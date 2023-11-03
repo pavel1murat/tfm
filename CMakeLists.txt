@@ -1,8 +1,8 @@
 # ======================================================================
-#  artdaq-daqinterface main build file
+#  tfm main build file
 #
 #  cd .../path/to/build/directory
-#  source .../path/to/artdaq-utilities/ups/setup_for_development
+#  source .../path/to/tfm/ups/setup_for_development
 #  cmake [-DCMAKE_INSTALL_PREFIX=/install/path]
 #        -Dqualifier:STRING=$CETPKG_QUAL
 #        -DCMAKE_BUILD_TYPE=$CETPKG_TYPE
@@ -12,20 +12,21 @@
 #  make install
 #  make package
 # ======================================================================
+# to be validated
 
 # use cmake 2.8 or later
 cmake_minimum_required (VERSION 3.16)
 
-find_package(cetmodules)
+# find_package(cetmodules)
 
-project(artdaq_daqinterface VERSION 3.12.05)
+project(tfm VERSION 0.0.1)
 
-set(artdaq_daqinterface_NOARCH TRUE)
+set(tfm_NOARCH TRUE)
 
-include(CetCMakeEnv)
-cet_cmake_env()
+# include(CetCMakeEnv)
+# cet_cmake_env()
 
-cet_set_compiler_flags(DIAGS VIGILANT
+add_compile_options(DIAGS VIGILANT
   WERROR
   NO_UNDEFINED
   EXTRA_FLAGS -pedantic
@@ -33,11 +34,11 @@ cet_set_compiler_flags(DIAGS VIGILANT
 
 #cet_report_compiler_flags()
 
-INSTALL(DIRECTORY bin DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-INSTALL(DIRECTORY docs DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-INSTALL(DIRECTORY rc DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-INSTALL(DIRECTORY simple_test_config DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-INSTALL(DIRECTORY utils DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-INSTALL(FILES source_me DESTINATION .)
+install(DIRECTORY bin       DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(DIRECTORY examples  DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(DIRECTORY rc        DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(DIRECTORY config    DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(DIRECTORY utils     DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(FILES     source_me DESTINATION .)
 
-cet_cmake_config()
+# cet_cmake_config()

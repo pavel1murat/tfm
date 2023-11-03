@@ -1,10 +1,9 @@
 #+startup:fold
 #
-* TFM : Trigger Farm Manager
+* TFM : Trigger Farm Manager : started from artdaq_daqinterface
 * ------------------------------------------------------------------------------
-** started from artdaq_daqinterface
-** daqinterface: configuring and running test example                        
-- daqinterface parameters:
+* tfm: configuring and running test example                        
+- parameters:
 |------------------------+---------------------------------+-----------|
 | flag                   | description                     | default   |
 |------------------------+---------------------------------+-----------|
@@ -17,7 +16,7 @@
 - knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
 - states  : Ready, Running, Paused, Stopped
 - commands: Init , Start, Pause, Resume, Stop, Shutdown
-- transition commands sent by file:../../artdaq_daqinterface/bin/send_transition.sh
+- transition commands sent by [[file:../bin/send_transition.sh]]
   - boot,
   - config
   - start :
@@ -27,7 +26,7 @@
   - disable
   - stop
   - terminate
-** commands XMLRPC:                                                          
+* commands XMLRPC:                                                          
 - status      : xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint
 - listdaqcomps: xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listdaqcomps
 #+begin_src
@@ -110,7 +109,7 @@ Configuring metrics with parameter set:
 Tue Oct 31 15:10:44 CDT 2023: DAQInterface in partition 8 launched and now in "stopped" state, listening on port 18000
 %MSG
 #+end_src
-** environment                                                               
+* environment                                                               
 #+begin_src
 DAQINTERFACE_FHICL_DIRECTORY=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
 DAQINTERFACE_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
@@ -128,7 +127,7 @@ DAQINTERFACE_TTY=pts/2
 ARTDAQ_DAQINTERFACE_VERSION=v3_12_05
 DAQINTERFACE_SETTINGS=/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings
 #+end_src
-** log file naming  : daqinterface.py                                        
+* log file naming  : daqinterface.py                                        
   [[file:../../artdaq_daqinterface/rc/control/daqinterface.py::/def determine_logfilename/]]
 
   log file names defined during the boot transition 
@@ -317,7 +316,7 @@ Details on how to examine the artdaq process logfiles can be found in the
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
 %MSG
 #+end_quote
-** startup steps                                                             
+* startup steps                                                             
 *** setdaqcomps.sh component01 component02                                   
   - components are defined in the 'known_boardreaders_list'
   - which is the DAQINTERFACE_KNOWN_BOARDREADERS_LIST
@@ -574,7 +573,7 @@ Details on how to examine the artdaq process logfiles can be found in the
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
 %MSG
 #+end_src
-** daqinterface scripts                                                      
+* daqinterface scripts                                                      
 *** send_transition.sh
 *** artdaq_process_info.sh
 *** status.sh

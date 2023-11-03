@@ -36,28 +36,16 @@ bindir product_dir bin
 # list all products here
 # the 4th field may be either optional or only_for_build
 product		version
-cetmodules	v3_21_02	-	only_for_build
+# cetmodules	v3_21_02	-	only_for_build
 end_product_list
  
-# e5  - with gcc 4.8.2 and -std=c++11 
-# e5 also implies cmake v2_8_12_2,which is pulled in by cetbuildtools
-# e4  - with gcc 4.8.1 and -std=c++11
-# e5  - with gcc 4.7.1 and -std=c++11
 # -nq- here means there is no qualifier
 # a - here means the dependent product is not required by the parent and will not be setup
-qualifier	cetmodules	notes
--nq-            -nq-
+qualifier	notes
+-nq-            
 end_qualifier_list
 
 table_fragment_begin
 # this is a table file fragment
 # it will be copied verbatim
 table_fragment_end
-
-# Preserve tabs and formatting in emacs and vi / vim:
-
-### Local Variables:
-### tab-width: 8
-### End:
-
-# vi:set ts=8 noexpandtab:
