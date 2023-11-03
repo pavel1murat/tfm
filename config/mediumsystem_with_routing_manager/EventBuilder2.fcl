@@ -1,0 +1,74 @@
+
+services: {
+  ArtdaqSharedMemoryServiceInterface: {
+   service_provider: ArtdaqSharedMemoryService
+  }
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+
+  #SimpleMemoryCheck: { }
+}
+
+daq: {
+  event_builder: {
+	expected_fragments_per_event: 3
+	use_art: true
+	buffer_count: 20
+	send_init_fragments: false
+	verbose: true
+	send_requests: true
+	request_port: 3001
+	request_address: "227.128.12.26"
+	multicast_interface_ip: "0.0.0.0"
+	expected_art_event_processing_time_us: 2000000
+
+    routing_token_config: {
+        ## True if using the Routing Manager
+        use_routing_manager: true
+
+        ## Port to send tokens on
+        routing_token_port: 35555  # default
+
+        ## Hostname or IP of RoutingManager
+        routing_manager_hostname: "localhost"  # default
+    }
+
+	sources: { }
+  }
+  metrics: {
+	evbFile: {
+	  metricPluginType: "file"
+	  level: 4
+	  fileName: "eventbuilder/evb_%UID%_metrics.log"
+         absolute_file_path: false
+	  uniquify: true
+	}
+  }
+} 
+
+outputs: {
+  rootNetOutput: {
+    module_type: RootNetOutput
+    #broadcast_sends: true
+	destinations: { }
+	routing_table_config: {
+	    use_routing_manager: false
+	}
+  }
+}
+
+physics: {
+  analyzers: {
+
+  }
+
+  producers: {
+  }
+
+  my_output_modules: [ rootNetOutput ]
+}
+source: {
+  module_type: ArtdaqInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+process_name: DAQ

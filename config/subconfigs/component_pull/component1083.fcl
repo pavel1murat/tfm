@@ -1,0 +1,3 @@
+#include "component_pull_standard.fcl"
+
+daq: @local::component1083_pull_standard

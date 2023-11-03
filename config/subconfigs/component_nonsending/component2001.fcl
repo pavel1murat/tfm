@@ -1,0 +1,3 @@
+#include "component_nonsending_standard.fcl"
+
+daq: @local::component2001_nonsending_standard

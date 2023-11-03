@@ -1,0 +1,163 @@
+=====================================================================
+=====================================================================
+====                                                             ====
+====            DAQInterface Example Configurations              ====
+====                                                             ====
+=====================================================================
+=====================================================================
+
+These simple configuration examples show some of the functionality
+of the ARTDAQ toolkit, and serve as integration and acceptance tests.
+
+Note that some of them have individual README files that provide
+additional information about the configuration.
+
+=====================================================================
+=====================================================================
+
+ascii_simulator_example:
+
+Demonstrates the AsciiSimulator_generator class and the AsciiDump
+ART module. This module can be used to verify ARTDAQ's data 
+preservation: AsciiSimulator can write a raw ASCII file which can be
+compared with the output of AsciiDump; they will be identical.
+
+=====================================================================
+
+combined_eb_and_DL:
+
+An ARTDAQ system consisting of several TOY1 Simulators, *no*
+EventBuilders, four DataLoggers, and a Dispatcher.
+The intention of this configuration is to demonstrate a system
+that combines the EventBuilding and DataLogging layers into one.
+As of 20-Apr-2018, this configuration is not yet working since
+there are DAQInterface changes that need to be made to support it.
+
+=====================================================================
+
+config_includes:
+
+An ARTDAQ system consisting of a TOY1 Simulator, a TOY2
+Simulator, two EventBuilders, a DataLogger and a Dispatcher.
+What sets this configuration apart from the "demo" config is
+the use of FHiCL fragments and/or templates that are #include(d)
+into the config files that are sent to the ARTDAQ processes.
+
+=====================================================================
+
+demo:
+
+A "standard" ARTDAQ system consisting of a TOY1 Simulator, a TOY2
+Simulator, two EventBuilders, a DataLogger and a Dispatcher.
+Used with artdaq_demo/tools/run_demo.sh, two Online Monitors are
+connected to run data quality displays.
+Used with artdaq_demo/tools/run_demo_hung_online_monitor_example.sh,
+demonstrates that the Online Monitors/Dispatcher being busy do
+not adversely affect data-taking.
+
+=====================================================================
+
+demo_artdaq_v1:
+
+TODO: Describe this configuration or remove it!!!
+
+=====================================================================
+
+demo_largesystem:
+
+A system with configuration files for up to 19 BoardReaders, alternating
+between TOY1 and TOY2 simulators.
+
+=====================================================================
+
+file_closing_example:
+
+A version of the "demo" configuration (described above) where the
+DataLogger is configured to change its output data file every 100 events.
+This example demonstrates that this capability has no adverse effects
+on data-taking.
+
+=====================================================================
+
+multiple_art_processes_example:
+
+A version of the "demo" configuration where each Data Receiver
+(EventBuilder, DataLogger, and Dispatcher) runs 5 subordinate art
+processes. 
+
+=====================================================================
+
+multiple_dataloggers:
+
+A version of the "demo" configuration with four DataLoggers.
+
+=====================================================================
+
+multiple_fragment_ids:
+
+A version of the "demo" configuration where component02 and component03
+generate multiple Fragments for each event.
+
+=====================================================================
+
+no_aggregators:
+
+TODO: Describe this configuration or remove it!!!
+
+=====================================================================
+
+pull_mode:
+
+TODO: Describe this configuration or remove it!!!
+
+=====================================================================
+
+request_based_dataflow_example:
+
+Demonstrates the Data Request capabilities of the CommandableFragmentGenerator
+class. This example consists of a "DAQ" BoardReader reading out at a 
+high rate, a "DCS" BoardReader which reads out very slowly,
+but sends data for each event the "DAQ" BoardReader generates, and
+a "CRV" BoardReader which samples uncorrelated data based
+on the Fragment timestamps, providing the events that occurred within
+a given time window around the "DAQ" events.
+
+* Note: Make sure that port 3001/udp is open so that the data requests get through.
+        If this example does not work, one should try disabling the
+        firewall on the test system. Instructions for do this can vary
+        greatly depending upon the system version _and_ who adminstrates
+        the system. For example, on mu2edaq01, the chant to try is:
+
+             systemctl stop slam-firewall
+
+        The request_address and request_port fhicl params, in the
+        example component0{1,2,3}.fcl files, control the
+        multicast address and port (default 3001 as mentioned above)
+        used. These fhicl params are also applicable for the
+        event_builder block in the EventBuilder.fcl files. Additionally,
+        for the EventBuilder.fcl, there is a fhicl "output_address"
+        for controlling the output interface for the multicasts. This
+        parameter defaults to pick the first interface which will
+        be OK for a single node demo.
+        
+        One additional "gotcha" may be that multiple users have
+        tried to run the demos on the same system. As root:
+
+             rm -f /tmp/TransferInputShmem2.fcl /tmp/pmtConfig.*
+
+=====================================================================
+
+request_dataflow_windowmode:
+
+TODO: Describe this configuration or remove it!!!
+
+=====================================================================
+
+routing_manager_example:
+
+A "2+2+1x1" system, with two BoardReaders, two EventBuilders, a
+DataLogger and a Dispatcher. Two RoutingManagers are employed,
+one between the BoardReaders and the EventBuilders, and the other
+between the EventBuilders and the DataLogger.
+
+=====================================================================

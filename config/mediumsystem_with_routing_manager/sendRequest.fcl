@@ -1,0 +1,50 @@
+   sender: {
+
+      ## Enable sending Data Request messages
+
+      send_requests: true
+
+      ## Multicast address to send DataRequests to
+
+      request_address: "227.128.12.35"
+
+      ## Port to send DataRequests on
+
+      request_port: 3501
+
+      ## Use this hostname for multicast output(to assign to the proper NIC)
+
+      multicast_interface_ip: "0.0.0.0"  # default
+
+      ## Whether to request acknowledgements for requests sent
+
+      request_acknowledgements: false  # default
+
+      ## Amount of time to wait between each request message
+
+      request_sending_delay: 1000000
+
+      ## Number of requests to send
+
+      num_requests: 10
+
+      ## Sequence ID of first request
+
+      starting_sequence_id: 11  # default
+
+      ## Amount to increment Sequence ID for each request
+
+      sequence_id_scale: 1  # default
+
+      ## Timestamp of first request
+
+      starting_timestamp: 1  # default
+
+      ## Amount to increment timestamp for each request
+
+      timestamp_scale: 1  # default
+
+      ## Rank of the requestSender app
+
+      request_sender_app_rank: -1  # default
+   }

@@ -1,0 +1,62 @@
+BEGIN_PROLOG
+
+datalogger_art_standard: {
+
+outputs: {
+   normalOutput: {
+      module_type: "RootDAQOut"
+
+      compressionLevel: 0
+      fastCloning: false
+      fileName: "override this in the document which includes this file"
+
+      # See https://cdcvs.fnal.gov/redmine/projects/art/wiki/Output-file_handling for instructions on what these parameters are
+      fileProperties: {
+         maxEvents: 1000
+         maxRuns: 1
+         maxSize: 8.192e6
+         maxSubRuns: 1
+      }
+   }
+   rootNetOutput: {
+      module_type: "RootNetOutput"
+      broadcast_sends: true
+      nonblocking_sends: true
+
+      destinations: {}
+   }
+}
+physics: {
+   analyzers: {}
+   my_mpi_output_modules: [
+      "rootNetOutput"
+   ]
+   my_output_modules: [
+      "normalOutput"
+   ]
+   p2: [
+      "BuildInfo"
+   ]
+   producers: {
+      BuildInfo: {
+         instance_name: "ArtdaqDemo"
+         module_type: "ArtdaqDemoBuildInfo"
+      }
+   }
+}
+process_name: "DAQDL"
+services: {
+   ArtdaqSharedMemoryServiceInterface: {
+      service_provider: "ArtdaqSharedMemoryService"
+}
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+   scheduler: {
+      errorOnFailureToPut: false  # Don't change this
+   }
+}
+source: {
+   module_type: "ArtdaqInput"
+}
+}
+
+END_PROLOG

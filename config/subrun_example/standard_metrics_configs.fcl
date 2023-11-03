@@ -1,0 +1,24 @@
+BEGIN_PROLOG
+
+global_metrics_default: {
+  file: {
+    metricPluginType: "file"
+    level: 4
+    uniquify: true
+	absolute_file_path: false
+  }
+}
+
+BR_metrics_default: @local::global_metrics_default
+BR_metrics_default.file.fileName: "boardreader/boardreader_%UID%_metrics.log"
+
+EB_metrics_default: @local::global_metrics_default
+EB_metrics_default.file.fileName: "eventbuilder/eventbuilder_%UID%_metrics.log"
+
+DL_metrics_default: @local::global_metrics_default
+DL_metrics_default.file.fileName: "aggregator/datalogger_%UID%_metrics.log"
+
+DISP_metrics_default: @local::global_metrics_default
+DISP_metrics_default.file.fileName: "aggregator/dispatcher_%UID%_metrics.log"
+
+END_PROLOG

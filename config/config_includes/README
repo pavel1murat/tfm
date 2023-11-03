@@ -1,0 +1,25 @@
+Sample configuration: config_includes
+09-Apr-2018, KAB
+
+Description:
+This configuration is intended to demonstrate a way to structure the FHiCL documents
+that groups related parameters into dedicated files.
+Its parent is the basic "demo" configuration.  As of 18-Apr-2018, its observable output
+should be very similar to the basic demo, modulo the change of the RootDAQOut compression
+mode from 3 to 0.
+
+Some notes:
+* This configuration has some extra component files that typically do not get used.
+  (Generally, this test only uses component01 and 02.)  The presence of the extra ones
+  is partly to highlight the fact that non-fully-resolved run configuration FHiCL
+  documents are currently being archived (as of 19-Apr-2018), and to allow us to check
+  that the archived configurations are less verbose when we start storing fully-resolved
+  FHiCL documents.
+* This configuration does not currently need a special boot.txt file; however one
+  is provided for reference.
+* To run this configuration, you can use any of the following steps, depending on what
+  you are trying to demonstrate:
+  - 'cd <yourArtdaqDemoInstallationDir>'
+  - 'sh ./run_demo.sh --config config_includes'
+  - 'sh ./run_demo.sh --config config_includes --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/config_includes/boot.txt'
+  - 'sh ./run_demo.sh --config config_includes --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/config_includes/boot.txt --comps component01 component02 component03 component04 --'

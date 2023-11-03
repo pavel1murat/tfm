@@ -1,0 +1,32 @@
+#include "windowModeBR_standard.fcl"
+
+BEGIN_PROLOG
+
+felix_daq_standard: @local::windowModeBR_daq_standard
+felix_daq_standard.fragment_receiver.request_window_offset: 5
+felix_daq_standard.fragment_receiver.request_window_width: 11
+felix_daq_standard.fragment_receiver.generator: ToySimulator
+felix_daq_standard.fragment_receiver.fragment_type: "TOY2"
+felix_daq_standard.fragment_receiver.throttle_usecs: 0
+felix_daq_standard.fragment_receiver.usecs_between_sends: 50000
+felix_daq_standard.fragment_receiver.timestamp_scale_factor: 5
+felix_daq_standard.fragment_receiver.nADCcounts: 5000
+felix_daq_standard.fragment_receiver.max_fragment_size_bytes: 30300 # 5000 times 2 (bytes per ADC count) times 3 (~request_window_width/timestamp_scale_factor) plus 1% extra
+felix_daq_standard.fragment_receiver.distribution_type: 3
+felix_daq_standard.fragment_receiver.random_seed: 738
+felix_daq_standard.fragment_receiver.fragment_id: 101
+felix_daq_standard.fragment_receiver.board_id: 1
+
+felix01_daq_standard: @local::felix_daq_standard
+felix01_daq_standard.fragment_receiver.fragment_id: 101
+felix01_daq_standard.fragment_receiver.board_id: 1
+
+felix02_daq_standard: @local::felix_daq_standard
+felix02_daq_standard.fragment_receiver.fragment_id: 102
+felix02_daq_standard.fragment_receiver.board_id: 2
+
+felix03_daq_standard: @local::felix_daq_standard
+felix03_daq_standard.fragment_receiver.fragment_id: 103
+felix03_daq_standard.fragment_receiver.board_id: 3
+
+END_PROLOG

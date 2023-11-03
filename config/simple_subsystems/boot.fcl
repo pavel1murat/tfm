@@ -1,0 +1,50 @@
+DAQ_setup_script: "$yourArtdaqInstallationDir/setupARTDAQDEMO"
+PMT_host: "localhost"
+debug_level: 1
+
+subsystem_settings: [
+{
+id: "1"
+destination: "2"
+},
+{
+id: "2"
+source: "1"
+}
+]
+
+artdaq_process_settings: [
+{
+name: "EventBuilder"
+label: "EventBuilder1"
+host: "localhost"
+},
+{
+name: "Dispatcher"
+label: "Dispatcher1"
+host: "localhost"
+subsystem: "2"
+},
+{
+name: "EventBuilder"
+label: "EventBuilder2"
+host: "localhost"
+},
+{
+name: "EventBuilder"
+label: "EventBuilder3"
+host: "localhost"
+subsystem: "2"
+},
+{
+name: "DataLogger"
+label: "DataLogger1"
+host: "localhost"
+},
+{
+name: "DataLogger"
+label: "DataLogger2"
+host: "localhost"
+subsystem: "2"
+}
+]

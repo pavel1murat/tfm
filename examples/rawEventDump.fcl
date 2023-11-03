@@ -1,0 +1,27 @@
+physics:
+{
+  analyzers:
+  {
+    evtDump:
+    {
+      module_type: EventDump
+      raw_data_label: daq
+    }
+  }
+
+  a1: [ evtDump ]
+  e1: [ out1 ]
+  end_paths: [ a1, e1 ]
+}
+
+outputs:
+{
+  out1:
+  {
+    module_type: FileDumperOutput
+    wantProductFriendlyClassName: true
+    onlyIfPresent: true
+  }
+}
+
+process_name: EVTDUMP

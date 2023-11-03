@@ -1,0 +1,14 @@
+#include "pushModeBR_standard.fcl"
+
+daq: @local::pushModeBR_daq_standard
+daq.fragment_receiver.generator: ToySimulator
+daq.fragment_receiver.fragment_type: "TOY1"
+daq.fragment_receiver.throttle_usecs: 0
+daq.fragment_receiver.usecs_between_sends: 100000
+daq.fragment_receiver.timestamp_scale_factor: 10
+daq.fragment_receiver.nADCcounts: 40
+daq.fragment_receiver.max_fragment_size_bytes: 200
+daq.fragment_receiver.distribution_type: 3
+daq.fragment_receiver.fragment_id: 1
+daq.fragment_receiver.board_id: 1
+daq.fragment_receiver.random_seed: 8250

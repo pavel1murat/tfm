@@ -1,0 +1,34 @@
+
+DAQ setup script: $yourArtdaqInstallationDir/setupARTDAQDEMO
+
+PMT host: localhost
+
+# debug level can range from 0 to 3 (increasing order of verbosity)
+debug level: 1
+
+Subsystem id: 1
+Subsystem destination: 2
+
+Subsystem id: 2
+Subsystem source: 1
+
+EventBuilder host: localhost
+EventBuilder label: EventBuilder1
+
+EventBuilder host: localhost
+EventBuilder label: EventBuilder2
+
+EventBuilder host: localhost
+EventBuilder label: EventBuilder3
+EventBuilder subsystem: 2
+
+DataLogger host: localhost
+DataLogger label: DataLogger1
+
+DataLogger host: localhost
+DataLogger label: DataLogger2
+DataLogger subsystem: 2
+
+Dispatcher host: localhost
+Dispatcher label: Dispatcher1
+Dispatcher subsystem: 2

@@ -1,0 +1,64 @@
+#include "routing_manager_parameters.fcl"
+
+services: {
+  ArtdaqSharedMemoryServiceInterface: {
+    service_provider: ArtdaqSharedMemoryService
+  }
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+}
+
+daq: {
+  event_builder: {
+    expected_fragments_per_event: 0  # Will be set by DAQInterface
+    use_art: true
+    buffer_count: 5
+    max_incomplete_events: 75 # Same as boardreader sync interval
+    verbose: true
+    send_requests: true
+    request_port: 3001
+    request_address: "227.128.12.26" # Multicast request address
+
+    routing_token_config: @local::artdaq_EB_routing_token_specification
+
+    sources: { }
+  }
+  metrics: {
+    evbFile: {
+      metricPluginType: "file"
+      level: 4
+      fileName: "eventbuilder/evb_%UID%_metrics.log"
+         absolute_file_path: false
+      uniquify: true
+    }
+  }
+} 
+
+outputs: {
+  rootNetOutput: {
+    module_type: RootNetOutput
+    #SelectEvents: { SelectEvents: [ pmod2,pmod3 ] }
+    #broadcast_sends: true
+    destinations: { }
+
+    routing_table_config: @local::artdaq_EB_routing_table_specification
+  }
+}
+
+physics: {
+  analyzers: {
+  }
+
+  producers: {
+  }
+
+  filters: {
+  }
+
+  my_output_modules: [ rootNetOutput ]
+}
+source: {
+  module_type: ArtdaqInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+process_name: DAQ

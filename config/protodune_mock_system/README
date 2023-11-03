@@ -1,0 +1,25 @@
+Sample configuration: protodune_mock_system
+Notes on 31-Jul-2018, ELF
+
+Description:
+This configuration is designed to be a protodune-like stress-test for the mu2edaq cluster.
+It consists of 24 BoardReaders, one in push mode and the rest in pull mode. The push-mode
+BR generates tiny (4K) fragments, and the rest are divided between 1 MB and 15 MB Fragments.
+The system generates 200 MB events, which at 25 Hz should saturate the 4 10 Gb links to the
+nodes hosting the 16 EventBuilders. There is currently no disk-writing in this example.
+
+Some notes:
+* This configuration benefits from enhanced copy of the typical boot.txt file, and a
+  sample is included with this configuration.  To use this file, you should first
+  edit it to replace <yourArtdaqDemoDir> with the correct path. Then,
+  to run this demo, you can use the following commands:
+  - 'cd <yourArtdaqDemoDir>'
+  - 'sh ./run_demo.sh --config protodune_mock_system --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/protodune_mock_system/boot.txt --comps component{01..24} --'
+
+* Note that you will also need to install the known_boardreader_list_example included with this
+  example to use all 24 components
+
+* NOTE that the pull-mode data requests that are used in this sample make use of 
+  multicast Ethernet messages.  As such, there may
+  be firewall settings that need to be tuned.  Please see the text that describes
+  this in ../README.simple_test_configs.

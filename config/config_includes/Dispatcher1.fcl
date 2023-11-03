@@ -1,0 +1,36 @@
+#include "standard_metrics_configs.fcl"
+#include "routing_manager_parameters.fcl"
+#include "art_input_output_parameters.fcl"
+
+daq: {
+  aggregator: {
+    expected_events_per_bunch: 1
+    buffer_count: 20
+    event_queue_depth: 2
+    event_queue_wait_time: 1
+    onmon_event_prescale: 1
+    is_dispatcher: true
+    overwrite_mode: true
+
+    routing_token_config: @local::artdaq_DISP_routing_token_specification
+
+    auto_suppression_enabled: false
+
+    sources: { }
+  }
+
+  metrics: @local::DISP_metrics_default
+}
+
+services: {
+  ArtdaqSharedMemoryServiceInterface: @local::art_service_for_shared_memory
+  ArtdaqFragmentNamingServiceInterface: @local::art_service_for_fragment_naming
+}
+
+source: @local::artdaq_DISP_art_source_specification
+
+outputs: { }
+
+physics: { }
+
+process_name: DAQDP

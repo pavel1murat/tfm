@@ -1,0 +1,36 @@
+
+DAQ setup script: $yourArtdaqInstallationDir/setupARTDAQDEMO
+
+PMT host: localhost
+PMT port: 5400
+
+# debug level can range from 0 to 3 (increasing order of verbosity)
+debug level: 1
+
+EventBuilder host: localhost
+EventBuilder port: 5235
+EventBuilder label: EventBuilder1
+
+EventBuilder host: localhost
+EventBuilder port: 5236
+EventBuilder label: EventBuilder2
+
+EventBuilder host: localhost
+EventBuilder port: 5237
+EventBuilder label: EventBuilder3
+
+DataLogger host: localhost
+DataLogger port: 5265
+DataLogger label: DataLogger1
+
+#DataLogger host: localhost
+#DataLogger port: 5266
+#DataLogger label: DataLogger2
+
+Dispatcher host: localhost
+Dispatcher port: 5269
+Dispatcher label: Dispatcher1
+
+RoutingManager host: localhost
+RoutingManager port: 5275
+RoutingManager label: RoutingManager1

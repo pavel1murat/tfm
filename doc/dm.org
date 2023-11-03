@@ -1,0 +1,681 @@
+#+startup:fold
+#
+* TFM : Trigger Farm Manager
+* ------------------------------------------------------------------------------
+** started from artdaq_daqinterface
+** daqinterface: configuring and running test example                        
+- daqinterface parameters:
+|------------------------+---------------------------------+-----------|
+| flag                   | description                     | default   |
+|------------------------+---------------------------------+-----------|
+| -n, --name             | component name (what is that ?) | daqint    |
+| -p, --partition-number | partition number                | 888       |
+| -r, --rpc-port         | RPC port                        | 5570      |
+| -H, --rpc-host         | This hostname/IP addr           | localhost |
+| -c, --control-host     | Control host                    | localhost |
+|------------------------+---------------------------------+-----------|
+- knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
+- states  : Ready, Running, Paused, Stopped
+- commands: Init , Start, Pause, Resume, Stop, Shutdown
+- transition commands sent by file:../../artdaq_daqinterface/bin/send_transition.sh
+  - boot,
+  - config
+  - start :
+    - if run number is not defined, use next one to the last found
+    - if run number is defined, use that, send "starting struct/{run_number:i/$rn}"
+  - enable
+  - disable
+  - stop
+  - terminate
+** commands XMLRPC:                                                          
+- status      : xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint
+- listdaqcomps: xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listdaqcomps
+#+begin_src
+mkdir DAQInterface
+cd DAQInterface
+cp $ARTDAQ_DAQINTERFACE_DIR/docs/user_sourcefile_example         source_me
+cp $ARTDAQ_DAQINTERFACE_DIR/docs/settings_example                daqinterface_settings
+cp $ARTDAQ_DAQINTERFACE_DIR/docs/known_boardreaders_list_example known_boardreaders_list
+cp $ARTDAQ_DAQINTERFACE_DIR/docs/boot.txt .
+#------------------------------------------------------------------------------
+# 1) edit daqinterface_settings
+# 2) edit boot.txt to define the setup script
+# 3) define environment variables
+#------------------------------------------------------------------------------
+export                DAQINTERFACE_SETTINGS=$PWD/daqinterface_settings
+export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=$PWD/known_boardreaders_list
+export         DAQINTERFACE_USER_SOURCEFILE=$PWD/source_me
+export   DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
+export        DAQINTERFACE_PARTITION_NUMBER=8
+export                 DAQINTERFACE_LOGFILE=daqinterface.log
+export                                 USER=murat            # need in a docker container
+#------------------------------------------------------------------------------
+# set DAQINTERFACE_PROCESS_MANAGEMENT_METHOD to one of the following:
+# "direct", "external_run_control", "pmt"
+# - use the partition number consistently in ARTDAQ_LOG_FHICL
+#------------------------------------------------------------------------------
+export DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
+export                       ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition8_murat.fcl
+# source 'global' source_me (it also sources the local source_me)
+source $ARTDAQ_DAQINTERFACE_DIR/source_me
+DAQInterface.sh &
+#+end_src
+- DAQInterface is a shell script submitting python script into background, which is *nonsense*
+#+begin_src
+/bin/bash /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/bin/DAQInterface.sh
+tail -n0 -f /tmp/daqinterface_murat/DAQInterface_partition0.log
+python3 /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/rc/control/daqinterface.py --partition-number 0 --rpc-port 10000
+#+end_src
+- management methods are defined in 
+file:../../artdaq_daqinterface/rc/control/daqinterface.py::/process_management_methods/
+*** environment                                                              
+/projects/mu2e/tdaq/pasha_013/DAQInterface>env | grep DAQINTERFACE
+DAQINTERFACE_PARTITION_NUMBER=8
+DAQINTERFACE_FHICL_DIRECTORY=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
+DAQINTERFACE_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
+DAQINTERFACE_USER_SOURCEFILE=/projects/mu2e/tdaq/pasha_013/DAQInterface/source_me
+DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
+DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
+DAQINTERFACE_PORT=18000
+DAQINTERFACE_LOGDIR=/tmp/daqinterface_murat
+DAQINTERFACE_SETUP_FHICLCPP=/projects/mu2e/tdaq/pasha_013/DAQInterface/.setup_fhiclcpp
+DAQINTERFACE_KNOWN_BOARDREADERS_LIST=/projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
+DAQINTERFACE_STANDARD_SOURCEFILE_SOURCED=true
+DAQINTERFACE_TTY=pts/0
+ARTDAQ_DAQINTERFACE_VERSION=v3_12_05
+DAQINTERFACE_SETTINGS=/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings
+*** when things go well:                                                     
+#+begin_src
+/projects/mu2e/tdaq/pasha_013/DAQInterface>source $ARTDAQ_DAQINTERFACE_DIR/source_me
+[11]   Terminated              tail -n0 -f $expanded_daqinterface_logfilename
+Using ups-installed DAQInterface, version "v3_12_05"
+ * The command was successful
+ * To launch, just type "DAQInterface &" (excluding quotes, ampersand optional)
+ * Output will be logged in /tmp/daqinterface_murat/DAQInterface_partition<N>.log, where <N> 
+   is the partition the DAQInterface instance is on
+ * You're encouraged to read the DAQInterface Manual at https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
+
+/projects/mu2e/tdaq/pasha_013/DAQInterface>source DAQInterface.sh 
+[DAQInterface.sh:25] : $DAQINTERFACE_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
+10-31 15:10:43.661828 MetricManager     INFO MetricManager(): MetricManager CONSTRUCTOR
+10-31 15:10:44.210547             UDP_mfPlugin     INFO ResolveHost(...): Resolving host 2451a76a3e84, on port 10005
+10-31 15:10:44.211381             UDP_mfPlugin     INFO GetInterfaceForNetwork(...): Resolving ip 2451a76a3e84
+%MSG-i configureMessageFacility:  Early 31-Oct-2023 15:10:44 CDT pre-events configureMessageFacility.cc:274
+Message Facility Application DAQInterface-2451a76a3e84-0 configured with: destinations:{console:{threshold:"DEBUG" type:"cout"} udp:{host:"2451a76a3e84" port:10005 threshold:"DEBUG" type:"UDP"}}
+%MSG
+%MSG-i MetricManager:  Early 31-Oct-2023 15:10:44 CDT pre-events MetricManager.cc:43
+Configuring metrics with parameter set: 
+%MSG
+%MSG-i DAQInterface_partition_8:  Early 31-Oct-2023 15:10:44 CDT pre-events swig_artdaq.cc:88
+Tue Oct 31 15:10:44 CDT 2023: DAQInterface in partition 8 launched and now in "stopped" state, listening on port 18000
+%MSG
+#+end_src
+** environment                                                               
+#+begin_src
+DAQINTERFACE_FHICL_DIRECTORY=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
+DAQINTERFACE_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
+DAQINTERFACE_USER_SOURCEFILE=/projects/mu2e/tdaq/pasha_013/DAQInterface/source_me
+DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
+DAQINTERFACE_PARTITION_NUMBER=0
+DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
+DAQINTERFACE_PORT=10000
+DAQINTERFACE_LOGDIR=/tmp/daqinterface_murat
+ARTDAQ_DAQINTERFACE_DIR=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface
+DAQINTERFACE_SETUP_FHICLCPP=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/docs/.setup_fhiclcpp
+DAQINTERFACE_KNOWN_BOARDREADERS_LIST=/projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
+DAQINTERFACE_STANDARD_SOURCEFILE_SOURCED=true
+DAQINTERFACE_TTY=pts/2
+ARTDAQ_DAQINTERFACE_VERSION=v3_12_05
+DAQINTERFACE_SETTINGS=/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings
+#+end_src
+** log file naming  : daqinterface.py                                        
+  [[file:../../artdaq_daqinterface/rc/control/daqinterface.py::/def determine_logfilename/]]
+
+  log file names defined during the boot transition 
+  -- do_boot
+     -- get_artdaq_log_filenames
+        -- determine_logfilename
+
+
+  -- logfiles are created at boot step, on my laptop/docker this step for config='demo'
+     took from 00:07:53 to 00:09:03, out of that:
+  -- 38 sec - not sure what
+  -- 10 sec - check of the setup script
+  -- 19 sec - launch of the artdaq processes
+  --  2 sec - associating log files
+
+- log of the boot transition 
+#+begin_quote                                                                
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:07:53 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:07:53 CDT 2023: BOOT transition underway
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:08:31 CDT pre-events swig_artdaq.cc:88
+
+artdaq_mfextensions v1_08_05, e28:prof:s124, appears to be available; if
+windowing is supported on your host you should see the messageviewer
+window pop up momentarily
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:08:31 CDT pre-events swig_artdaq.cc:88
+
+On randomly selected node (localhost), will confirm that the DAQ setup script 
+/projects/mu2e/tdaq/pasha_013/setup_ots.sh
+doesn't return a nonzero value when sourced...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:08:41 CDT pre-events swig_artdaq.cc:88
+done (10.0 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:08:41 CDT pre-events swig_artdaq.cc:88
+
+Launching the artdaq processes
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:08:41 CDT pre-events swig_artdaq.cc:88
+Executing commands to launch processes on 2451a76a3e84
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:00 CDT pre-events swig_artdaq.cc:88
+Checking that processes are up (check 1 of a max of 20 checks)...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:00 CDT pre-events swig_artdaq.cc:88
+found 6 of 6 processes.
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:00 CDT pre-events swig_artdaq.cc:88
+All processes appear to be up
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:00 CDT pre-events swig_artdaq.cc:88
+
+Determining logfiles associated with the artdaq processes...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:03 CDT pre-events swig_artdaq.cc:88
+done (2.4 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:09:03 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 00:09:03 CDT 2023: BOOT transition complete
+%MSG
+#+end_quote
+- log of the stop transition
+#+begin_quote                                                                
+/projects/mu2e/tdaq/pasha_013/DAQInterface>send_transition.sh stop 
+xmlrpc http://localhost:10000/RPC2 state_change daqint stopping 'struct/{ignored_variable:i/999}'
+Result:
+
+Nil
+/projects/mu2e/tdaq/pasha_013/DAQInterface>%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:29:12 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 00:29:12 CDT 2023: STOP transition underway for run 2
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:29:12 CDT pre-events swig_artdaq.cc:88
+
+Sending stop transition to artdaq processes...
+%MSG
+/projects/mu2e/tdaq/pasha_013/DAQInterface>top%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:12 CDT pre-events swig_artdaq.cc:76
+
+ Thu Nov  2 00:30:12 CDT 2023: Timeout sending Stop transition to artdaq
+process component02 at 2451a76a3e84:10101; try checking logfile
+2451a76a3e84:/projects/mu2e/tdaq/pasha_013/DAQInterface/Logs/component02-2451a76a3e84-10101/component02-2451a76a3e84-10101-20231102000900-128582.log
+for details 
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:12 CDT pre-events swig_artdaq.cc:76
+
+ Thu Nov  2 00:30:12 CDT 2023: Timeout sending Stop transition to artdaq
+process component01 at 2451a76a3e84:10100; try checking logfile
+2451a76a3e84:/projects/mu2e/tdaq/pasha_013/DAQInterface/Logs/component01-2451a76a3e84-10100/component01-2451a76a3e84-10100-20231102000900-128581.log
+for details 
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 00:30:12 CDT pre-events swig_artdaq.cc:82
+
+Thu Nov  2 00:30:12 CDT 2023: RECOVER transition underway for run 2
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:12 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:12 CDT 2023: Attempting to cleanly wind down the BoardReaders if they (still) exist
+%MSG
+top%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:13 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:13 CDT 2023: Attempting to cleanly wind down the EventBuilders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:13 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:13 CDT 2023: Attempting to cleanly wind down the DataLoggers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:13 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:13 CDT 2023: Attempting to cleanly wind down the Dispatchers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:15 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:15 CDT 2023: Attempting to cleanly wind down the RoutingManagers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:15 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:15 CDT 2023: Attempting to kill off the artdaq processes from this run if they still exist
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 00:30:16 CDT pre-events swig_artdaq.cc:82
+
+Despite receiving a termination signal, the following artdaq processes on
+2451a76a3e84 were not killed, so they'll be issued a SIGKILL: component01
+component02 EventBuilder1 EventBuilder2 DataLogger1 DataLogger1
+EventBuilder2 EventBuilder1
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:16 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 00:30:16 CDT 2023: RECOVER transition complete for run 2
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:16 CDT pre-events swig_artdaq.cc:76
+
+
+
+"An exception was thrown when attempting to send the "stop" transition to
+the artdaq processes; see messages above for more info"
+
+DAQInterface has set the DAQ back in the "Stopped" state; you may need to
+scroll above the Recover transition output to find messages which could
+help you provide any necessary adjustments.
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:16 CDT pre-events swig_artdaq.cc:76
+
+Details on how to examine the artdaq process logfiles can be found in the
+"Examining your output" section of the DAQInterface manual,
+https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:82
+
+Thu Nov  2 00:30:17 CDT 2023: RECOVER transition underway for run 2
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to cleanly wind down the BoardReaders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to cleanly wind down the EventBuilders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to cleanly wind down the DataLoggers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to cleanly wind down the Dispatchers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to cleanly wind down the RoutingManagers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:17 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 00:30:17 CDT 2023: Attempting to kill off the artdaq processes from this run if they still exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 00:30:18 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 00:30:18 CDT 2023: RECOVER transition complete for run 2
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:18 CDT pre-events swig_artdaq.cc:76
+
+
+
+"Traceback (most recent call last):   File
+"/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/rc/control/daqinterface.py",
+line 4426, in runner     raise Exception( Exception: Error: at some point DAQInterface
+set an exception state "
+
+DAQInterface has set the DAQ back in the "Stopped" state; you may need to
+scroll above the Recover transition output to find messages which could
+help you provide any necessary adjustments.
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 00:30:18 CDT pre-events swig_artdaq.cc:76
+
+Details on how to examine the artdaq process logfiles can be found in the
+"Examining your output" section of the DAQInterface manual,
+https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
+%MSG
+#+end_quote
+** startup steps                                                             
+*** setdaqcomps.sh component01 component02                                   
+  - components are defined in the 'known_boardreaders_list'
+  - which is the DAQINTERFACE_KNOWN_BOARDREADERS_LIST
+*** send_transition.sh boot boot.txt  
+*** send_transition.sh config demo                                           
+  - demo is a subdirectory under /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
+  - which is the DAQINTERFACE_FHICL_DIRECTORY
+#+begin_src                                                                  
+/projects/mu2e/tdaq/pasha_013/DAQInterface>send_transition.sh config demo
+xmlrpc http://localhost:10000/RPC2 state_change daqint configuring 'struct/{config:array/(s/demo)}'
+Result:
+
+Nil
+/projects/mu2e/tdaq/pasha_013/DAQInterface>%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:37 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 06:54:37 CDT 2023: CONFIG transition underway
+%MSG
+%MSG-d DAQInterface_partition_0:  Early 02-Nov-2023 06:54:37 CDT pre-events swig_artdaq.cc:94
+Config name: demo
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:37 CDT pre-events swig_artdaq.cc:88
+
+Obtaining FHiCL documents...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:37 CDT pre-events swig_artdaq.cc:88
+done (0.0 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:37 CDT pre-events swig_artdaq.cc:88
+Reformatting the FHiCL documents...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:38 CDT pre-events swig_artdaq.cc:88
+done (0.1 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:38 CDT pre-events swig_artdaq.cc:88
+Bookkeeping the FHiCL documents...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:38 CDT pre-events swig_artdaq.cc:88
+done (0.2 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:38 CDT pre-events swig_artdaq.cc:88
+Saving the run record...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:50 CDT pre-events swig_artdaq.cc:88
+done (11.8 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:50 CDT pre-events swig_artdaq.cc:88
+
+Sending init transition to artdaq processes...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+done (1.2 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+Longest individual transition was EventBuilder1, which took 0.0 seconds.
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+All artdaq processes returned "Success".
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+Ensuring FHiCL documents will be archived in the output *.root files...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+done (0.1 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+
+Process manager logfiles (if applicable):
+/projects/mu2e/tdaq/pasha_013/DAQInterface/Logs/pmt/launch_attempt_2451a76a3e84_murat_partition0_20231102065130
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 06:54:51 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 06:54:51 CDT 2023: CONFIG transition complete
+%MSG
+
+/projects/mu2e/tdaq/pasha_013/DAQInterface>artdaq_process_info.sh
+Result:
+
+String: 
+  component01 at 2451a76a3e84:10100 (subsystem 1, rank 0): Ready\n
+  component02 at 2451a76a3e84:10101 (subsystem 1, rank 1): Ready\n
+  EventBuilder1 at 2451a76a3e84:10102 (subsystem 1, rank 2): Ready\n
+  EventBuilder2 at 2451a76a3e84:10103 (subsystem 1, rank 3): Ready\n
+  DataLogger1 at 2451a76a3e84:10104 (subsystem 1, rank 4): Ready\n
+  Dispatcher1 at 2451a76a3e84:10105 (subsystem 1, rank 5): Ready\n
+#+end_src
+*** send_transition.sh start                                                 
+#+begin_src 
+/projects/mu2e/tdaq/pasha_013/DAQInterface>send_transition.sh start
+xmlrpc http://localhost:10000/RPC2 state_change daqint starting 'struct/{run_number:i/3}'
+Result:
+
+Nil
+/projects/mu2e/tdaq/pasha_013/DAQInterface>%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:20 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 07:04:20 CDT 2023: START transition underway for run 3
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:20 CDT pre-events swig_artdaq.cc:88
+
+Sending start transition to artdaq processes...
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+done (1.2 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+Longest individual transition was EventBuilder1, which took 0.0 seconds.
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+All artdaq processes returned "Success".
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+done (0.1 seconds).
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+
+Run info can be found locally at /projects/mu2e/tdaq/pasha_013/DAQInterface/run_records/3
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:04:21 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 07:04:21 CDT 2023: START transition complete for run 3
+%MSG
+/projects/mu2e/tdaq/pasha_013/DAQInterface>artdaq_process_info.sh
+Result:
+
+String: 
+  component01 at 2451a76a3e84:10100 (subsystem 1, rank 0): Running\n
+  component02 at 2451a76a3e84:10101 (subsystem 1, rank 1): Running\n
+  EventBuilder1 at 2451a76a3e84:10102 (subsystem 1, rank 2): Running\n
+  EventBuilder2 at 2451a76a3e84:10103 (subsystem 1, rank 3): Running\n
+  DataLogger1 at 2451a76a3e84:10104 (subsystem 1, rank 4): Running\n
+  Dispatcher1 at 2451a76a3e84:10105 (subsystem 1, rank 5): Running\n
+#+end_src
+*** send_transition.sh stop                                                  
+#+begin_src
+/projects/mu2e/tdaq/pasha_013/DAQInterface>send_transition.sh stop 
+xmlrpc http://localhost:10000/RPC2 state_change daqint stopping 'struct/{ignored_variable:i/999}'
+Result:
+
+Nil
+/projects/mu2e/tdaq/pasha_013/DAQInterface>%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:09:11 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 07:09:11 CDT 2023: STOP transition underway for run 3
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:09:11 CDT pre-events swig_artdaq.cc:88
+
+Sending stop transition to artdaq processes...
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:11 CDT pre-events swig_artdaq.cc:76
+
+ Thu Nov  2 07:10:11 CDT 2023: Timeout sending Stop transition to artdaq
+process component01 at 2451a76a3e84:10100; try checking logfile
+2451a76a3e84:/projects/mu2e/tdaq/pasha_013/DAQInterface/Logs/component01-2451a76a3e84-10100/component01-2451a76a3e84-10100-20231102065148-169561.log
+for details 
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:11 CDT pre-events swig_artdaq.cc:76
+
+ Thu Nov  2 07:10:11 CDT 2023: Timeout sending Stop transition to artdaq
+process component02 at 2451a76a3e84:10101; try checking logfile
+2451a76a3e84:/projects/mu2e/tdaq/pasha_013/DAQInterface/Logs/component02-2451a76a3e84-10101/component02-2451a76a3e84-10101-20231102065148-169562.log
+for details 
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 07:10:11 CDT pre-events swig_artdaq.cc:82
+
+Thu Nov  2 07:10:11 CDT 2023: RECOVER transition underway for run 3
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:11 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:11 CDT 2023: Attempting to cleanly wind down the BoardReaders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:12 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:12 CDT 2023: Attempting to cleanly wind down the EventBuilders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:12 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:12 CDT 2023: Attempting to cleanly wind down the DataLoggers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:12 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:12 CDT 2023: Attempting to cleanly wind down the Dispatchers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:14 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:14 CDT 2023: Attempting to cleanly wind down the RoutingManagers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:14 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:14 CDT 2023: Attempting to kill off the artdaq processes from this run if they still exist
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 07:10:15 CDT pre-events swig_artdaq.cc:82
+
+Despite receiving a termination signal, the following artdaq processes on
+2451a76a3e84 were not killed, so they'll be issued a SIGKILL: component01
+component02 EventBuilder1 EventBuilder2 DataLogger1 DataLogger1
+EventBuilder2 EventBuilder1
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:15 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 07:10:15 CDT 2023: RECOVER transition complete for run 3
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:15 CDT pre-events swig_artdaq.cc:76
+
+
+
+"An exception was thrown when attempting to send the "stop" transition to
+the artdaq processes; see messages above for more info"
+
+DAQInterface has set the DAQ back in the "Stopped" state; you may need to
+scroll above the Recover transition output to find messages which could
+help you provide any necessary adjustments.
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:15 CDT pre-events swig_artdaq.cc:76
+
+Details on how to examine the artdaq process logfiles can be found in the
+"Examining your output" section of the DAQInterface manual,
+https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
+%MSG
+%MSG-w DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:82
+
+Thu Nov  2 07:10:16 CDT 2023: RECOVER transition underway for run 3
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to cleanly wind down the BoardReaders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to cleanly wind down the EventBuilders if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to cleanly wind down the DataLoggers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to cleanly wind down the Dispatchers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to cleanly wind down the RoutingManagers if they (still) exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:16 CDT pre-events swig_artdaq.cc:88
+Thu Nov  2 07:10:16 CDT 2023: Attempting to kill off the artdaq processes from this run if they still exist
+%MSG
+%MSG-i DAQInterface_partition_0:  Early 02-Nov-2023 07:10:17 CDT pre-events swig_artdaq.cc:88
+
+Thu Nov  2 07:10:17 CDT 2023: RECOVER transition complete for run 3
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:17 CDT pre-events swig_artdaq.cc:76
+
+
+
+"Traceback (most recent call last):   File
+"/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/rc/control/daqinterface.py",
+line 4426, in runner     raise Exception( Exception: Error: at some point DAQInterface
+set an exception state "
+
+DAQInterface has set the DAQ back in the "Stopped" state; you may need to
+scroll above the Recover transition output to find messages which could
+help you provide any necessary adjustments.
+%MSG
+%MSG-e DAQInterface_partition_0:  Early 02-Nov-2023 07:10:17 CDT pre-events swig_artdaq.cc:76
+
+Details on how to examine the artdaq process logfiles can be found in the
+"Examining your output" section of the DAQInterface manual,
+https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
+%MSG
+#+end_src
+** daqinterface scripts                                                      
+*** send_transition.sh
+*** artdaq_process_info.sh
+*** status.sh
+*** TODO listdaqcomps.sh                                                     
+- the printout doesn't seem to come up on the screen, gets printed by the next command
+#+begin_src                                                                  
+/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings is only
+applicable when working with the database
+
+/projects/mu2e/tdaq/pasha_013/DAQInterface>listdaqcomps.sh
+Result:
+
+Nil
+#+end_src
+*** listconfigs.sh                                                           
+#+begin_src                                                                  
+/projects/mu2e/tdaq/pasha_013/DAQInterface>listconfigs.sh
+Result:
+
+Nil
+/projects/mu2e/tdaq/pasha_013/DAQInterface>[config_functions_local.py] components_file: /projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
+EMOE # of components found in listdaqcomps call: 31
+component01 (runs on localhost)
+component02 (runs on localhost)
+component03 (runs on localhost)
+component04 (runs on localhost)
+component05 (runs on localhost)
+component06 (runs on localhost)
+component07 (runs on localhost)
+component08 (runs on localhost)
+component09 (runs on localhost)
+component10 (runs on localhost)
+component1000 (runs on localhost)
+component1001 (runs on localhost)
+component11 (runs on localhost)
+component12 (runs on localhost)
+component13 (runs on localhost)
+component14 (runs on localhost)
+component15 (runs on localhost)
+component16 (runs on localhost)
+component17 (runs on localhost)
+component18 (runs on localhost)
+component19 (runs on localhost)
+component_buffer_mode (runs on localhost)
+component_dies_from_abort (runs on localhost)
+component_dies_from_exit (runs on localhost)
+component_dies_on_config (runs on localhost)
+component_fragment_size_blows_up (runs on localhost)
+component_hangs (runs on localhost)
+component_one_event_per_subrun (runs on localhost)
+component_subsystem_2 (runs on localhost)
+component_throws_exception (runs on localhost)
+component_throws_exception_on_config (runs on localhost)
+murat     128584  2.3  0.2 3299960 34292 pts/2   Sl   00:09   0:29 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
+murat     137942  0.0  0.0 2835944 10016 pts/2   S    00:14   0:00 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
+Appear to have duplicate processes for EventBuilder2 on 2451a76a3e84, pids: 128584 137942
+murat     128583  2.3  0.2 3295724 33788 pts/2   Sl   00:09   0:29 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
+murat     137943  0.0  0.0 2835944 9996 pts/2    S    00:14   0:00 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
+Appear to have duplicate processes for EventBuilder1 on 2451a76a3e84, pids: 128583 137943
+murat     128585  3.8  0.1 3027128 27952 pts/2   Sl   00:09   0:49 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
+murat     137923  0.0  0.0 2723632 10512 pts/2   S    00:14   0:00 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
+Appear to have duplicate processes for DataLogger1 on 2451a76a3e84, pids: 128585 137923
+murat     169563  1.0  0.2 3295724 33476 pts/2   Sl   06:51   0:11 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
+murat     184287  0.0  0.0 2835944 9996 pts/2    S    07:04   0:00 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
+Appear to have duplicate processes for EventBuilder1 on 2451a76a3e84, pids: 169563 184287
+murat     169564  1.0  0.2 3299960 33652 pts/2   Sl   06:51   0:11 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
+murat     184286  0.0  0.0 2840048 10420 pts/2   S    07:04   0:00 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
+Appear to have duplicate processes for EventBuilder2 on 2451a76a3e84, pids: 169564 184286
+murat     169565  1.7  0.1 3027128 28124 pts/2   Sl   06:51   0:19 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
+murat     184267  0.0  0.0 2723632 10504 pts/2   S    07:04   0:00 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
+Appear to have duplicate processes for DataLogger1 on 2451a76a3e84, pids: 169565 184267
+Available configurations: 
+ascii_simulator_example
+circular_buffer_mode_example
+circular_buffer_mode_withRM
+complex_subsystems
+complicated_subsystems
+config_includes
+demo
+demo_largesystem
+dune_sample_system
+eventbuilder_diskwriting
+file_closing_example
+mediumsystem_with_routing_manager
+missed_requests
+mu2e_sample_system
+multiple_art_processes_example
+multiple_dataloggers
+multiple_fragment_ids
+multiple_fragments_per_read
+pdune_swtrig_DFO
+protodune_mock_system
+request_based_dataflow_example
+routing_manager_example
+simple_subsystems
+subconfigs
+subrun_example
+See file "/tmp/listconfigs_murat.txt" for saved record of the above configurations
+
+Please note that for the time being, the optional
+max_configurations_to_list variable which may be set in
+/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings is only
+applicable when working with the database
+#+end_src

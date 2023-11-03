@@ -1,0 +1,49 @@
+#include "routing_manager_parameters.fcl"
+
+BEGIN_PROLOG
+
+
+# todo: add comment
+art_source_for_just_built_events: {
+  module_type: ArtdaqInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+
+artdaq_EB_art_source_specification: @local::art_source_for_just_built_events
+
+
+# todo: add comment
+art_source_for_serialized_root_events: {
+  module_type: ArtdaqInput
+}
+
+artdaq_DL_art_source_specification: @local::art_source_for_serialized_root_events
+
+artdaq_DISP_art_source_specification: @local::art_source_for_serialized_root_events
+
+
+# todo: add comment
+art_service_for_shared_memory: {
+  service_provider: ArtdaqSharedMemoryService
+}
+
+art_service_for_fragment_naming: {
+  service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo"
+}
+
+# todo: add comment
+art_output_module_for_sending_events_downstream: {
+  module_type: RootNetOutput
+}
+
+artdaq_EB_art_output_module_for_sending_events: @local::art_output_module_for_sending_events_downstream
+artdaq_EB_art_output_module_for_sending_events.destinations: { }
+artdaq_EB_art_output_module_for_sending_events.routing_table_config: @local::artdaq_EB_routing_table_specification
+
+artdaq_DL_art_output_module_for_sending_events: @local::art_output_module_for_sending_events_downstream
+artdaq_DL_art_output_module_for_sending_events.destinations: { }
+artdaq_DL_art_output_module_for_sending_events.broadcast_sends: true
+artdaq_DL_art_output_module_for_sending_events.nonblocking_sends: true
+
+END_PROLOG

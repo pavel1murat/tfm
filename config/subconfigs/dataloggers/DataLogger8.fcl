@@ -1,0 +1,8 @@
+#include "datalogger_daq_standard.fcl"
+#include "datalogger_art_standard.fcl"
+
+daq: @local::datalogger_daq_standard
+art: @local::datalogger_art_standard
+
+art.outputs.normalOutput.fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%#.root"
+

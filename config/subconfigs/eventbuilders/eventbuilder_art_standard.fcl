@@ -1,0 +1,41 @@
+BEGIN_PROLOG
+
+eventbuilder_art_standard: {
+   outputs: {
+      rootNetOutput: {
+         module_type: "RootNetOutput"
+         destinations: {}
+         routing_table_config: {
+            use_routing_manager: false
+         }
+      }
+   }
+   physics: {
+
+      # A common use case for an experiment is to run art filters on
+      # the events before sending them downstream
+
+      filters: {} 	    
+
+      my_output_modules: [
+         "rootNetOutput"
+      ]
+   }
+   process_name: "DAQ"
+   services: {
+      ArtdaqSharedMemoryServiceInterface: {
+         service_provider: "ArtdaqSharedMemoryService"
+      }
+      scheduler: {
+         errorOnFailureToPut: false
+      }
+      ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+   }
+   source: {
+      module_type: "ArtdaqInput"
+      resume_after_timeout: true
+      waiting_time: 2.5e6
+   }
+}
+
+END_PROLOG

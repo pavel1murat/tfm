@@ -1,0 +1,37 @@
+BEGIN_PROLOG
+
+default_data_logging_specification: {
+  rootDiskOutput: {
+    module_type: RootDAQOut
+    fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root"
+    fileProperties: { maxSubRuns: 1 maxRuns: 1  }
+    fastCloning: false
+    compressionLevel: 0
+  }
+}
+
+artdaq_DL_data_logging_specification: @local::default_data_logging_specification
+
+artdaq_EB_data_logging_specification: @local::default_data_logging_specification
+
+
+default_data_logging_path: {
+  write_data_to_disk: [ rootDiskOutput ]
+}
+
+artdaq_DL_data_logging_path: @local::default_data_logging_path
+
+artdaq_EB_data_logging_path: @local::default_data_logging_path
+
+
+##outputs.rootDiskOutput: {
+##    module_type: RootDAQOut
+##    fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root"
+##    #fileName: /tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root
+##    #fileName: /tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root  
+##    fileProperties: { maxSubRuns: 1 maxRuns: 1  }
+##    fastCloning: false
+##    compressionLevel: 501 # ZSTD
+##}
+
+END_PROLOG

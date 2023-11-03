@@ -1,0 +1,10 @@
+# This is an example of the rules an experiment can use to determine
+# when a run should end. Here, "fail" should be understood to either
+# mean that the process dies or that it responds with Error when
+# queried by DAQInterface.
+
+component.*    1.0 1   # Need at least one ToySimulator boardreader, and none of them can fail 
+EventBuilder.* 1.0 1   # Need at least one eventbuilder, and none of them can fail
+DataLogger.*   1.0 0   # If the run has any dataloggers, none of them can fail
+Dispatcher.*   0.0 0   # If the run has any dispatchers, any can fail
+RoutingManager.* 1.0 0  # If the run has any routingmanagers, none of them can fail

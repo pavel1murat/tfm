@@ -1,0 +1,6 @@
+*.pyc
+*~
+MessageFacility.fcl
+sync.ffs_*
+.editorconfig
+*.pyproj*

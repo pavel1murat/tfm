@@ -1,0 +1,34 @@
+BEGIN_PROLOG
+
+eventbuilder_daq_standard: {
+   event_builder: {
+
+      # buffer_count is the allowed number of events in the Shared Memory (incomplete + pending art)
+      buffer_count: 20
+
+      # During shutdown, shared memory will wait for expected_art_event_processing_time_us microseconds while it is checking that the art threads are done reading buffers.
+      expected_art_event_processing_time_us: 2e6
+     
+      expected_fragments_per_event: 0       # Don't touch this; DAQInterface will set it
+
+
+
+      request_address: "999.999.999.999"       # Don't touch this; DAQInterface will set it
+
+      # send_init_fragments defines whether Init Fragments are expected to be sent to art. If true, a Warning message is printed when an Init Fragment is requested but none are available.
+      send_init_fragments: false
+      send_requests: true
+
+      # use_art defines whether to start and manage art threads (Sets art_analyzer count to 0 and overwrite_mode to true when false)
+      use_art: true
+      verbose: false
+
+      sources: {}
+
+      #include "routing_for_eventbuilders.fcl"
+}
+
+   #include "metrics_for_eventbuilders.fcl"    
+}
+
+END_PROLOG

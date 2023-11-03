@@ -1,0 +1,33 @@
+BEGIN_PROLOG
+
+# for receiving routing tables from a BR-to-EB Routing Manager
+artdaq_BR_routing_table_specification: {
+  use_routing_manager: false
+}
+
+# for exchanging routing tokens with a BR-to-EB Routing Manager
+artdaq_EB_routing_token_specification: {
+  use_routing_manager: false
+}
+
+# for receiving routing tables from an EB-to-DL Routing Manager
+artdaq_EB_routing_table_specification: {
+  use_routing_manager: false
+}
+
+# for exchanging routing tokens with an EB-to-DL Routing Manager
+artdaq_DL_routing_token_specification: {
+  use_routing_manager: false
+}
+
+# for receiving routing tables from a DL-to-Disp Routing Manager
+artdaq_DL_routing_table_specification: {
+  use_routing_manager: false
+}
+
+# for exchanging routing tokens with a DL-to-Disp Routing Manager
+artdaq_DISP_routing_token_specification: {
+  use_routing_manager: false
+}
+
+END_PROLOG

@@ -1,0 +1,69 @@
+#include "standard_metrics_configs.fcl"
+#include "standard_boardreader_parameters.fcl"
+#include "routing_manager_parameters.fcl"
+
+BEGIN_PROLOG
+
+component_standard: {
+  fragment_receiver: {
+	# CommandableFragmentGenerator Configuration: 
+	fragment_ids: []
+	fragment_id: -99 # Please define only one of these
+
+	sleep_on_stop_us: 0
+
+        @table::artdaq_BR_data_request_parameters
+        @table::artdaq_BR_data_thread_parameters
+        @table::artdaq_BR_monitoring_thread_parameters
+
+        generator: ToySimulator
+	  fragment_type: TOY1
+	  fragment_id: 0
+	  board_id: 0
+	  starting_fragment_id: 0
+	  random_seed: 8250
+	  sleep_on_stop_us: 500000 
+	  nADCcounts: 40
+	  max_fragment_size_bytes: 200
+	  throttle_usecs: 100000
+	  distribution_type: 2
+	  timestamp_scale_factor: 1
+
+        destinations: { }
+
+        routing_table_config: @local::artdaq_BR_routing_table_specification
+  }
+
+  metrics: @local::BR_metrics_default
+}
+
+component01_standard: @local::component_standard
+component01_standard.fragment_receiver.fragment_type: TOY1
+component01_standard.fragment_receiver.fragment_id: 0
+component01_standard.fragment_receiver.board_id: 0
+component01_standard.fragment_receiver.starting_fragment_id: 0
+component01_standard.fragment_receiver.random_seed: 8250
+component01_standard.fragment_receiver.rollover_subrun_interval: 100
+
+component02_standard: @local::component_standard
+component02_standard.fragment_receiver.fragment_type: TOY2
+component02_standard.fragment_receiver.fragment_id: 1
+component02_standard.fragment_receiver.board_id: 1
+component02_standard.fragment_receiver.starting_fragment_id: 1
+component02_standard.fragment_receiver.random_seed: 2899
+
+component03_standard: @local::component_standard
+component03_standard.fragment_receiver.fragment_type: TOY1
+component03_standard.fragment_receiver.fragment_id: 2
+component03_standard.fragment_receiver.board_id: 2
+component03_standard.fragment_receiver.starting_fragment_id: 2
+component03_standard.fragment_receiver.random_seed: 4567
+
+component04_standard: @local::component_standard
+component04_standard.fragment_receiver.fragment_type: TOY2
+component04_standard.fragment_receiver.fragment_id: 3
+component04_standard.fragment_receiver.board_id: 3
+component04_standard.fragment_receiver.starting_fragment_id: 3
+component04_standard.fragment_receiver.random_seed: 1206
+
+END_PROLOG

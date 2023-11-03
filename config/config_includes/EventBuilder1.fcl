@@ -1,0 +1,67 @@
+#include "standard_metrics_configs.fcl"
+#include "routing_manager_parameters.fcl"
+#include "art_input_output_parameters.fcl"
+
+daq: {
+  event_builder: {
+    expected_fragments_per_event: 0  # Will be set by DAQInterface
+    use_art: true
+    buffer_count: 20
+    max_incomplete_events: 75 # Same as boardreader sync interval
+    verbose: true
+    send_requests: false
+
+    routing_token_config: @local::artdaq_EB_routing_token_specification
+
+    sources: { }
+  }
+  metrics: @local::EB_metrics_default
+} 
+
+services: {
+  ArtdaqSharedMemoryServiceInterface: @local::art_service_for_shared_memory
+  ArtdaqFragmentNamingServiceInterface: @local::art_service_for_fragment_naming
+}
+
+source: @local::artdaq_EB_art_source_specification
+
+outputs: {
+  rootNetOutput: @local::artdaq_EB_art_output_module_for_sending_events
+  #rootNetOutput.SelectEvents: { SelectEvents: [ pmod2,pmod3 ] }
+}
+
+physics: {
+  analyzers: {
+    toy1Integ: {
+      module_type: CheckIntegrity
+      raw_data_label: "daq"
+      frag_type: "TOY1"      
+    }
+    toy2Integ: {
+      module_type: CheckIntegrity
+      raw_data_label: "daq"
+      frag_type: "TOY2"
+    }
+  }
+
+  producers: { }
+
+  filters: {
+    prescaleMod2: {
+       module_type: NthEvent
+       nth: 2
+    }
+    prescaleMod3: {
+       module_type: NthEvent
+       nth: 3
+    }
+  }
+
+  pmod2: [ prescaleMod2 ]
+  pmod3: [ prescaleMod3 ]
+   
+  a1: [ toy1Integ, toy2Integ ]
+  my_output_modules: [ rootNetOutput ]
+}
+
+process_name: DAQ

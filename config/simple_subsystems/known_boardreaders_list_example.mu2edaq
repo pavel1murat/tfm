@@ -1,0 +1,21 @@
+# Name Host [Port [Subsystem]]
+component01 mu2edaq14 -1
+component02 mu2edaq11
+component03 mu2edaq13 -1 2
+component04 mu2edaq14 -1
+component05 mu2edaq11 -1
+component06 mu2edaq13 -1
+component07 mu2edaq14 -1
+component08 mu2edaq11 -1
+component09 mu2edaq13 -1
+component10 mu2edaq14 -1
+component11 mu2edaq11
+component12 mu2edaq13
+component13 mu2edaq14
+component14 mu2edaq11
+component15 mu2edaq13
+component16 mu2edaq14
+component17 mu2edaq11
+component18 mu2edaq13
+component19 mu2edaq14
+component_subsystem_2 mu2edaq11 -1 2

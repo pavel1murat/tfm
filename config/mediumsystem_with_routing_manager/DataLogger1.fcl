@@ -1,0 +1,107 @@
+services: {
+  ArtdaqSharedMemoryServiceInterface: {
+   service_provider: ArtdaqSharedMemoryService
+  }
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+}
+
+daq: {
+  aggregator: {
+    expected_fragments_per_event: 1
+    buffer_count: 20
+    event_queue_wait_time: 5
+    onmon_event_prescale: 1
+    is_data_logger: true
+    expected_art_event_processing_time_us: 2000000
+    restart_crashed_art_processes: false
+
+	routing_token_config: {
+		use_routing_manager: false
+	}
+
+	auto_suppression_enabled: false
+    tcp_receive_buffer_size: 81000
+	sources: { }
+  }
+
+  metrics: {
+    aggFile: {
+      metricPluginType: "file"
+      level: 4
+      fileName: "aggregator/agg_%UID%_metrics.log"
+         absolute_file_path: false
+      uniquify: true
+    }
+  }
+}
+
+source: {
+  module_type: ArtdaqInput
+}
+outputs: {
+  rootNetOutput: {
+    module_type: RootNetOutput
+    #SelectEvents: { SelectEvents: [ pmod2,pmod3 ] }
+    broadcast_sends: true
+    nonblocking_sends: true
+    destinations: { }
+  }
+
+  normalOutput: {
+    module_type: RootDAQOut
+    fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%#_dl${OneBasedRelativeRank}.root"
+    #fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%#_dl${OneBasedRelativeRank}_${DataDisk}_${ExtraSuffix}.root"
+    fileProperties: { maxSubRuns: 1 maxRuns: 1 maxSize: 8192000 maxEvents: 1000 }
+    fastCloning: false
+    compressionLevel: 0
+    firstLoggerRank: 5
+    fileNameSubstitutions:
+    [
+      {
+        # preferred model (no delimiting text in targetString)
+        targetString: "DataDisk"
+        replacementList:
+        [
+          { appName: "DataLogger1_art1" newString: "data0" },
+          { appName: "DataLogger2_art1" newString: "data1" }
+        ]
+      },
+      {
+        # also supported (delimiting text appears in targetString)
+        targetString: "${ExtraSuffix}"
+        replacementList:
+        [
+          { appName: "DataLogger1_art1" newString: "hello" },
+          { appName: "DataLogger2_art1" newString: "world" }
+        ]
+      }
+    ]
+  }
+
+}
+physics: {
+  analyzers: {
+
+
+   checkintegrity: {
+     module_type: CheckIntegrity
+     raw_data_label: daq
+     frag_type: TOY1
+   }
+
+  }
+
+  producers: {
+
+     BuildInfo:
+     {
+       module_type: ArtdaqDemoBuildInfo
+       instance_name: ArtdaqDemo
+     }
+  }
+
+  p2: [ BuildInfo ]
+  my_output_modules: [ normalOutput ]
+  my_mpi_output_modules: [ rootNetOutput ]
+}
+process_name: DAQDL

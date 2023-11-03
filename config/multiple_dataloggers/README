@@ -1,0 +1,31 @@
+Sample configuration: multiple_dataloggers
+18-Apr-2018, KAB
+
+Description:
+This configuration is intended to demonstrate/test the use of multiple DataLoggers.
+Its parent is the "config_includes" sample (which is intended to demonstrate a
+possible reorganization of the FHiCL configuration files), and its grandparent is
+the basic "demo" configuration.  As of 18-Apr-2018, its observable output should
+be very similar to the basic demo, modulo the splitting of the data into 4 files
+on disk and the note below about only sending events from one DL to the Dispatcher.
+
+Some notes:
+* This configuration needs an enhanced copy of the typical boot.txt file, and a
+  sample is included with this configuration.  To use this file, you should first
+  edit it to replace <yourArtdaqInstallationDir> with the correct path. Then,
+  to run this demo, you can use the following commands:
+  - 'cd <yourArtdaqDemoInstallationDir>'
+  - 'sh ./run_demo.sh --config multiple_dataloggers --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/multiple_dataloggers/boot.txt'
+
+* When using earlier versions of art, only one DataLogger can effectively send
+  events to the Dispatcher. Of course, it is possible to configure a system to do
+  otherwise, and such a system will run, but only one of the N events sent to the
+  Dispatcher will be de-serializable. This is because the different DataLogger
+  configurations (different RootDAQOut filenames) will violate the requirement
+  that upstream art configurations must be identical in order for downstream
+  processes to understand them.
+  It was hoped that this restriction would be removed in art v2.08+, but that
+  does not appear to be the case.  Given that, the configurations for Aggregators
+  2, 3, and 4 have the rootNetOutput lines (two per file) commented out.  To run
+  a test in which all four DLs send events to the Dispatcher, edit Aggregator2/3/4.fcl
+  to restore the rootNetOutput lines.

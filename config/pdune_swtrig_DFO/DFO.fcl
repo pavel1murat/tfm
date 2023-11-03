@@ -1,0 +1,72 @@
+daq: {
+  event_builder: {
+    expected_fragments_per_event: 0  # Will be set by DAQInterface
+    use_art: true
+    buffer_count: 5
+    max_incomplete_events: 75 # Same as boardreader sync interval
+    verbose: true
+    send_requests: false
+
+    sources: { }
+  }
+
+  metrics: {
+    evbFile: {
+      metricPluginType: "file"
+      level: 4
+      fileName: "eventbuilder/evb_%UID%_metrics.log"
+         absolute_file_path: false
+      uniquify: true
+    }
+  }
+} 
+
+art: {
+  services: {
+    ArtdaqSharedMemoryServiceInterface: {
+      service_provider: ArtdaqSharedMemoryService
+    }
+	ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+  }
+
+  source: {
+    module_type: ArtdaqInput
+    waiting_time: 2500000
+    resume_after_timeout: true
+  }
+
+  physics: {
+    analyzers: { }
+
+    producers: { }
+
+    filters: { }
+
+    my_output_modules: [ routingNetOutput ]
+  }
+
+  outputs: {
+    routingNetOutput: {
+      module_type: RoutingNetOutput
+      destinations: {}
+
+      allow_default_round_robin_routing: false
+
+      policy: {                                                                                                                                        
+        policy: "RoundRobin"
+        minimum_participants: -2
+      }
+
+      inhibit_publisher: {
+        publisher: "ZMQ"
+        bind_address: "tcp://*:5599"
+      }
+
+      token_receiver: {
+          routing_token_port: 35555  # default
+      }
+    }
+  }
+
+  process_name: DAQ
+}

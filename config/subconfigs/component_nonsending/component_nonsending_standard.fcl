@@ -1,0 +1,38 @@
+BEGIN_PROLOG
+
+component_nonsending_standard: {
+
+   fragment_receiver: {
+
+      generator: "ToySimulator"
+
+        generated_fragments_per_event: 0
+	fragment_ids: [ ]
+        distribution_type: 1
+
+        max_fragment_size_bytes: 200
+        nADCcounts: 0
+
+        fragment_type: "TOY1"
+
+      # sleep_on_stop_us gives the stopping thread the chance to gather the required lock
+      sleep_on_stop_us: 500000
+
+      destinations: {}
+}
+
+   #include "metrics_for_boardreaders.fcl"
+}
+
+component2001_nonsending_standard: @local::component_nonsending_standard
+component2001_nonsending_standard.fragment_receiver.board_id: 2001
+
+component2002_nonsending_standard: @local::component_nonsending_standard
+component2002_nonsending_standard.fragment_receiver.board_id: 2002
+
+component2003_nonsending_standard: @local::component_nonsending_standard
+component2003_nonsending_standard.fragment_receiver.board_id: 2003
+
+
+
+END_PROLOG

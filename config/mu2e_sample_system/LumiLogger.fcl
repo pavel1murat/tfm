@@ -1,0 +1,93 @@
+
+
+daq: {
+  aggregator: {
+    expected_events_per_bunch: 1
+    print_event_store_stats: true
+    event_queue_depth: 40
+    event_queue_wait_time: 5
+    buffer_count: 40
+    init_fragment_count: 2
+    onmon_event_prescale: 1
+    is_data_logger: true
+
+    auto_suppression_enabled: false
+
+	routing_token_config: {
+		use_routing_manager: false
+	}
+
+	sources: { }
+  }
+
+  metrics: {
+    aggFile: {
+      metricPluginType: "file"
+      level: 4
+      fileName: "aggregator/agg_%UID%_metrics.log"
+         absolute_file_path: false
+      uniquify: true
+    }
+  }
+
+}
+
+art: {
+services: {
+  ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService }
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "ArtdaqDemo" }
+}
+source: {
+  module_type: ArtdaqInput
+  register_fragment_types: false
+}
+outputs: {
+  normalOutput: {
+    module_type: RootDAQOut
+    fileName: "/tmp/lumi_r%06r_sr%02s_%to_%#.root"
+    fileProperties: { maxSubRuns: 1 maxRuns: 1  }
+    fastCloning: false
+    compressionLevel: 3
+  }
+  rootNetOutput: {
+    module_type: RootNetOutput
+    #SelectEvents: { SelectEvents: [ pmod2,pmod3 ] }
+    broadcast_sends: true
+    nonblocking_sends: true
+	destinations: { }
+  }
+
+}
+physics: {
+  analyzers: {
+
+
+   checkintegrity: {
+     module_type: CheckIntegrity
+     raw_data_label: daq
+     frag_type: TOY1
+   }
+   checkintegrity2: {
+     module_type: CheckIntegrity
+     raw_data_label: daq
+     frag_type: TOY2
+   }
+
+  }
+
+  producers: {
+
+     BuildInfo:
+     {
+       module_type: ArtdaqDemoBuildInfo
+       instance_name: ArtdaqDemo
+     }
+   }
+
+  p2: [ BuildInfo ]
+  a1: [ checkintegrity, checkintegrity2 ]
+  my_output_modules: [ normalOutput ]
+  my_mpi_output_modules: [rootNetOutput]
+}
+process_name: DAQDL
+}

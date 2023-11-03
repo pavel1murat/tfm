@@ -1,0 +1,42 @@
+physics:
+{
+  analyzers:
+  {
+    toyDump:
+    {
+      module_type: ToyDump
+      raw_data_label: daq
+      frag_type: TOY1
+      num_adcs_to_show: 10   # Obviously this should be no more than ADC counts per fragment
+      dump_to_screen: true
+      num_adcs_to_write: -1
+    }
+
+    printBuildInfo: {
+      module_type: PrintBuildInfo
+      buildinfo_module_label: BuildInfo
+      buildinfo_instance_label: ArtdaqDemo
+    }
+  }
+
+  a1: [ toyDump, printBuildInfo ]
+  e1: [ out1 ]
+}
+
+outputs:
+{
+  out1:
+  {
+    module_type: FileDumperOutput
+    wantProductFriendlyClassName: true
+    onlyIfPresent: true
+  }
+}
+
+source:
+{
+  module_type: RootInput
+  fileNames: [ "/tmp/artdaqdemo.root" ]
+}
+
+process_name: ToyDump

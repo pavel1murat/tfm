@@ -1,0 +1,86 @@
+  daq: {
+  fragment_receiver: {
+	mpi_sync_interval: 50
+
+	# CommandableFragmentGenerator Configuration: 
+fragment_ids: []
+fragment_id: -99 # Please define only one of these
+
+sleep_on_stop_us: 0
+
+    # Generated Parameters: 
+    generator: ToySimulator
+    fragment_type: TOY2
+    fragment_id: 23
+    board_id: 23
+    starting_fragment_id: 23
+    random_seed: 9738
+    sleep_on_stop_us: 500000 
+
+    # Generator-Specific Configuration:
+    
+request_mode: "Window" # Possible values are: Ignored, Single, Buffer, Window
+
+end_of_run_quiet_timeout_ms: 1000 # Time, in milliseconds, that the entire system must be quiet for check_stop to return true in request mode. 
+
+data_buffer_depth_fragments: 1000
+data_buffer_depth_mb: 1000
+
+request_port: 3001
+request_address: "227.128.12.26" # Multicast request address
+
+request_window_offset: 0 # Request message contains tzero. Window will be from tzero - offset to tz-o + width
+request_window_width: 0 # These settings correspond to "two before, two after"
+stale_request_timeout: "0xFFFFFFFF" # How long to wait before discarding request messages that are outside the available data
+request_windows_are_unique: true # If request windows are unique, avoids a copy operation, but the same data point cannot be used for two requests. If this is not anticipated, leave set to "true"
+
+separate_data_thread: true # MUST be true for requests to be applied! If requesting is not desired, but a separate readout thread is, set this to true, requests_enabled to false and request_mode to ignored.
+
+separate_monitoring_thread: false # Whether a thread should be started which periodically calls checkHWStatus_, a user-defined function which should be used to check hardware status registers and report to MetricMan.
+hardware_poll_interval_us: 0 # How often, in microseconds, checkHWStatus_() should be called. 0 to disable.
+
+nADCcounts: 8257360 # Fragment Size = 24 B + 2 * nADCcounts ~ 15.75 MB
+
+throttle_usecs: 0
+usecs_between_sends: 40000 # 25 Hz
+
+distribution_type: 3
+
+timestamp_scale_factor: 1
+
+
+	destinations: {	}
+
+	routing_table_config: {
+           ## True if using the Routing Manager
+           use_routing_manager: true
+       
+           ## Port that table updates should arrive on
+           table_update_port: 35556  # default
+       
+           ## Address that table updates should arrive on
+           table_update_address: "227.128.12.28"  # default
+       
+           ## Port that acknowledgements should be sent to
+          table_acknowledge_port: 35557  # default
+       
+           ## Host that acknowledgements should be sent to
+           routing_manager_hostname: "localhost"  # default
+       
+           ## Time to wait (in ms) for a routing table update if the table is exhausted
+           routing_timeout_ms: 1000  # default
+       
+           ## Number of times to retry getting destination from routing table
+           routing_retry_count: 5  # default
+       	}
+  }
+
+  metrics: {
+	brFile: {
+	  metricPluginType: "file"
+	  level: 3
+	  fileName: "/tmp/boardreader/br_%UID%_metrics.log"
+	  uniquify: true
+	}
+  }
+}

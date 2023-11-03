@@ -1,0 +1,33 @@
+#include "windowModeBR_standard.fcl"
+
+BEGIN_PROLOG
+
+ssp_daq_standard: @local::windowModeBR_daq_standard
+ssp_daq_standard.fragment_receiver.request_window_offset: 5
+ssp_daq_standard.fragment_receiver.request_window_width: 11
+ssp_daq_standard.fragment_receiver.data_buffer_depth_fragments: 3000
+ssp_daq_standard.fragment_receiver.generator: ToySimulator
+ssp_daq_standard.fragment_receiver.fragment_type: "TOY1"
+ssp_daq_standard.fragment_receiver.throttle_usecs: 0
+ssp_daq_standard.fragment_receiver.usecs_between_sends: 10000
+ssp_daq_standard.fragment_receiver.timestamp_scale_factor: 1
+ssp_daq_standard.fragment_receiver.nADCcounts: 300
+ssp_daq_standard.fragment_receiver.max_fragment_size_bytes: 6664 # 300 times 2 (bytes per ADC count) times 11 (request_window_width/timestamp_scale_factor) plus 1% extra
+ssp_daq_standard.fragment_receiver.distribution_type: 3
+ssp_daq_standard.fragment_receiver.random_seed: 738
+ssp_daq_standard.fragment_receiver.fragment_id: 101
+ssp_daq_standard.fragment_receiver.board_id: 1
+
+ssp01_daq_standard: @local::ssp_daq_standard
+ssp01_daq_standard.fragment_receiver.fragment_id: 201
+ssp01_daq_standard.fragment_receiver.board_id: 11
+
+ssp02_daq_standard: @local::ssp_daq_standard
+ssp02_daq_standard.fragment_receiver.fragment_id: 202
+ssp02_daq_standard.fragment_receiver.board_id: 12
+
+ssp03_daq_standard: @local::ssp_daq_standard
+ssp03_daq_standard.fragment_receiver.fragment_id: 203
+ssp03_daq_standard.fragment_receiver.board_id: 13
+
+END_PROLOG

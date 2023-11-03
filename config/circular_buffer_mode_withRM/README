@@ -1,0 +1,20 @@
+Sample configuration: circular_buffer_mode_withRM (with Routing Manager)
+Notes on 11-Jan-2019, KAB
+
+Description:
+This configuration is intended to demonstrate/test the use of a system that
+has a BoardReader that must deal with a large number of fragments per event.
+It builds on mediumsystem_with_routing_manager.
+
+Some notes:
+* This configuration benefits from enhanced copy of the typical boot.txt file, and a
+  sample is included with this configuration.  To run this demo, you can use the
+  following commands:
+  - 'cd <yourArtdaqDemoDir>'
+  - 'sh ./run_demo.sh --config circular_buffer_mode_withRM --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/circular_buffer_mode_withRM/boot.txt --comps component01 component02 component03 component04 component05 component06 component07 component08 component09 component10 component<N> --'
+  - where component<N> picks the characteristics of the BR with a large number of fragments, <N>=11..16
+
+* NOTE that the pull-mode data requests that are used in this sample make use of 
+  multicast Ethernet messages.  As such, there may
+  be firewall settings that need to be tuned.  Please see the text that describes
+  this in ../README.simple_test_configs.

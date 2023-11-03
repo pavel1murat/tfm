@@ -1,0 +1,11 @@
+metrics: {
+  brFile: {
+    fileName: "boardreader/br_%UID%_metrics.log"
+         absolute_file_path: false
+    level: 4
+    metricPluginType: "file"
+
+    # If uniquify is true, will replace "%UID%" in fileName with the PID of the current process, or append _%UID% to the end of the filename if "%UID%" is not present in fileName
+    uniquify: true
+  }
+}

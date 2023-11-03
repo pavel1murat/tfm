@@ -1,0 +1,5 @@
+routing_token_config: {
+   routing_manager_hostname: "localhost"
+   routing_token_port: 35555
+   use_routing_manager: true
+}

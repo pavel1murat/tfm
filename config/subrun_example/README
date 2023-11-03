@@ -1,0 +1,42 @@
+Sample configuration: subrun_example
+20-Apr-2018, KAB
+
+To-do: rename Aggregator files as DataLogger and Dispatcher files.
+
+Description:
+This configuration is intended to demonstrate/test the use of a system that
+internally initiates subrun rollovers based on special data fragments that
+are sent from a BoardReader/FragmentGenerator.
+Its parentage includes the multiple_dataloggers, config_includes, and demo
+configurations.  As of 20-Apr-2018, its observable output should
+be very similar to the multiple_dataloggers configuration, with the addition
+of the events being split into subrun-based data files.
+
+Some notes:
+* This configuration needs an enhanced copy of the typical boot.txt file, and a
+  sample is included with this configuration.  To use this file, you should first
+  edit it to replace <yourArtdaqInstallationDir> with the correct path. Then,
+  to run this demo, you can use the following commands:
+  - 'cd <yourArtdaqDemoInstallationDir>'
+  - 'sh ./run_demo.sh --config subrun_example --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/subrun_example/boot.txt'
+  - or 
+  - 'sh ./run_demo.sh --config subrun_example --bootfile `pwd`/artdaq-utilities-daqinterface/simple_test_config/subrun_example/boot.txt --comps component01 component02 component03 --'
+
+
+* Here is the git commit message from Eric's artdaq changes to support subrun rollovers:
+
+Allow for subrun rollover to occur.
+
+1. A designated Fragment Generator can cause a subrun rollover by
+generating an appropriate EndOfSubrunFragment
+2. System command "rollover_subrun" with parameter "boundary" indicating
+the event number that the new subrun should begin at.
+
+Code for creating EndOfSubrunFramgnets:
+artdaq::FragmentPtr endOfSubrunFrag(new
+artdaq::Fragment(static_cast(ceil(sizeof(my_rank) /
+static_cast(sizeof(artdaq::Fragment::value_type))))));
+endOfSubrunFrag->setSystemType(artdaq::Fragment::EndOfSubrunFragmentType);
+endOfSubrunFrag->setSequenceID(ev_counter());
+*endOfSubrunFrag->dataBegin() = my_rank;
+frags.emplace_back(std::move(endOfSubrunFrag));

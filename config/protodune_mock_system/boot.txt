@@ -1,0 +1,74 @@
+
+DAQ setup script: <yourArtdaqDemoDir>/setupARTDAQDEMO
+
+PMT host: localhost
+PMT port: 5400
+
+partition_number: 5
+
+# debug level can range from 0 to 3 (increasing order of verbosity)
+debug level: 1
+
+EventBuilder host: mu2edaq04
+EventBuilder port: 5235
+EventBuilder label: EventBuilder1
+
+EventBuilder host: mu2edaq05
+EventBuilder port: 5236
+EventBuilder label: EventBuilder2
+
+EventBuilder host: mu2edaq06
+EventBuilder port: 5237
+EventBuilder label: EventBuilder3
+
+EventBuilder host: mu2edaq07
+EventBuilder port: 5237
+EventBuilder label: EventBuilder3
+
+EventBuilder host: mu2edaq04
+EventBuilder port: 5238
+EventBuilder label: EventBuilder4
+
+EventBuilder host: mu2edaq05
+EventBuilder port: 5239
+EventBuilder label: EventBuilder5
+
+EventBuilder host: mu2edaq06
+EventBuilder port: 5240
+EventBuilder label: EventBuilder6
+
+EventBuilder host: mu2edaq07
+EventBuilder port: 5241
+EventBuilder label: EventBuilder7
+
+EventBuilder host: mu2edaq04
+EventBuilder port: 5242
+EventBuilder label: EventBuilder8
+
+EventBuilder host: mu2edaq05
+EventBuilder port: 5243
+EventBuilder label: EventBuilder9
+
+EventBuilder host: mu2edaq06
+EventBuilder port: 5244
+EventBuilder label: EventBuilder10
+
+EventBuilder host: mu2edaq07
+EventBuilder port: 5245
+EventBuilder label: EventBuilder11
+
+EventBuilder host: mu2edaq04
+EventBuilder port: 5246
+EventBuilder label: EventBuilder12
+
+EventBuilder host: mu2edaq05
+EventBuilder port: 5247
+EventBuilder label: EventBuilder13
+
+EventBuilder host: mu2edaq06
+EventBuilder port: 5248
+EventBuilder label: EventBuilder14
+
+EventBuilder host: mu2edaq07
+EventBuilder port: 5249
+EventBuilder label: EventBuilder15

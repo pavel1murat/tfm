@@ -1,0 +1,75 @@
+
+services: {
+  scheduler: {
+    errorOnFailureToPut: false
+  }
+  NetMonTransportServiceInterface: {
+    service_provider: NetMonTransportService
+    #broadcast_sends: true
+	destinations: { }
+	routing_table_config: {
+	    use_routing_master: false
+	}
+  }
+
+  #SimpleMemoryCheck: { }
+}
+
+daq: {
+  event_builder: {
+	expected_fragments_per_event: 3
+	max_event_size_bytes: 16777216
+	use_art: true
+	print_event_store_stats: true
+	buffer_count: 20
+	send_init_fragments: false
+	verbose: false
+	send_requests: true
+    request_port: 3001
+    request_address: "227.128.12.26"
+	
+    routing_token_config: {
+        ## True if using the Routing Master
+        use_routing_master: true
+
+        ## Port to send tokens on
+        routing_token_port: 35555  # default
+
+        ## Hostname or IP of RoutingMaster
+        routing_master_hostname: "localhost"  # default
+   }
+
+	sources: { }
+  }
+  metrics: {
+	evbFile: {
+	  metricPluginType: "file"
+	  level: 3
+	  fileName: "/tmp/eventbuilder/evb_%UID%_metrics.log"
+	  uniquify: true
+	}
+  }
+} 
+
+outputs: {
+  rootNetOutput: {
+    module_type: RootNetOutput
+  }
+}
+
+physics: {
+  analyzers: {
+
+  }
+
+  producers: {
+  }
+
+  my_output_modules: [ rootNetOutput ]
+}
+source: {
+  module_type: DemoInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+process_name: DAQ

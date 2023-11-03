@@ -1,0 +1,3 @@
+#include "component_push_standard.fcl"
+
+daq: @local::component175_push_standard
