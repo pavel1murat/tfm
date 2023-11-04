@@ -2,7 +2,7 @@
 #
 * TFM : Trigger Farm Manager : started from artdaq_daqinterface
 * ------------------------------------------------------------------------------
-* tfm: configuring and running test example                        
+* tfm: configuring and running test example                                  
 - parameters:
 |------------------------+---------------------------------+-----------|
 | flag                   | description                     | default   |
@@ -26,7 +26,7 @@
   - disable
   - stop
   - terminate
-* commands XMLRPC:                                                          
+* commands XMLRPC:                                                           
 - status      : xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint
 - listdaqcomps: xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listdaqcomps
 #+begin_src
@@ -109,25 +109,58 @@ Configuring metrics with parameter set:
 Tue Oct 31 15:10:44 CDT 2023: DAQInterface in partition 8 launched and now in "stopped" state, listening on port 18000
 %MSG
 #+end_src
-* environment                                                               
+* TFM environment variables                                                  
+- TFM_FHICL_DIRECTORY                                                        
+  the name of the directory containing the configurations you can pass 
+  on the config transition. If set to "IGNORED", this means the database is used. 
+- TFM_KNOWN_BOARDREADERS_LIST                                                
+  the name of the file containing the list of possible boardreaders to select from for a run
+- TFM_LOGDIR                                                                 
+  the directory in which the file which logs TFM output to screen is located.
+- TFM_LOGFILE                                                                
+  the name of the file which logs TFM output to screen. 
+  Default: /tmp/tfm_${USER}/tfm_partition\$TFM_PARTITION_NUMBER}.log 
+
+  Notice that since the variable name itself includes a reference to the
+  partition variable, you can't directly use it (e.g., "less $TFM_LOGFILE" 
+  wouldn't do what you'd think it would do)
+- TFM_PARTITION_NUMBER                                                       
+  The partition TFM (and ARTDAQ) will run on. Defaults to 0.
+  I guess, both should be the same
+- TFM_PROCESS_MANAGEMENT_METHOD                                              
+  The method used to control processes. 
+  Options are "direct", "pmt", and "external_run_control". 
+- TFM_PROCESS_REQUIREMENTS_LIST                                              
+  an (optional) file users can edit to control which processes are run-
+  critical, assuming the process management method is in "direct" mode
+
+  P.M. calling a file 'a list' doesn't make much sense
+- TFM_SETTINGS                                                               
+  The name of the file containing unlikely-to-be-changed-often parameters 
+  controlling TFM behavior (process timeouts, output directory 
+  for artdaq logfiles, etc.)
+- TFM_USER_SOURCEFILE                                                        
+  The name of the experiment-defined script which the generic TFM source_me 
+  script will in turn source when you set up the environment
+- ---------------------------------------------------------------------------                                                        
 #+begin_src
-DAQINTERFACE_FHICL_DIRECTORY=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
-DAQINTERFACE_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
-DAQINTERFACE_USER_SOURCEFILE=/projects/mu2e/tdaq/pasha_013/DAQInterface/source_me
-DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
-DAQINTERFACE_PARTITION_NUMBER=0
-DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
-DAQINTERFACE_PORT=10000
-DAQINTERFACE_LOGDIR=/tmp/daqinterface_murat
-ARTDAQ_DAQINTERFACE_DIR=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface
-DAQINTERFACE_SETUP_FHICLCPP=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/docs/.setup_fhiclcpp
-DAQINTERFACE_KNOWN_BOARDREADERS_LIST=/projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
-DAQINTERFACE_STANDARD_SOURCEFILE_SOURCED=true
-DAQINTERFACE_TTY=pts/2
-ARTDAQ_DAQINTERFACE_VERSION=v3_12_05
-DAQINTERFACE_SETTINGS=/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings
+TFM_FHICL_DIRECTORY=/projects/mu2e/tdaq/pasha_019/srcs/artdaq_daqinterface/simple_test_config
+TFM_LOGFILE=/tmp/daqinterface_murat/DAQInterface_partition${DAQINTERFACE_PARTITION_NUMBER}.log
+TFM_USER_SOURCEFILE=/projects/mu2e/tdaq/pasha_013/DAQInterface/source_me
+TFM_PROCESS_MANAGEMENT_METHOD=direct
+TFM_PARTITION_NUMBER=0
+TFM_USER_SOURCEFILE_ERRNO=0
+TFM_PORT=10000
+TFM_LOGDIR=/tmp/daqinterface_murat
+TFM_DIR=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface
+TFM_SETUP_FHICLCPP=/projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/docs/.setup_fhiclcpp
+TFM_KNOWN_BOARDREADERS_LIST=/projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
+TFM_STANDARD_SOURCEFILE_SOURCED=true
+TFM_TTY=pts/2
+TFM_VERSION=v3_12_05
+TFM_SETTINGS=/projects/mu2e/tdaq/pasha_019/tfm/tfm_settings
 #+end_src
-* log file naming  : daqinterface.py                                        
+* log file naming  : daqinterface.py                                         
   [[file:../../artdaq_daqinterface/rc/control/daqinterface.py::/def determine_logfilename/]]
 
   log file names defined during the boot transition 
@@ -316,7 +349,7 @@ Details on how to examine the artdaq process logfiles can be found in the
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
 %MSG
 #+end_quote
-* startup steps                                                             
+* startup steps                                                              
 *** setdaqcomps.sh component01 component02                                   
   - components are defined in the 'known_boardreaders_list'
   - which is the DAQINTERFACE_KNOWN_BOARDREADERS_LIST
@@ -573,7 +606,7 @@ Details on how to examine the artdaq process logfiles can be found in the
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output
 %MSG
 #+end_src
-* daqinterface scripts                                                      
+* TFM scripts                                                                
 *** send_transition.sh
 *** artdaq_process_info.sh
 *** status.sh
@@ -678,3 +711,6 @@ max_configurations_to_list variable which may be set in
 /projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings is only
 applicable when working with the database
 #+end_src
+* error codes                                                                
+- 140: 
+* ------------------------------------------------------------------------------

@@ -35,7 +35,8 @@ bindir product_dir bin
 
 # list all products here
 # the 4th field may be either optional or only_for_build
-product		version
+product		 version
+xmlrpc_c   v1_54_06b
 # cetmodules	v3_21_02	-	only_for_build
 end_product_list
  
