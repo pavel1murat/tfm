@@ -9,8 +9,7 @@ fi
 runnum=$1
 examine=$2
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
 
 metadata_file=$recorddir/$runnum/metadata.txt
 

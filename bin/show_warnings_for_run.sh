@@ -10,8 +10,7 @@ runnum=$1
 
 echo
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $TFM_DIR/bin/diagnostic_tools.sh
 
 metadata_file=$recorddir/$runnum/metadata.txt
 
@@ -42,7 +41,7 @@ elif [[ "$method" == "direct" ]]; then
     
     output=""
     for proclabel in $proclabels ; do
-	output=${output}"@"$( show_logfile_for_process.sh $runnum $proclabel | tail -1 )
+	      output=${output}"@"$( show_logfile_for_process.sh $runnum $proclabel | tail -1 )
     done
     output=$( echo $output | tr "@" "\n" )
 else
@@ -55,24 +54,23 @@ if [[ "$?" == "0" ]]; then
     echo
     echo $disclaimer
     echo
-
+    
     for file in $output ; do
-
-	echo
-	echo "Examining file \"$file\""
-
-	host=$( echo $file | awk 'BEGIN{FS=":"}{print $1}' )
-	filename=$( echo $file | awk 'BEGIN{FS=":"}{print $2}' )
-	
-	sedcmd="sed -r -n '{/MSG-e/{N;p};/MSG-w/{N;/Use of services.user parameter set is deprecated/d;/Fast cloning deactivated/d;/Attempted to send metric when/d;/Cannot send init fragment because I haven.t yet received one/d;/Stop Message received/d;/RCVBUF initial/d;p}}' $filename"
-
-	if [[ "$host" == "localhost" || "$host" == "$HOSTNAME" ]]; then
-	    if [[ -e $filename ]]; then 
-		( eval $sedcmd  )
-	    fi
-	else
-	    ssh $host $sedcmd
-	fi
+	      echo
+	      echo "Examining file \"$file\""
+        
+	      host=$( echo $file | awk 'BEGIN{FS=":"}{print $1}' )
+	      filename=$( echo $file | awk 'BEGIN{FS=":"}{print $2}' )
+	      
+	      sedcmd="sed -r -n '{/MSG-e/{N;p};/MSG-w/{N;/Use of services.user parameter set is deprecated/d;/Fast cloning deactivated/d;/Attempted to send metric when/d;/Cannot send init fragment because I haven.t yet received one/d;/Stop Message received/d;/RCVBUF initial/d;p}}' $filename"
+        
+	      if [[ "$host" == "localhost" || "$host" == "$HOSTNAME" ]]; then
+	          if [[ -e $filename ]]; then 
+		            ( eval $sedcmd  )
+	          fi
+	      else
+	          ssh $host $sedcmd
+	      fi
     done
     echo
     echo $disclaimer
@@ -81,5 +79,3 @@ else
     echo $output
     exit 1
 fi
-
-

@@ -24,8 +24,7 @@ if ! [[ "$seconds_to_run" =~ ^[0-9]+$ ]] ; then
     exit 1
 fi
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $TFM_DIR/bin/diagnostic_tools.sh
 
 if $nostrict ; then
     
@@ -35,7 +34,7 @@ The "--nostrict" option has been requested; will ignore the following:
 
 -Potential differences in the code used for run $runnum and the run about to be performed
 -Potential differences in the known boardreaders list used for run $runnum and the run about to be performed
--A potential difference between the host DAQInterface was on for run $runnum and the host you're currently on
+-A potential difference between the host TFM was on for run $runnum and the host you're currently on
 
 EOF
 fi
@@ -57,11 +56,9 @@ daq_setup_script=$( sed -r -n 's/^\s*DAQ\s+setup\s+script\s*:\s*(\S+).*$/\1/p' $
 
 if [[ ! -e $daq_setup_script ]]; then
     cat >&2 <<EOF 
-
 Can't find DAQ setup script "$daq_setup_script" 
 listed in boot file for run $runnum ($recorddir/$runnum/boot.txt);
 exiting...
-
 EOF
     exit 1
 fi
@@ -93,24 +90,23 @@ fi
 echo
 echo -n "Checking that the known boardreaders list pointed to by DAQINTERFACE_KNOWN_BOARDREADERS_LIST is the same as was used in run $runnum..."
 
-if [[ -n $( diff $DAQINTERFACE_KNOWN_BOARDREADERS_LIST $recorddir/$runnum/known_boardreaders_list.txt ) ]]; then
+if [[ -n $( diff $TFM_KNOWN_BOARDREADERS_LIST $recorddir/$runnum/known_boardreaders_list.txt ) ]]; then
     cat <<EOF >&2
 
 A difference was found in the contents of the file currently pointed
-to by the DAQINTERFACE_KNOWN_BOARDREADERS_LIST environment variable
-("$DAQINTERFACE_KNOWN_BOARDREADERS_LIST") and the file that was used
+to by the TFM_KNOWN_BOARDREADERS_LIST environment variable
+("$TFM_KNOWN_BOARDREADERS_LIST") and the file that was used
 during run $runnum; unless you're running this script with the
 --nostrict option, this attempt to repeat run $runnum will not
 proceed. To address this warning, you can kill the current instance of
 DAQInterface on your partition and execute the following two commands:
 
 cp $recorddir/$runnum/known_boardreaders_list.txt /tmp/known_boardreaders_list.txt
-export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=/tmp/known_boardreaders_list.txt
+export TFM_KNOWN_BOARDREADERS_LIST=/tmp/known_boardreaders_list.txt
 
-and then relaunch DAQInterface. 
+and then relaunch TF manager. 
 
 EOF
-
     deviation_found=true
 else
     echo "done."
@@ -125,7 +121,7 @@ if [[ $current_daqinterface_host != $daqinterface_host_from_run ]]; then
 	
     cat<<EOF >&2
 
-A difference was found between the host DAQInterface was run on for
+A difference was found between the host TF manager was run on for
 run $runnum ($daqinterface_host_from_run) and the host you're
 currently on ($current_daqinterface_host). Consequently, any artdaq
 process specified to run on "localhost" in either the boot file or the
@@ -144,16 +140,12 @@ fi
 
 if ! $nostrict && $deviation_found ; then
 
-cat<<EOF >&2
-
+    cat<<EOF >&2
 Exiting...
-
 EOF
-
-exit 1
-
+   
+    exit 1
 fi
-
 
 config=$( sed -r -n 's/^Config name: ([^#]+).*/\1/p' $recorddir/$runnum/metadata.txt )
 comps=$( awk '/^Component/ { printf("%s ", $NF); }' $recorddir/$runnum/metadata.txt )

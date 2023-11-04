@@ -1,4 +1,6 @@
 #!/bin/env bash
+#------------------------------------------------------------------------------
+source $TFM_DIR/bin/tfm_utils.sh
 
 if (( "$#" != 1 && "$#" != 2)) || [[ "$#" == 2 && "$2" != "--force" ]]; then
     echo "Usage: "$( basename $0 )" <partition number to mopup> (optional \"--force\")"
@@ -20,30 +22,26 @@ fi
 
 if ! $force_cleanup; then
 
-	. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
+	  if [[ -n $( listdaqinterfaces.sh | grep -E "\s+[Pp]artition\s+$partition\s+" ) ]]; then
 
-	if [[ -n $( listdaqinterfaces.sh | grep -E "\s+[Pp]artition\s+$partition\s+" ) ]]; then
+		    timeoutsecs=10
 
-		timeoutsecs=10
-
-		cat<<EOF
-
+		    cat<<EOF
 A DAQInterface on partition $partition has been found; will confirm
 that it's in the "stopped" state via a status.sh call with a
 $timeoutsecs second timeout...
 
 EOF
-
-		res=$( timeout $timeoutsecs $ARTDAQ_DAQINTERFACE_DIR/bin/status.sh | tail -1 | tr "'" " " | awk '{print $2}' )
-		
-		if [[ "$res" == "stopped" ]]; then
-
-			echo "DAQInterface in \"stopped\" state; will proceed with cleaning up the shared memory blocks"
-			
-		elif [[ "$res" == "" ]]; then
-
-			cat <<EOF >&2
-
+        
+		    res=$( timeout $timeoutsecs $TFM_DIR/bin/status.sh | tail -1 | tr "'" " " | awk '{print $2}' )
+		    
+		    if [[ "$res" == "stopped" ]]; then
+            
+			      echo "TF manager in \"stopped\" state; will proceed with cleaning up the shared memory blocks"
+			      
+		    elif [[ "$res" == "" ]]; then
+            
+			      cat <<EOF >&2
 No state discovered after calling status.sh, this may be because the
 $timeoutsecs second timeout was activated due to a communication
 issue. If you want this script to clean up the shared memory blocks
@@ -52,22 +50,19 @@ added. Exiting...
 
 EOF
 	
-    exit 1
-
-		elif [[ "$res" != "stopped" ]]; then
-			cat<<EOF >&2
-
+            exit 1
+        
+		    elif [[ "$res" != "stopped" ]]; then
+			      cat<<EOF >&2
 After executing status.sh the DAQInterface instance on partition
 $partition didn't confirm it's in the "stopped" state (result was
 "$res"). If you want this script to clean up the shared memory blocks
 regardless, execute it again with the option "--force"
 added. Exiting...
-
 EOF
-	exit 1
-		fi
-	fi
-
+	          exit 1
+		    fi
+	  fi
 fi
 
 token=$(( partition + 1))
@@ -80,11 +75,9 @@ num_owned_blocks_before=$( ipcs | grep -E "^0xee${hextoken}|^0xbb${hextoken}|^0x
 if (( $num_blocks != $num_owned_blocks_before )); then
     
     cat<<EOF >&2
-
 WARNING: it appears that only $num_owned_blocks_before of $num_blocks shared
 memory blocks associated with partition $partition are actually owned
 by the user (\$USER == "$USER"); cleanup will be incomplete...
-
 EOF
     retval=10
 fi
@@ -112,7 +105,7 @@ owner_pids=""
 
 for shmid in $( get_shmids ); do
     nattached=$( ipcs | awk '{ if ("'$shmid'" == $2) { print $6 } }' )
-
+    
     if ! [[ "$nattached" =~ ^[0-9]+$ ]]; then
 		echo "Surprising error - attempt to determine number of attached processes to shared memory block with id $shmid did not yield an integer" >&2
 		exit 1

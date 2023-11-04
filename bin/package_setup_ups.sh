@@ -20,16 +20,16 @@ if [[ -n "${!prodDirEnvVar}" ]]; then
 fi
 
 
-if [[ ! -e $DAQINTERFACE_SETTINGS ]]; then
-    echo "Unable to find DAQInterface settings file \"$DAQINTERFACE_SETTINGS\"" >&2
+if [[ ! -e $TFM_SETTINGS ]]; then
+    echo "Unable to find tfm settings file \"$TFM_SETTINGS\"" >&2
     return 30
 fi
-test -z "${ARTDAQ_DAQINTERFACE_DIR-}" && { echo "Error: artdaq_daqinterface not setup"; return 40; }
+test -z "${TFM_DIR-}" && { echo "Error: tfm not setup"; return 40; }
 
-proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $DAQINTERFACE_SETTINGS )
+proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $TFM_SETTINGS )
 export PRODUCTS
 eval "PRODUCTS=\"$proddir\"" # Expand environ variables in string
-proddir=`$ARTDAQ_DAQINTERFACE_DIR/rc/control/utilities.py upsproddir_from_productsdir "$PRODUCTS"`
+proddir=`$TFM_DIR/rc/control/utilities.py upsproddir_from_productsdir "$PRODUCTS"`
 
 if [[ -n $proddir ]]; then
 
@@ -65,42 +65,40 @@ if [[ -n $proddir ]]; then
     # already been sourced in the environment; if it HAS, then unsetup_all
     # will remove a package which the externval environment needs
 
-    if [[ -z $DAQINTERFACE_ALREADY_CALLED_PACKAGE_SETUP ]]; then
-	export DAQINTERFACE_ALREADY_CALLED_PACKAGE_SETUP=true
-	unsetup_all
+    if [[ -z $TFM_ALREADY_CALLED_PACKAGE_SETUP ]]; then
+	      export TFM_ALREADY_CALLED_PACKAGE_SETUP=true
+	      unsetup_all
     else
-	cat >&2 <<EOF
-
+	      cat >&2 <<EOF
         DEVELOPER ERROR: package_setup.sh shouldn't be sourced twice
         in the same environment as its first action is to unsetup any
         previously-set-up ups package. Please contact the 
         artdaq-developers@fnal.gov mailing list. 
-
 EOF
-	return 1
+	      return 1
     fi
 
-    num_versions_available=$( ups list -aK+ $packagename | wc -l )
+    nv=$( ups list -aK+ $packagename | wc -l )
     successful_setup=false
 
-    while (( $num_versions_available > 0 )); do
-	setup_cmd=$( ups list -aK+ $packagename | sort -n | head -$num_versions_available | tail -1 | awk '{print "setup $packagename",$2," -q ", $4}' )
-	eval $setup_cmd
+    while (( $nv > 0 )); do
+	      setup_cmd=$( ups list -aK+ $packagename | sort -n | head -$nv | tail -1 | awk '{print "setup $packagename",$2," -q ", $4}' )
+	      eval $setup_cmd
 
-	if [[ "$?" == "0" ]]; then
-	    break
-	else
-	    num_versions_available=$(( num_versions_available - 1 ))
-	fi
+	      if [[ "$?" == "0" ]]; then
+	          break
+	      else
+	          nv=$(( nv - 1 ))
+	      fi
     done
-
-    if (( num_versions_available == 0 )); then
-	echo "Unable to set up any of the versions of $packagename found in $proddir" >&2
-	return 50
+    
+    if (( nv == 0 )); then
+	      echo "Unable to set up any of the versions of $packagename found in $proddir" >&2
+	      return 50
     fi
-
+    
     return 0
 else
-    echo "Unable to find valid products/ directory from DAQInterface settings file \"$DAQINTERFACE_SETTINGS\"" >&2
+    echo "Unable to find valid products/ directory from TFM settings file \"$TFM_SETTINGS\"" >&2
     return 40
 fi

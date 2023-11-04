@@ -12,13 +12,13 @@ if [[ -z $packagename ]]; then
     return 70
 fi
 
-if [[ ! -e $DAQINTERFACE_SETTINGS ]]; then
-    echo "Unable to find DAQInterface settings file \"$DAQINTERFACE_SETTINGS\"" >&2
+if [[ ! -e $TFM_SETTINGS ]]; then
+    echo "Unable to find TFM settings file \"$TFM_SETTINGS\"" >&2
     return 30
 fi
-test -z "${ARTDAQ_DAQINTERFACE_DIR-}" && { echo "Error: artdaq_daqinterface not setup"; return 40; }
+test -z "${TFM_DIR-}" && { echo "Error: TFM not setup"; return 40; }
 
-spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $DAQINTERFACE_SETTINGS )
+spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $TFM_SETTINGS )
 
 if [[ -n $spackdir ]]; then
 
@@ -47,6 +47,6 @@ if [[ -n $spackdir ]]; then
 
     return $?
 else
-    echo "Unable to find valid products/ directory from DAQInterface settings file \"$DAQINTERFACE_SETTINGS\"" >&2
+    echo "Unable to find valid products/ directory from tfm settings file \"$TFM_SETTINGS\"" >&2
     return 40
 fi

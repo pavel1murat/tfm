@@ -78,10 +78,9 @@ else
   daq_time_in_seconds=$time_override
 fi
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $TFM_DIR/bin/diagnostic_tools.sh
 
-vcmd() {
+function vcmd() {
     if [ -n "${opt_verbose-}" ];then
         # the following attemps to format the command/options similar to when "set -x" is active
         args=
@@ -102,8 +101,6 @@ vcmd() {
 
 starttime=$(date +%s)
 
-
-
 root_output_dir="/tmp"
 
 if ! [[ $daq_time_in_seconds =~ ^[0-9-]+$ ]]; then
@@ -118,15 +115,12 @@ end_running_requested=false
 
 function end_running() {
 
-cat<<EOF
-
+    cat<<EOF
 Received request to end running; if you're in the middle of a
 transition the transition will complete before wind-down begins.
-
 EOF
 
-end_running_requested=true
-
+    end_running_requested=true
 }
 
 trap "end_running" SIGHUP SIGINT SIGTERM
@@ -139,175 +133,175 @@ if ! [[ -e $daqutils_script ]]; then
 else   
      . $daqutils_script
 fi   
-
-
+#------------------------------------------------------------------------------
 # And now define the main body of code (this function is not actually
 # called until the very bottom of the script, in order to be able to
 # use functions in the body of the main() function that aren't defined
 # until lower in the script)
-
+#------------------------------------------------------------------------------
 function main() {
 
     res=$( ps aux | grep -E "python.*daqinterface.py" | grep -v grep )
 
     if [[ -z $res ]]; then
-	echo 
-	echo "DAQInterface does not appear to be running, will exit.." >&2
-	exit 40
+	      echo 
+	      echo "DAQInterface does not appear to be running, will exit.." >&2
+	      exit 40
     fi
-
+    
     echo -n "Checking that the DAQ is in the \"stopped\" state..."
-
+    
     state_true="0"
     check_for_state "stopped" state_true
-
+    
     if [[ "$state_true" == "1" ]]; then
-	echo "success"
+	      echo "success"
     else
-	echo
-	echo "DAQ does not appear to be in the \"stopped\" state, exiting..."
-	exit 50
+	      echo
+	      echo "DAQ does not appear to be in the \"stopped\" state, exiting..."
+	      exit 50
     fi
-
+    
     vcmd $scriptdir/setdaqcomps.sh $daqcomps
-
+    
     if [[ "$?" != "0" ]]; then
-	echo "A problem occurred when calling setdaqcomps.sh; exiting..."
-	exit 300
+	      echo "A problem occurred when calling setdaqcomps.sh; exiting..."
+	      exit 300
     fi
-
+    
     vcmd $scriptdir/send_transition.sh boot $daqintconfig
-
+    
     wait_until_no_longer booting
-
+    
     state_true="0"
     check_for_state "booted" state_true
-
+    
     if [[ "$state_true" != "1" ]]; then
-	echo "DAQ failed to enter booted state; exiting $0"
-	exit 51
+	      echo "DAQ failed to enter booted state; exiting $0"
+	      exit 51
     fi
-
+    
     sleep 2
-
+    
     if $end_running_requested ; then
-	vcmd $scriptdir/send_transition.sh terminate
-	exit 0
+	      vcmd $scriptdir/send_transition.sh terminate
+	      exit 0
     fi
-
+    
     #read -n 1 -s -r -p "Press any key to configure"
     # Initialize the DAQ
-
+    
     config_cntr=0
     
     while (( $config_cntr < 1 )); do 
+        
+	      config_cntr=$(( config_cntr + 1 ))
+        vcmd $scriptdir/send_transition.sh config $config
+        
+        wait_until_no_longer configuring
 
-	config_cntr=$(( config_cntr + 1 ))
-    vcmd $scriptdir/send_transition.sh config $config
+        state_true="0"
+        check_for_state "ready" state_true
+        
+        if [[ "$state_true" != "1" ]]; then
+	          echo "DAQ failed to enter ready state; exiting $0"
+	          exit 60
+        fi
 
-    wait_until_no_longer configuring
-
-    state_true="0"
-    check_for_state "ready" state_true
-
-    if [[ "$state_true" != "1" ]]; then
-	echo "DAQ failed to enter ready state; exiting $0"
-	exit 60
-    fi
-
-    if $end_running_requested ; then
-	vcmd $scriptdir/send_transition.sh terminate
-	exit 0
-    fi
-
+        if $end_running_requested ; then
+	          vcmd $scriptdir/send_transition.sh terminate
+	          exit 0
+        fi
     done
-
+    
     # Start the DAQ, and run it for the requested amount of time
-	counter=0
-	while [ $counter -lt $runs ]; do
-		#read -n 1 -s -r -p "Press any key to start"
-		vcmd $scriptdir/send_transition.sh start
-
-		wait_until_no_longer starting
-
-		state_true="0"
-		check_for_state "running" state_true
-
-		if [[ "$state_true" != "1" ]]; then
-			echo "DAQ failed to enter running state; exiting $0"
-			exit 70
-		fi
-
+	  counter=0
+	  while [ $counter -lt $runs ]; do
+		    #read -n 1 -s -r -p "Press any key to start"
+		    vcmd $scriptdir/send_transition.sh start
+        
+		    wait_until_no_longer starting
+        
+		    state_true="0"
+		    check_for_state "running" state_true
+        
+		    if [[ "$state_true" != "1" ]]; then
+			      echo "DAQ failed to enter running state; exiting $0"
+			      exit 70
+		    fi
+        
+        
+		    if [[ $daq_time_in_seconds > 0 ]]; then
+			      echo "Will acquire data for $daq_time_in_seconds seconds"
+			      sleep $daq_time_in_seconds
+		    else
+			      echo "Will acquire data until Ctrl-c is hit"
+			      sleep 10000000000
+		    fi
+        
+		    # Stop the DAQ
+        
+		    state_true="0"
+		    check_for_state "running" state_true
+        
+		    if [[ "$state_true" == "1" ]]; then
+			      #read -n 1 -s -r -p "Press any key to stop"
+			      vcmd $scriptdir/send_transition.sh stop
+			      wait_until_no_longer stopping
+		    fi
+        
+		    counter=$(($counter + 1))
+	  done
     
-		if [[ $daq_time_in_seconds > 0 ]]; then
-			echo "Will acquire data for $daq_time_in_seconds seconds"
-			sleep $daq_time_in_seconds
-		else
-			echo "Will acquire data until Ctrl-c is hit"
-			sleep 10000000000
-		fi
-
-		# Stop the DAQ
-    
-		state_true="0"
-		check_for_state "running" state_true
-
-		if [[ "$state_true" == "1" ]]; then
-			#read -n 1 -s -r -p "Press any key to stop"
-			vcmd $scriptdir/send_transition.sh stop
-			wait_until_no_longer stopping
-		fi
-
-		counter=$(($counter + 1))
-	done
-
     sleep 1
-
+    
     state_true="0"
     check_for_state "ready" state_true
-
+    
     if [[ "$state_true" != "1" ]]; then
-	echo "DAQ unexpectedly not in ready state; exiting "$( basename $0)
-	exit 80
+	      echo "DAQ unexpectedly not in ready state; exiting "$( basename $0)
+	      exit 80
     fi
-
+    
     #read -n 1 -s -r -p "Press any key to shutdown"
     vcmd $scriptdir/send_transition.sh terminate
-
+    
     wait_until_no_longer terminating
-
+    
     state_true="0"
     check_for_state "stopped" state_true
-
+    
     if [[ "$state_true" != "1" ]]; then
-	echo "DAQ unexpectedly not in stopped state;  exiting "$( basename $0)
-	exit 90
+	      echo "DAQ unexpectedly not in stopped state;  exiting "$( basename $0)
+	      exit 90
     fi
 }
 
+#------------------------------------------------------------------------------
 function check_output_file() {
 
     local runtoken=$( awk 'BEGIN{ printf("r%06d", '$runnum')}' )
     
     local glob=$root_output_dir/*${runtoken}*.root
     local output_file=$( ls -tr1 $glob | tail -1 )    
-
+    
     if [[ -n $output_file ]]; then
-	ls -l $output_file
-	return
+	      ls -l $output_file
+	      return
     else
-	echo "No file in $root_output_dir matches glob $glob" >&2
-	exit 100
+	      echo "No file in $root_output_dir matches glob $glob" >&2
+	      exit 100
     fi
 }
 
+#------------------------------------------------------------------------------
 function check_run_records() {
-
+    
     if [[ ! -d $recorddir/$runnum ]]; then
-	echo "Unable to find expected run records subdirectory $recorddir/$runnum" >&2
-	exit 200
+	      echo "Unable to find expected run records subdirectory $recorddir/$runnum" >&2
+	      exit 200
     fi
-
+    
     echo "Contents of $recorddir/$runnum :"
     ls -ltr $recorddir/$runnum 
 }

@@ -23,7 +23,7 @@ boardreader_aborts_test=true
 boardreader_exits_test=true
 boardreader_throws_test=true
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
+source $TFM_DIR/bin/tfm_utils.sh
 
 if [[ ! -e bin/just_do_it.sh ]]; then
     echo "Can't find bin/just_do_it.sh; are you in the base directory of artdaq-utilities-daqinterface?" >&2

@@ -15,10 +15,7 @@ fi
 
 nruns=$1
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
-
-echo
+source $TFM_DIR/bin/diagnostic_tools.sh
 
 for dir in $( ls -tr1 $recorddir | tail -$nruns  ); do
     

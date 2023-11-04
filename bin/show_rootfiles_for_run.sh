@@ -13,8 +13,7 @@ if [[ -n $2 ]]; then
     nevents=$2
 fi
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $TFM_DIR/bin/diagnostic_tools.sh
 
 
 if [[ "$runnum" =~ ^[0-9]+$ ]]; then

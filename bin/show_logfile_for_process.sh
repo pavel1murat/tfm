@@ -10,8 +10,7 @@ runnum=$1
 proclabel=$2
 examine=$3
 
-. $ARTDAQ_DAQINTERFACE_DIR/bin/exit_if_bad_environment.sh
-. $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
 
 if [[ "$runnum" =~ ^[0-9]+$ ]]; then
     echo "Run number is $runnum"
