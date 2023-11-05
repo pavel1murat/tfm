@@ -2,34 +2,36 @@
 * running the TFM test example 
 * ------------------------------------------------------------------------------
 ** 1) initialize the TFM environment                                         
+- standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
 #+begin_src *command output*                                                 
-mkdir DAQInterface
-cd DAQInterface
-cp $ARTDAQ_DAQINTERFACE_DIR/docs/user_sourcefile_example         source_me
-cp $ARTDAQ_DAQINTERFACE_DIR/docs/settings_example                daqinterface_settings
-cp $ARTDAQ_DAQINTERFACE_DIR/docs/known_boardreaders_list_example known_boardreaders_list
-cp $ARTDAQ_DAQINTERFACE_DIR/docs/boot.txt .
+cd $MRB_TOP
+mkdir tfm_test
+export TFM_TEST_DIR=$MRB_TOP/tfm_test
+cd tfm_test
+cp $TFM_DIR/examples/user_sourcefile_example         $TFM_TEST_DIR/source_me
+cp $TFM_DIR/examples/settings_example                $TFM_TEST_DIR/settings
+cp $TFM_DIR/examples/known_boardreaders_list_example $TFM_TEST_DIR/known_boardreaders_list
+cp $TFM_DIR/examples/boot.txt                        $TFM_TEST_DIR/.
 #------------------------------------------------------------------------------
 # 1) edit daqinterface_settings
 # 2) edit boot.txt to define the setup script
 # 3) define environment variables
 #------------------------------------------------------------------------------
-export                DAQINTERFACE_SETTINGS=$PWD/daqinterface_settings
-export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=$PWD/known_boardreaders_list
-export         DAQINTERFACE_USER_SOURCEFILE=$PWD/source_me
-export   DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
-export        DAQINTERFACE_PARTITION_NUMBER=8
-export                 DAQINTERFACE_LOGFILE=daqinterface.log
-export                                 USER=murat            # need in a docker container
+export                TFM_SETTINGS=$TFM_TEST_DIR/daqinterface_settings
+export TFM_KNOWN_BOARDREADERS_LIST=$TFM_TEST_DIR/known_boardreaders_list
+export         TFM_USER_SOURCEFILE=$TFM_TEST_DIR/source_me
+export   TFM_USER_SOURCEFILE_ERRNO=0
+export        TFM_PARTITION_NUMBER=8
+export                        USER=murat            # need in a docker container
 #------------------------------------------------------------------------------
-# set DAQINTERFACE_PROCESS_MANAGEMENT_METHOD to one of the following:
-# "direct", "external_run_control", "pmt"
 # - use the partition number consistently in ARTDAQ_LOG_FHICL
 #------------------------------------------------------------------------------
-export DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
+export          TFM_PROCESS_MANAGEMENT_METHOD=direct
 export                       ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition8_murat.fcl
-# source 'global' source_me (it also sources the local source_me)
-source $ARTDAQ_DAQINTERFACE_DIR/source_me
+#------------------------------------------------------------------------------
+# source $TFM_DIR/source_me (which sources the user source_me, if that one is defined)
+#------------------------------------------------------------------------------
+source $TFM_DIR/source_me
 #+end_src
 1.1) make sure that the tfm_test/settings file has everything needed defined
 1.2) edit tfm_test/boot.txt to define the DAQ setup script 
