@@ -1,11 +1,16 @@
 #+startup:fold
 #
 * TFM : the Trigger Farm Manager
+- started from artdaq_daqinterface/fc/control/DAQInterface.py
+- goals : 
+  - reduce number of transitions
+  - get rid of symlinks in the logfile naming
+  - make sure that the server can provide any diagnostics information needed for 
+    troubleshooting the farm performance
+  - integrate with MIDAS as a frontend client
 * ------------------------------------------------------------------------------
 * [[file:software_setup.org][software setup]]
 * farm_manager.py: server managing the trigger farm                          
-- started from artdaq_daqinterface/fc/control/DAQInterface.py
-- needed to change the interface and get rid of symlinks in the logfile naming
 - parameters:
 |------------------------+---------------------------------+-----------|
 | flag                   | description                     | default   |
