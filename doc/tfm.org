@@ -2,6 +2,7 @@
 #
 * TFM : the Trigger Farm Manager
 * ------------------------------------------------------------------------------
+* [[file:software_setup.org][software setup]]
 * farm_manager.py: server managing the trigger farm                          
 - started from artdaq_daqinterface/fc/control/DAQInterface.py
 - needed to change the interface and get rid of symlinks in the logfile naming

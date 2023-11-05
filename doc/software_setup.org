@@ -1,0 +1,15 @@
+#+startup:fold
+
+* Software setup
+- need artdaq_demo and artdaq_demo_core - the test example configuration assumes saving hash from artdaq_demo
+#+begin_src 
+git clone https://github.com/pavel1murat/tfm 
+git clone https://github.com/pavel1murat/artdaq_demo
+git clone https://github.com/pavel1murat/artdaq_core_demo
+mrb uc
+mrbsetenv
+mrb b
+#+end_src
+* ------------------------------------------------------------------------------
+* back to [[file:tfm.org]]
+* ------------------------------------------------------------------------------
