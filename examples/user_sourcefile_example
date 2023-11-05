@@ -1,18 +1,14 @@
+#!/usr/bin/bash 
 
-export DAQINTERFACE_SETTINGS=$ARTDAQ_DAQINTERFACE_DIR/docs/settings_example
-export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=$ARTDAQ_DAQINTERFACE_DIR/docs/known_boardreaders_list_example
-export DAQINTERFACE_FHICL_DIRECTORY=$ARTDAQ_DAQINTERFACE_DIR/simple_test_config
+export                TFM_SETTINGS=$TFM_DIR/examples/settings_example
+export TFM_KNOWN_BOARDREADERS_LIST=$TFM_DIR/examples/known_boardreaders_list_example
+export         TFM_FHICL_DIRECTORY=$TFM_DIR/config
 
-if [[ "$DAQINTERFACE_FHICL_DIRECTORY" == "IGNORED" ]]; then
- 
-   echo "Put code here which sets up the database environment"
- 
+if [[ "$TFM_FHICL_DIRECTORY" == "IGNORED" ]]; then
+    echo "Put code here which sets up the database environment"
 fi
 
-# What the syntax below means is that DAQINTERFACE_LOGDIR only gets set if it's not already set
+if [ -z $TFM_LOGDIR ] ; then export TFM_LOGDIR=/tmp/daqinterface_$USER ; fi
 
-printenv DAQINTERFACE_LOGDIR >/dev/null \
-||export DAQINTERFACE_LOGDIR=/tmp/daqinterface_${USER}
-
-export DAQINTERFACE_USER_SOURCEFILE_ERRNO=0
-export DAQINTERFACE_PARTITION_NUMBER=0
+export TFM_USER_SOURCEFILE_ERRNO=0
+export TFM_PARTITION_NUMBER=0

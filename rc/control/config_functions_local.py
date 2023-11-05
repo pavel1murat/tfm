@@ -2,7 +2,7 @@
 import os
 import sys
 
-sys.path.append(os.environ["ARTDAQ_DAQINTERFACE_DIR"])
+sys.path.append(os.environ["TFM_DIR"])
 
 import re
 import traceback
@@ -15,7 +15,7 @@ from rc.control.utilities import make_paragraph
 
 
 def get_config_parentdir():
-    parentdir = os.environ["DAQINTERFACE_FHICL_DIRECTORY"]
+    parentdir = os.environ["TFM_FHICL_DIRECTORY"]
     assert os.path.exists(
         parentdir
     ), "Expected configuration directory %s doesn't appear to exist" % (parentdir)
@@ -327,7 +327,7 @@ def get_boot_info_base(self, boot_filename):
 
 def listdaqcomps_base(self):
 
-    components_file = os.environ["DAQINTERFACE_KNOWN_BOARDREADERS_LIST"]
+    components_file = os.environ["TFM_KNOWN_BOARDREADERS_LIST"]
 
     print("[config_functions_local.py] components_file:",components_file)
     try:
@@ -378,7 +378,7 @@ def listconfigs_base(self):
     print(
         make_paragraph(
             "Please note that for the time being, the optional max_configurations_to_list variable which may be set in %s is only applicable when working with the database"
-            % os.environ["DAQINTERFACE_SETTINGS"]
+            % os.environ["TFM_SETTINGS"]
         )
     )
     print

@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import sys
 
-sys.path.append(os.environ["ARTDAQ_DAQINTERFACE_DIR"])
+sys.path.append(os.environ["TFM_DIR"])
 
 import string
 import re
@@ -21,8 +21,7 @@ from rc.control.utilities import zero_out_last_subnet
 def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     # Determine that the artdaq package used is new enough to be
-    # compatible with the assumptions made by DAQInterface about the
-    # interface artdaq offers
+    # compatible with the assumptions about its interface
 
     # JCF, Nov-20-2018: update this when ready to require subsystem-compatible
     # artdaq
@@ -129,7 +128,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     raise Exception(
                         make_paragraph(
                             'Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; this is needed since "advanced_memory_usage" is set to true in the settings file, %s'
-                            % (procinfo.label, os.environ["DAQINTERFACE_SETTINGS"])
+                            % (procinfo.label, os.environ["TFM_SETTINGS"])
                         )
                     )
             else:
@@ -144,8 +143,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             if "max_event_size_bytes" in procinfo.fhicl_used:
                 raise Exception(
                     make_paragraph(
-                        'max_event_size_bytes is found in the FHiCL document for %s; this parameter must not appear in FHiCL documents when "advanced_memory_usage" is set to true in the settings file %s. This is because DAQInterface calculates and then adds this parameter during bookkeeping.'
-                        % (procinfo.label, os.environ["DAQINTERFACE_SETTINGS"])
+                        'max_event_size_bytes is found in the FHiCL document for %s; this parameter must not appear in FHiCL documents when "advanced_memory_usage" is set to true in the settings file %s. This is because TFM calculates and then adds this parameter during bookkeeping.'
+                        % (procinfo.label, os.environ["TFM_SETTINGS"])
                     )
                 )
 
@@ -311,7 +310,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
 
                     assert res, make_paragraph(
-                        "artdaq's FHiCL requirements have changed since this code was written (DAQInterface expects a parameter called 'buffer_count' in %s, but this doesn't appear to exist -> DAQInterface code needs to be changed to accommodate this)"
+                        "artdaq's FHiCL requirements have changed since this code was written (TFM expects a parameter called 'buffer_count' in %s, but this doesn't appear to exist -> TFM code needs to be changed to accommodate this)"
                         % (self.procinfos[i_proc].label)
                     )
 
@@ -834,7 +833,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         ) != len(set([p.target for p in router_process_for_subsystem_as_list])):
             raise Exception(
                 make_paragraph(
-                    "DAQInterface has found more than one router process (RoutingManager, DFO, etc.) associated with subsystem %s requested in the boot file %s with the same target; this isn't currently supported"
+                    "TFM has found more than one router process (RoutingManager, DFO, etc.) associated with subsystem %s requested in the boot file %s with the same target; this isn't currently supported"
                     % (subsystem_id, self.boot_filename)
                 )
             )
@@ -957,9 +956,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     self.print_log(
                         "w",
                         make_paragraph(
-                            'Warning: disable_private_network_bookkeeping isn\'t set to true in the DAQInterface settings file "%s" -- it defaults to false if unset -- but no private network was found visible to all the processes involved in data requests for subsystem %s: %s'
+                            'Warning: disable_private_network_bookkeeping isn\'t set to true in the TFM settings file "%s" -- it defaults to false if unset -- but no private network was found visible to all the processes involved in data requests for subsystem %s: %s'
                             % (
-                                os.environ["DAQINTERFACE_SETTINGS"],
+                                os.environ["TFM_SETTINGS"],
                                 str(subsystem_id),
                                 ", ".join(processes_involved_in_requests),
                             )

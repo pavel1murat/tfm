@@ -325,8 +325,8 @@ def is_msgviewer_running():
     ).stdout.readlines():
         if (
             "msgviewer" in line
-            and "DAQINTERFACE_TTY" in os.environ
-            and os.environ["DAQINTERFACE_TTY"] in line
+            and "TFM_TTY" in os.environ
+            and os.environ["TFM_TTY"] in line
         ):
             return True
 
@@ -554,7 +554,7 @@ def get_commit_hash(gitrepo):
         raise Exception(
             make_paragraph(
                 'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list found in %s'
-                % (gitrepo, os.environ["DAQINTERFACE_SETTINGS"])
+                % (gitrepo, os.environ["TFM_SETTINGS"])
             )
         )
 
@@ -846,9 +846,9 @@ def fhiclize_document(filename):
 
 
 def get_messagefacility_template_filename():
-    if "DAQINTERFACE_MESSAGEFACILITY_FHICL" in os.environ.keys():
+    if "TFM_MESSAGEFACILITY_FHICL" in os.environ.keys():
         messagefacility_fhicl_filename = os.environ[
-            "DAQINTERFACE_MESSAGEFACILITY_FHICL"
+            "TFM_MESSAGEFACILITY_FHICL"
         ]
     else:
         messagefacility_fhicl_filename = os.getcwd() + "/MessageFacility.fcl"
@@ -876,10 +876,10 @@ def obtain_messagefacility_fhicl(have_artdaq_mfextensions):
 # contents below to change the behavior of how/where MessageFacility
 # messages are sent, though keep in mind that this FHiCL will be
 # nested inside a table. Or you can use a different file by setting
-# the environment variable DAQINTERFACE_MESSAGEFACILITY_FHICL to the
+# the environment variable TFM_MESSAGEFACILITY_FHICL to the
 # name of the other file.
 
-udp : { type : "UDP" threshold : "DEBUG"  port : DAQINTERFACE_WILL_OVERWRITE_THIS_WITH_AN_INTEGER_VALUE host : "%s" }
+udp : { type : "UDP" threshold : "DEBUG"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_INTEGER_VALUE host : "%s" }
 
 """ % (
         messagefacility_fhicl_filename,
@@ -894,7 +894,7 @@ udp : { type : "UDP" threshold : "DEBUG"  port : DAQINTERFACE_WILL_OVERWRITE_THI
 
     processed_messagefacility_fhicl_filename = (
         "/tmp/messagefacility_partition%s_%s.fcl"
-        % (os.environ["DAQINTERFACE_PARTITION_NUMBER"], os.environ["USER"])
+        % (os.environ["TFM_PARTITION_NUMBER"], os.environ["USER"])
     )
 
     with open(messagefacility_fhicl_filename) as inf_mf:
@@ -910,7 +910,7 @@ udp : { type : "UDP" threshold : "DEBUG"  port : DAQINTERFACE_WILL_OVERWRITE_THI
                             "port: %d"
                             % (
                                 10005
-                                + int(os.environ["DAQINTERFACE_PARTITION_NUMBER"])
+                                + int(os.environ["TFM_PARTITION_NUMBER"])
                                 * 1000
                             ),
                             line,
@@ -1155,11 +1155,9 @@ def main():
 
     if table_range_test:
 
-        assert (
-            "ARTDAQ_DAQINTERFACE_DIR" in os.environ
-        ), "Need to have DAQInterface environment sourced for table_range test"
+        assert ("TFM_DIR" in os.environ), "Need to have TFM environment sourced for table_range test"
         filename = "%s/simple_test_config/pdune_swtrig_noRM/DFO.fcl" % (
-            os.environ["ARTDAQ_DAQINTERFACE_DIR"]
+            os.environ["TFM_DIR"]
         )
         print("From file %s:" % (filename))
 
@@ -1256,7 +1254,7 @@ def get_setup_commands(productsdir=None, spackdir=None, log_file=None):
 def kill_tail_f():
     tail_pids = get_pids(
         "%s.*tail -f %s"
-        % (os.environ["DAQINTERFACE_TTY"], os.environ["DAQINTERFACE_LOGFILE"])
+        % (os.environ["TFM_TTY"], os.environ["TFM_LOGFILE"])
     )
     if len(tail_pids) > 0:
         status = Popen("kill %s" % (" ".join(tail_pids)), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()

@@ -30,78 +30,64 @@ may have problems with sending output to a MessageViewer instance
 EOF
 fi
 
-if [ -z $TFM_BASE_PORT           ] ; then export TFM_BASE_PORT=10000          ; fi
-if [ -z $TFM_PORTS_PER_PARTITION ] ; then export TFM_PORTS_PER_PARTITION=1000 ; fi
+if [[ -z $ARTDAQ_BASE_PORT           ]]; then export           ARTDAQ_BASE_PORT=10000 ; fi
+if [[ -z $ARTDAQ_PORTS_PER_PARTITION ]]; then export ARTDAQ_PORTS_PER_PARTITION=1000  ; fi
+
+export           TFM_BASE_PORT=$ARTDAQ_BASE_PORT
+export TFM_PORTS_PER_PARTITION=$ARTDAQ_PORTS_PER_PARTITION
 
 export PATH=$TFM_DIR/bin:$PATH
 
-if [[ -n $TFM_USER_SOURCEFILE ]]; then
-
-   if [[ "$TFM_USER_SOURCEFILE" != "IGNORED" && -e $TFM_USER_SOURCEFILE ]]; then
-       user_sourcefile_owner=$( ls -l $TFM_USER_SOURCEFILE | awk '{print $3}' )
-
-       if [[ "$user_sourcefile_owner" == "$USER" ]]; then
-       	  . $TFM_USER_SOURCEFILE
-       else
-
-cat<<heredoc
-
-	   ERROR: Current user "$USER" is not the same as the owner of
-           ${TFM_USER_SOURCEFILE}; source of
-           $TFM_USER_SOURCEFILE will not take place
-
+if [ -n $TFM_USER_SOURCEFILE ]; then
+    if [[ "$TFM_USER_SOURCEFILE" != "IGNORED" && -e $TFM_USER_SOURCEFILE ]]; then
+        user_sourcefile_owner=$( ls -l $TFM_USER_SOURCEFILE | awk '{print $3}' )
+       
+        if [[ "$user_sourcefile_owner" == "$USER" ]]; then
+       	    source $TFM_USER_SOURCEFILE
+            export TFM_USER_SOURCEFILE_ERRNO=$?
+        else cat<<heredoc
+ERROR: Current user "$USER" is not the same as the owner of
+${TFM_USER_SOURCEFILE}; source of
+$TFM_USER_SOURCEFILE will not take place
 heredoc
-
-           cleanup
-           return 1
-
-       fi
-   elif [[ "$TFM_USER_SOURCEFILE" != "IGNORED" && ! -e $TFM_USER_SOURCEFILE ]]; then
-
-cat<<heredoc
-
-	ERROR: TFM_USER_SOURCEFILE environment variable has been
-	set, but the would-be sourcefile it refers to,
-	"$TFM_USER_SOURCEFILE", doesn't exist. 
-
-heredoc
-
-        cleanup
-	return 1
-   else   # $TFM_USER_SOURCEFILE == IGNORED, so we don't source a user-defined script
-
-cat<<EOF
-
-       ERROR: TFM_USER_SOURCEFILE environment variable has
-       been set to "IGNORED"; while previously this meant that this
-       script would not source a user-defined script referred to by
-       the TFM_USER_SOURCEFILE variable, this option is now
-       deprecated
-
+            cleanup
+            return 1
+        fi
+    elif [[ "$TFM_USER_SOURCEFILE" != "IGNORED" && ! -e $TFM_USER_SOURCEFILE ]]; then
+        
+        cat<<EOF
+ERROR: TFM_USER_SOURCEFILE environment variable has been
+set, but the would-be sourcefile it refers to,
+"$TFM_USER_SOURCEFILE", doesn't exist. 
 EOF
-         cleanup
-	 return 1
-   fi
-
-else
-
-cat<<heredoc
-
-	ERROR: the TFM_USER_SOURCEFILE environment variable
-	must be set, either to the name of the user-defined sourcefile
-	you wish to have sourced, or to "IGNORED" if you don't want to
-	source a user-defined sourcefile
-
-heredoc
-
-   cleanup
-   return 1
+        cleanup
+        return 1
+    else   
+#------------------------------------------------------------------------------
+# $TFM_USER_SOURCEFILE == IGNORED, so we don't source a user-defined script
+#------------------------------------------------------------------------------
+        cat<<EOF
+ERROR: TFM_USER_SOURCEFILE environment variable has
+been set to "IGNORED"; while previously this meant that this
+script would not source a user-defined script referred to by
+the TFM_USER_SOURCEFILE variable, this option is now
+deprecated
+EOF
+        cleanup
+	      return 1
+    fi
+   
+else cat<<EOF
+ERROR: the TFM_USER_SOURCEFILE environment variable
+must be set, either to the name of the user-defined sourcefile
+you wish to have sourced, or to "IGNORED" if you don't want to
+source a user-defined sourcefile
+EOF
+    cleanup
+    return 1
 fi
 
-if [[ -z $TFM_USER_SOURCEFILE_ERRNO ]] ; then
-    
-cat<<heredoc
-
+if [[ -z $TFM_USER_SOURCEFILE_ERRNO ]] ; then cat<<heredoc
       ERROR: the TFM_USER_SOURCEFILE_ERRNO environment
       variable doesn't exist; this needs to be set in the user script
       referred to by the TFM_USER_SOURCEFILE environment
@@ -109,111 +95,80 @@ cat<<heredoc
       $TFM_USER_SOURCEFILE implies success, anything else
       implies a failure and this script will consequently *not* set up
       the DAQInterface environment.
-
 heredoc
 
     cleanup
     return 1
-
-elif [[ "$TFM_USER_SOURCEFILE_ERRNO" != "0" ]] ; then
-
-cat<<heredoc
-
+elif [[ "$TFM_USER_SOURCEFILE_ERRNO" != "0" ]] ; then cat<<EOF
       ERROR: the TFM_USER_SOURCEFILE_ERRNO environment
       variable was set by the user-defined source script
       "$TFM_USER_SOURCEFILE" with a value of
       $TFM_USER_SOURCEFILE_ERRNO; anything nonzero is considered to be an error.
-heredoc
-
+EOF
      cleanup
      return 1
 fi
 
 if [[ -n $TFM_SETTINGS ]]; then
-    
     if [[ ! -e $TFM_SETTINGS ]]; then
-
-	echo "ERROR: the TFM_SETTINGS environment variable doesn't point to a file which exists"
-	cleanup
-	return 1
+	      echo "ERROR: the TFM_SETTINGS environment variable doesn't point to a file which exists"
+	      cleanup
+	      return 1
     fi
 
     export TFM_SETUP_FHICLCPP=$( dirname $TFM_SETTINGS )/.setup_fhiclcpp
-else
 
-    cat<<EOF
-
+else cat<<EOF
 ERROR: the environment variable TFM_SETTINGS hasn't been
 defined in $TFM_USER_SOURCEFILE. Please read the DAQInterface
 Manual at
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
 to learn how to properly set up the DAQInterface environment.
-
 EOF
 
-cleanup
-return 1
+    cleanup
+    return 1
 fi
-
-
-
+#------------------------------------------------------------------------------
 # At this point, set various environment variables DAQInterface needs
 # to reasonable defaults if they weren't already set in
-# $TFM_USER_SOURCEFILE - or complain if there's no reasonable
-# default
-
-if [[ -z $TFM_PARTITION_NUMBER ]]; then
-   export TFM_PARTITION_NUMBER=0
-fi
-
-if [[ -z $TFM_PROCESS_MANAGEMENT_METHOD ]]; then
-   export TFM_PROCESS_MANAGEMENT_METHOD="direct"
-fi
-
-if [[ -z $TFM_KNOWN_BOARDREADERS_LIST ]]; then
-    cat<<EOF
-
+# $TFM_USER_SOURCEFILE - or complain if there's no reasonable default
+#------------------------------------------------------------------------------
+if [ -z $TFM_PARTITION_NUMBER          ]; then export TFM_PARTITION_NUMBER=0 ; fi
+if [ -z $TFM_PROCESS_MANAGEMENT_METHOD ]; then export TFM_PROCESS_MANAGEMENT_METHOD="direct" ; fi
+if [ -z $TFM_KNOWN_BOARDREADERS_LIST   ]; then cat<<EOF
 ERROR: the environment variable TFM_KNOWN_BOARDREADERS_LIST
 hasn't been defined in $TFM_USER_SOURCEFILE. Please read the
 DAQInterface Manual at
 https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
 to learn how to properly set up the DAQInterface environment.
-
 EOF
 
-cleanup
-return 1
+    cleanup
+    return 1
 
 elif [[ ! -e $TFM_KNOWN_BOARDREADERS_LIST ]]; then
-
     echo "ERROR: the TFM_KNOWN_BOARDREADERS_LIST environment variable doesn't point to a file which exists"
     cleanup
     return 1
 fi
 
 if [[ -z $TFM_FHICL_DIRECTORY ]]; then
-
     export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
-
     cat<<EOF
-
 WARNING: the environment variable TFM_FHICL_DIRECTORY hasn't
 been defined in $TFM_USER_SOURCEFILE, so we're going to
 assume the default configuration area is $TFM_FHICL_DIRECTORY
 EOF
 fi
 
-if [[ ! -e "$TFM_FHICL_DIRECTORY" && "$TFM_FHICL_DIRECTORY" != "IGNORED" ]]; then
-
-cat<<EOF
-
+if [[ ! -e "$TFM_FHICL_DIRECTORY" && "$TFM_FHICL_DIRECTORY" != "IGNORED" ]]; then cat<<EOF
 ERROR: unable to find the FHiCL directory referred to by the
 TFM_FHICL_DIRECTORY environment variable,
 $TFM_FHICL_DIRECTORY
 EOF
-
-cleanup
-return 1
+    cleanup
+    return 1
 fi
 
 if [[ -z $TFM_LOGDIR ]]; then export TFM_LOGDIR=/tmp/tfm_${USER} ; fi
@@ -223,16 +178,14 @@ mkdir -p $TFM_LOGDIR
 # assume 100 partitions is enough
 #------------------------------------------------------------------------------
 export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $TFM_PARTITION_NUMBER`.log
-
 cat<<EOF
-* The command was successful
-* To launch, just type "DAQInterface &" (excluding quotes, ampersand optional)
-* Output will be logged in ${TFM_LOGDIR}/DAQInterface_partition<N>.log, where <N> 
-  is the partition the DAQInterface instance is on
-* You're encouraged to read the DAQInterface Manual at https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
+
+* The TFM environment setup successful. To launch TFM: tfm_start.sh &
+* Output will be logged in ${TFM_LOGDIR}/tfm_partition_<N>.log, 
+  where <N> is the partition the TF manager instance is running on
+
 EOF
  
-echo
 export TFM_STANDARD_SOURCEFILE_SOURCED=true
 
 return 0

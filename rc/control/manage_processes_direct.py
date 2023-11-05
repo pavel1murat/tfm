@@ -10,7 +10,7 @@ import re
 import sys
 import copy
 
-sys.path.append(os.environ["ARTDAQ_DAQINTERFACE_DIR"])
+sys.path.append(os.environ["TFM_DIR"])
 
 from rc.control.utilities import host_is_local
 from rc.control.utilities import get_pids
@@ -27,18 +27,12 @@ from rc.control.utilities import RaisingThread
 
 def bootfile_name_to_execname(bootfile_name):
 
-    if "BoardReader" in bootfile_name:
-        execname = "boardreader"
-    elif "EventBuilder" in bootfile_name:
-        execname = "eventbuilder"
-    elif "DataLogger" in bootfile_name:
-        execname = "datalogger"
-    elif "Dispatcher" in bootfile_name:
-        execname = "dispatcher"
-    elif "RoutingManager" in bootfile_name:
-        execname = "routing_manager"
-    else:
-        assert False
+    if   "BoardReader"    in bootfile_name: execname = "boardreader"
+    elif "EventBuilder"   in bootfile_name: execname = "eventbuilder"
+    elif "DataLogger"     in bootfile_name: execname = "datalogger"
+    elif "Dispatcher"     in bootfile_name: execname = "dispatcher"
+    elif "RoutingManager" in bootfile_name: execname = "routing_manager"
+    else: assert False
 
     return execname
 
@@ -62,7 +56,7 @@ def launch_procs_on_host(
         "Before check for existing processes on %s" % (host),
         executing_commands_debug_level,
     )
-    grepped_lines = []
+    grepped_lines    = []
     preexisting_pids = get_pids(
         "\|".join(
             [
@@ -86,7 +80,7 @@ def launch_procs_on_host(
             "Before re-check for existing processes on %s" % (host),
             executing_commands_debug_level,
         )
-        grepped_lines = []
+        grepped_lines    = []
         preexisting_pids = get_pids(
             "\|".join(
                 [
@@ -208,7 +202,7 @@ def launch_procs_base(self):
     cmds = []
     cmds.append(
         "if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-        % (";".join(get_setup_commands(self.productsdir, self.spackdir)), os.environ["DAQINTERFACE_SETUP_FHICLCPP"])
+        % (";".join(get_setup_commands(self.productsdir, self.spackdir)), os.environ["TFM_SETUP_FHICLCPP"])
     )
     cmds.append(
         "if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi"
@@ -298,7 +292,7 @@ def launch_procs_base(self):
                 self.log_directory,
                 procinfo.host,
                 os.environ["USER"],
-                os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                os.environ["TFM_PARTITION_NUMBER"],
                 date_and_time_filename(),
             )
 
@@ -329,8 +323,8 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[procinfo.host].append(
                 "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1"
                 % (
-                    os.environ["ARTDAQ_DAQINTERFACE_DIR"],
-                    os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                    os.environ["TFM_DIR"],
+                    os.environ["TFM_PARTITION_NUMBER"],
                     self.launch_attempt_files[procinfo.host],
                 )
             )
@@ -359,7 +353,7 @@ def launch_procs_base(self):
                 procinfo.port,
                 procinfo.rank,
                 procinfo.label,
-                os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                os.environ["TFM_PARTITION_NUMBER"],
             )
         )
         if procinfo.allowed_processors is not None:
@@ -477,7 +471,7 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
 
     if kill_art:
         art_pids = get_pids(
-            "art -c .*partition_%s" % os.environ["DAQINTERFACE_PARTITION_NUMBER"], host
+            "art -c .*partition_%s" % os.environ["TFM_PARTITION_NUMBER"], host
         )
 
         if len(art_pids) > 0:
@@ -576,7 +570,7 @@ def get_process_manager_log_filename(self, host):
             self.log_directory,
             host,
             os.environ["USER"],
-            os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+            os.environ["TFM_PARTITION_NUMBER"],
         )
     )
 
@@ -791,7 +785,7 @@ def get_pids_and_labels_on_host(host, procinfos):
                     [bootfile_name_to_execname(procinfo.name) for procinfo in procinfos]
                 )
             ),
-            os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+            os.environ["TFM_PARTITION_NUMBER"],
         )
     )
     sshgreptoken = (
@@ -802,7 +796,7 @@ def get_pids_and_labels_on_host(host, procinfos):
                     [bootfile_name_to_execname(procinfo.name) for procinfo in procinfos]
                 )
             ),
-            os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+            os.environ["TFM_PARTITION_NUMBER"],
         )
     )
 
@@ -811,7 +805,7 @@ def get_pids_and_labels_on_host(host, procinfos):
     #% \
     #            ("\|".join(set([bootfile_name_to_execname(procinfo.name) for
     #            procinfo in procinfos])), \
-    # os.environ["DAQINTERFACE_PARTITION_NUMBER"])
+    # os.environ["TFM_PARTITION_NUMBER"])
 
     grepped_lines = []
     pids = get_pids(greptoken, host, grepped_lines)

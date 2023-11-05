@@ -198,9 +198,9 @@ else:
     from rc.control.config_functions_local import listconfigs_base
 
 
-class DAQInterface(Component):
+class FarmManager(Component):
     """
-    DAQInterface: The intermediary between Run Control, the
+    FarmManager: The intermediary between Run Control, the
     configuration database, and artdaq processes
 
     """
@@ -215,7 +215,7 @@ class DAQInterface(Component):
 
     # I add the "fhicl_file_path" variable, which is a sequence of
     # paths which are searched in order to cut-and-paste #include'd files 
-    # (see also the description of the DAQInterface class's
+    # (see also the description of the FarmManager class's
     # fhicl_file_path variable, whose sole purpose is to be passed to Procinfo's functions)
 
     # JCF, Apr-26-2018
@@ -270,7 +270,7 @@ class DAQInterface(Component):
             # Do NOT change the "lastreturned" string below without
             # changing the commensurate string in check_proc_transition!
 
-            self.lastreturned = "DAQInterface: ARTDAQ PROCESS NOT YET CALLED"
+            self.lastreturned = "FarmManager: ARTDAQ PROCESS NOT YET CALLED"
             self.socketstring = "http://" + self.host + ":" + self.port + "/RPC2"
             self.state        = "nonexistent"
 
@@ -403,25 +403,25 @@ class DAQInterface(Component):
             if self.use_messagefacility and self.messageviewer_sender is not None:
                 if severity == "e":
                     self.messageviewer_sender.write_error(
-                        "DAQInterface partition %s"
+                        "FarmManager partition %s"
                         % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "w":
                     self.messageviewer_sender.write_warning(
-                        "DAQInterface partition %s"
+                        "FarmManager partition %s"
                         % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "i":
                     self.messageviewer_sender.write_info(
-                        "DAQInterface partition %s"
+                        "FarmManager partition %s"
                         % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "d":
                     self.messageviewer_sender.write_debug(
-                        "DAQInterface partition %s"
+                        "FarmManager partition %s"
                         % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
@@ -430,7 +430,7 @@ class DAQInterface(Component):
                 with self.printlock:
                     if self.fake_messagefacility:
                         print(
-                            "%%MSG-%s DAQInterface %s %s %s"
+                            "%%MSG-%s FarmManager %s %s %s"
                             % (severity, formatted_day, time, timezone),
                             flush=True,
                         )
@@ -479,17 +479,17 @@ class DAQInterface(Component):
         self.reset_process_manager_variables()
 
         # "procinfos" will be an array of Procinfo structures (defined
-        # above), where Procinfo contains all the info DAQInterface
+        # above), where Procinfo contains all the info FarmManager
         # needs to know about an individual artdaq process: name,
         # host, port, and FHiCL initialization document. Filled
-        # through a combination of info in the DAQInterface
+        # through a combination of info in the FarmManager
         # configuration file as well as the components list
 
         self.procinfos = []
 
         # "subsystems" is an dictionary of Subsystem structures (defined
         # above),
-        # where Subsystem contains all the information DAQInterface needs
+        # where Subsystem contains all the information FarmManager needs
         # to know about artdaq subsystems: id (dictionary key), source
         # subsystem, destination subsystem.
         # Subsystems are an optional feature that allow users to build complex
@@ -497,7 +497,7 @@ class DAQInterface(Component):
         # with multiple request domains and levels of filtering.
         self.subsystems = {}
 
-    # Constructor for DAQInterface begins here
+    # Constructor for FarmManager begins here
 
     def __init__(
         self,
@@ -510,7 +510,7 @@ class DAQInterface(Component):
         partition_number=999,
     ):
 
-        # Initialize Component, the base class of DAQInterface
+        # Initialize Component, the base class of FarmManager
 
         Component.__init__(
             self,
@@ -564,7 +564,7 @@ class DAQInterface(Component):
         self.printlock = RLock()
 
         # Here, states refers to individual artdaq process states, not the
-        # DAQInterface state
+        # FarmManager state
         self.target_states = {
             "Init": "Ready",
             "Start": "Running",
@@ -589,8 +589,8 @@ class DAQInterface(Component):
             self.print_log(
                 "e",
                 make_paragraph(
-                    "An exception was thrown when trying to read DAQInterface settings; "
-                    "DAQInterface will exit. Look at the messages above, make any necessary "
+                    "An exception was thrown when trying to read FarmManager settings; "
+                    "FarmManager will exit. Look at the messages above, make any necessary "
                     "changes, and restart."
                 )
                 + "\n",
@@ -599,7 +599,7 @@ class DAQInterface(Component):
 
         if self.use_messagefacility:
             try:
-                config_str = "application_name: DAQInterface"
+                config_str = "application_name: FarmManager"
                 if self.debug_level > 0:
                     config_str += " debug_logging: true"
                 
@@ -611,7 +611,7 @@ class DAQInterface(Component):
             self.print_log(
                 "e",
                 make_paragraph(
-                    "DAQInterface launch failed since it's been determined that you don't have write access to the run records directory \"%s\""
+                    "FarmManager launch failed since it's been determined that you don't have write access to the run records directory \"%s\""
                     % (self.record_directory)
                 ),
             )
@@ -619,7 +619,7 @@ class DAQInterface(Component):
 
         self.print_log(
             "i",
-            '%s: DAQInterface in partition %s launched and now in "%s" state, listening on port %d'
+            '%s: FarmManager in partition %s launched and now in "%s" state, listening on port %d'
             % (
                 date_and_time(),
                 self.partition_number,
@@ -826,14 +826,14 @@ class DAQInterface(Component):
             alertmsg = "\n\n" + make_paragraph('"' + extrainfo + '"')
 
         alertmsg += "\n" + make_paragraph(
-            'DAQInterface has set the DAQ back in the "Stopped" state; you may need to scroll above the Recover transition output to find messages which could help you provide any necessary adjustments.'
+            'FarmManager has set the DAQ back in the "Stopped" state; you may need to scroll above the Recover transition output to find messages which could help you provide any necessary adjustments.'
         )
         self.print_log("e", alertmsg)
         print
         self.print_log(
             "e",
             make_paragraph(
-                'Details on how to examine the artdaq process logfiles can be found in the "Examining your output" section of the DAQInterface manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output'
+                'Details on how to examine the artdaq process logfiles can be found in the "Examining your output" section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output'
             ),
         )
         print
@@ -1159,7 +1159,7 @@ class DAQInterface(Component):
         ):
             raise Exception(
                 make_paragraph(
-                    'Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config", "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" are defined in %s; this is not allowed. For further information, take a look at "The settings file reference" in the DAQInterface Manual'
+                    'Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config", "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" are defined in %s; this is not allowed. For further information, take a look at "The settings file reference" in the FarmManager Manual'
                     % (os.environ["TFM_SETTINGS"])
                 )
             )
@@ -1646,7 +1646,7 @@ class DAQInterface(Component):
                     self.print_log(
                         "e",
                         make_paragraph(
-                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because there are no special rules for it in %s. To learn how to add rules, see the relevant section of the DAQInterface manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
+                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because there are no special rules for it in %s. To learn how to add rules, see the relevant section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
                             % (
                                 procinfo.label,
                                 process_description,
@@ -1658,7 +1658,7 @@ class DAQInterface(Component):
                     self.print_log(
                         "e",
                         make_paragraph(
-                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because DAQInterface wasn't provided with a file overriding its default behavior. To learn how to override, see \"%s/docs/process_requirements_list_example\" for an example of such a file and also read the relevant section of the DAQInterface manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
+                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because FarmManager wasn't provided with a file overriding its default behavior. To learn how to override, see \"%s/docs/process_requirements_list_example\" for an example of such a file and also read the relevant section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
                             % (
                                 procinfo.label,
                                 process_description,
@@ -1669,7 +1669,7 @@ class DAQInterface(Component):
 
                 raise Exception(
                     make_paragraph(
-                        "Loss of process %s violates one of DAQInterface's default requirements; scroll up for more details. You can override this behavior by adding a rule to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
+                        "Loss of process %s violates one of FarmManager's default requirements; scroll up for more details. You can override this behavior by adding a rule to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
                         % (procinfo.label)
                     )
                 )
@@ -1691,7 +1691,7 @@ class DAQInterface(Component):
             if "/%s-" % (procinfo.label) in logfilename
         ]
         assert len(logfilename_in_list_form) <= 1, make_paragraph(
-            'Unable to locate logfile for process "%s" out of the following list of candidates: [%s]; this may be due to incorrect assumptions made by DAQInterface about the format of the logfilenames. Please contact the artdaq-developers@fnal.gov mailing list'
+            'Unable to locate logfile for process "%s" out of the following list of candidates: [%s]; this may be due to incorrect assumptions made by FarmManager about the format of the logfilenames. Please contact the artdaq-developers@fnal.gov mailing list'
             % (procinfo.label, ", ".join(all_logfilenames))
         )
 
@@ -1720,7 +1720,7 @@ class DAQInterface(Component):
         if undefined_var != "":
             raise Exception(
                 make_paragraph(
-                    'Error: "%s" undefined in DAQInterface boot file' % (undefined_var)
+                    'Error: "%s" undefined in FarmManager boot file' % (undefined_var)
                 )
             )
 
@@ -2030,7 +2030,7 @@ class DAQInterface(Component):
         if "artdaq_daqinterface" in packages:
             assert (
                 len(packages) == 1
-            ), "Note to developer: you'll probably need to refactor save_run_records.py if you want to get the version of other packages alongside the version of DAQInterface"
+            ), "Note to developer: you'll probably need to refactor save_run_records.py if you want to get the version of other packages alongside the version of FarmManager"
             cmd = "ups active | sed -r -n 's/^artdaq_daqinterface\\s+(\\S+).*/artdaq_daqinterface \\1/p'"
         elif self.productsdir != None:
             cmd = (
@@ -2138,7 +2138,7 @@ class DAQInterface(Component):
         if re.search(r"^%s" % (os.environ["TFM_DIR"]), trace_script):
             raise Exception(
                 make_paragraph(
-                    'The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", appears to be located inside the DAQInterface package itself. Please copy it somewhere else before using it, and revert any edits which may have been made to %s.'
+                    'The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", appears to be located inside the FarmManager package itself. Please copy it somewhere else before using it, and revert any edits which may have been made to %s.'
                     % (trace_script, trace_script)
                 )
             )
@@ -2303,7 +2303,7 @@ class DAQInterface(Component):
                     ].server.daq.start(self.run_number, timeout)
 
                     # JCF, Jan-8-2019
-                    # Ensure DAQInterface is backwards-compatible with artdaq
+                    # Ensure FarmManager is backwards-compatible with artdaq
                     # code which predates Issue #23824
 
                     if (
@@ -2646,7 +2646,7 @@ class DAQInterface(Component):
 
         if not os.path.exists(ranksfile):
             raise Exception(
-                "Error: DAQInterface run in external_run_control mode expects your experiment's run control to provide it with a file named %s"
+                "Error: FarmManager run in external_run_control mode expects your experiment's run control to provide it with a file named %s"
                 % (ranksfile)
             )
 
@@ -2666,7 +2666,7 @@ class DAQInterface(Component):
                             matched = True
                             if host != procinfo.host or port != procinfo.port:
                                 raise Exception(
-                                    "Error: mismatch between values for process %s in DAQInterface's procinfo structure and the ranks file, %s"
+                                    "Error: mismatch between values for process %s in FarmManager's procinfo structure and the ranks file, %s"
                                     % (procinfo.label, ranksfile)
                                 )
                             self.procinfos[i_proc].rank = int(rank)
@@ -2779,7 +2779,7 @@ class DAQInterface(Component):
                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
                         raise Exception(
                             make_paragraph(
-                                'Unable to find fhiclcpp ups product in products directory "%s" provided in the DAQInterface settings file, "%s"'
+                                'Unable to find fhiclcpp ups product in products directory "%s" provided in the FarmManager settings file, "%s"'
                                 % (self.productsdir, os.environ["TFM_SETTINGS"])
                             )
                         )
@@ -3366,7 +3366,7 @@ class DAQInterface(Component):
                         self.print_log(
                             "e",
                             make_paragraph(
-                                'In order to investigate what happened, you can try re-running with "debug level" in your boot file set to 4. If that doesn\'t help, you can directly recreate what DAQInterface did by doing the following:'
+                                'In order to investigate what happened, you can try re-running with "debug level" in your boot file set to 4. If that doesn\'t help, you can directly recreate what FarmManager did by doing the following:'
                             ),
                         )
 
@@ -3380,7 +3380,7 @@ class DAQInterface(Component):
 
                             self.print_log(
                                 "i",
-                                "\nPerform a clean login to %s, source the DAQInterface environment, and execute the following:\n%s"
+                                "\nPerform a clean login to %s, source the FarmManager environment, and execute the following:\n%s"
                                 % (host, "\n".join(launch_procs_actions[host])),
                             )
 
@@ -3801,7 +3801,7 @@ class DAQInterface(Component):
 
         else:
             self.alert_and_recover(
-                "Error in DAQInterface: unable to find temporary run records directory %s"
+                "Error in FarmManager: unable to find temporary run records directory %s"
                 % self.tmp_run_record
             )
             return
@@ -3854,7 +3854,7 @@ class DAQInterface(Component):
         self.start_datataking()
 
         self.save_metadata_value(
-            "DAQInterface start time",
+            "FarmManager start time",
             subprocess.Popen(
                 "date --utc",
                 executable="/bin/bash",
@@ -3900,7 +3900,7 @@ class DAQInterface(Component):
         )
 
         self.save_metadata_value(
-            "DAQInterface stop time",
+            "FarmManager stop time",
             subprocess.Popen(
                 "date --utc",
                 executable="/bin/bash",
@@ -4048,7 +4048,7 @@ class DAQInterface(Component):
                 self.kill_procs()
             except Exception:
                 self.print_log(
-                    "e", "DAQInterface caught an exception in " "do_terminate()"
+                    "e", "FarmManager caught an exception in " "do_terminate()"
                 )
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover("An exception was thrown " "within kill_procs()")
@@ -4079,7 +4079,7 @@ class DAQInterface(Component):
         if not self.called_launch_procs:
             self.print_log(
                 "i",
-                "DAQInterface does not appear to have gotten to the point of launching the artdaq processes",
+                "FarmManager does not appear to have gotten to the point of launching the artdaq processes",
             )
 
         if self.disable_recovery or not self.called_launch_procs:
@@ -4325,7 +4325,7 @@ class DAQInterface(Component):
         # JCF, Oct-15-2019
 
         # Make sure that the runner function won't just proceed with a
-        # transition "in the queue" despite DAQInterface being in the
+        # transition "in the queue" despite FarmManager being in the
         # Stopped state after we've finished this recover
 
         self.__do_boot = (
@@ -4484,7 +4484,7 @@ class DAQInterface(Component):
 # the environment overrides the code defaults, the command line overrides both
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
-    parser = argparse.ArgumentParser(description="DAQInterface")
+    parser = argparse.ArgumentParser(description="FarmManager")
     parser.add_argument(
         "-n", "--name", type=str, dest="name", default="daqint", help="Component name"
     )
@@ -4540,7 +4540,7 @@ def main():  # no-coverage
 
     if "TFM_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
         print(
-            make_paragraph('Won\'t launch DAQInterface; you first need to run "source $TFM_DIR/source_me"')
+            make_paragraph('Won\'t launch FarmManager; you first need to run "source $TFM_DIR/source_me"')
         )
         print
         return
@@ -4548,7 +4548,7 @@ def main():  # no-coverage
     if "TFM_SETTINGS" not in os.environ.keys():
         print(
             make_paragraph(
-                "Need to have the TFM_SETTINGS environment variable set to refer to the DAQInterface settings file"
+                "Need to have the TFM_SETTINGS environment variable set to refer to the FarmManager settings file"
             )
         )
         print
@@ -4567,7 +4567,7 @@ def main():  # no-coverage
     if "TFM_KNOWN_BOARDREADERS_LIST" not in os.environ.keys():
         print(
             make_paragraph(
-                "Need to have the TFM_KNOWN_BOARDREADERS_LIST environment variable set to refer to the list of boardreader types DAQInterface can use"
+                "Need to have the TFM_KNOWN_BOARDREADERS_LIST environment variable set to refer to the list of boardreader types FarmManager can use"
             )
         )
         print
@@ -4590,7 +4590,7 @@ def main():  # no-coverage
         if not legal_method_found:
             raise Exception(
                 make_paragraph(
-                    'DAQInterface can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
+                    'FarmManager can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
                     % (
                         os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
                         ",".join(
@@ -4666,7 +4666,7 @@ def main():  # no-coverage
     def handle_kill_signal(signum, stack):
         daqinterface_instance.print_log(
             "e",
-            "%s: DAQInterface on partition %s caught kill signal %d"
+            "%s: FarmManager on partition %s caught kill signal %d"
             % (date_and_time(), partition_number, signum),
         )
         daqinterface_instance.recover()
@@ -4677,7 +4677,7 @@ def main():  # no-coverage
             if int(time() - starttime) > timeout:
                 daqinterface_instance.print_log(
                     "e",
-                    "DAQInterface signal handler recovery attempt timed out after %d seconds; DAQInterface is in the %s state rather than the stopped state"
+                    "FarmManager signal handler recovery attempt timed out after %d seconds; FarmManager is in the %s state rather than the stopped state"
                     % (
                         timeout,
                         daqinterface_instance.state(daqinterface_instance.name),
@@ -4710,7 +4710,7 @@ def main():  # no-coverage
     default_sighup_handler  = signal.signal(signal.SIGHUP , handle_kill_signal)
     default_sigint_handler  = signal.signal(signal.SIGINT , handle_kill_signal)
 
-    with DAQInterface(
+    with FarmManager(
         logpath=os.path.join(os.environ["HOME"], ".lbnedaqint.log"), **vars(args)
     ) as daqinterface_instance:
 

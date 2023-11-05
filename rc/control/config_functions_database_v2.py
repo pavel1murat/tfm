@@ -6,7 +6,7 @@
 import os
 import sys
 
-sys.path.append(os.environ["ARTDAQ_DAQINTERFACE_DIR"])
+sys.path.append(os.environ["TFM_DIR"])
 
 dbdirs = [
     dbdir
@@ -54,7 +54,7 @@ else:
     print
     print(
         make_paragraph(
-            "WARNING: you appear to be using an artdaq_database version older than v1_04_75 (%s), on the config transition DAQInterface will accept a configuration even if it's been masked off"
+            "WARNING: you appear to be using an artdaq_database version older than v1_04_75 (%s), on the config transition TFM will accept a configuration even if it's been masked off"
             % (os.environ["ARTDAQ_DATABASE_VERSION"])
         )
     )
@@ -127,9 +127,9 @@ def get_config_info_base(self):
         for dirname, dummy, dummy in os.walk(subconfigdir):
             ffp.append(dirname)
 
-        # DAQInterface doesn't like duplicate files with the same basename
+        # TFM doesn't like duplicate files with the same basename
         # in the collection of subconfigurations, and schema.fcl isn't used
-        # since DAQInterface just wants the FHiCL documents used to initialize
+        # since TFM just wants the FHiCL documents used to initialize
         # artdaq processes...
         for dirname, dummy, filenames in os.walk(subconfigdir):
             if "schema.fcl" in filenames:
@@ -146,7 +146,7 @@ def put_config_info_base(self):
 
     starttime = time()
 
-    scriptdir = os.environ["ARTDAQ_DAQINTERFACE_DIR"] + "/utils"
+    scriptdir = os.environ["TFM_DIR"] + "/utils"
 
     if not os.path.exists(scriptdir):
         raise Exception(
@@ -193,7 +193,7 @@ def put_config_info_base(self):
     if os.getenv("ARTDAQ_DATABASE_CONFDIR") is None:
         raise Exception(
             make_paragraph(
-                "Environment variable ARTDAQ_DATABASE_CONFDIR needs to be set in order for DAQInterface to determine where to find the schema.fcl file needed to archive configurations to the database; since ARTDAQ_DATABASE_CONFDIR is not set this may indicate that the version of artdaq_database you're using is old"
+                "Environment variable ARTDAQ_DATABASE_CONFDIR needs to be set in order for TFM to determine where to find the schema.fcl file needed to archive configurations to the database; since ARTDAQ_DATABASE_CONFDIR is not set this may indicate that the version of artdaq_database you're using is old"
             )
         )
 
@@ -271,8 +271,8 @@ def put_config_info_base(self):
         with open("%s/%s/metadata.fcl" % (tmpdir, runnum)) as metadata_file:
             for line in metadata_file.readlines():
                 if (
-                    "DAQInterface_start_time" not in line
-                    and "DAQInterface_stop_time" not in line
+                    "TFM_start_time" not in line
+                    and "TFM_stop_time" not in line
                     and not line == ""
                 ):
                     dataflow_file.write("\n" + line)
@@ -288,7 +288,7 @@ def put_config_info_base(self):
                     runhistory_file.write("\n" + line)
 
         if os.environ[
-            "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"
+            "TFM_PROCESS_MANAGEMENT_METHOD"
         ] == "external_run_control" and os.path.exists(
             "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
         ):
@@ -356,30 +356,30 @@ def put_config_info_on_stop_base(self):
 
             with open(metadata_filename) as metadata_file:
                 for line in metadata_file:
-                    res = re.search(r"^DAQInterface start time:\s+(.*)", line)
+                    res = re.search(r"^TFM start time:\s+(.*)", line)
                     if res:
                         runhistory_file.write(
-                            '\nDAQInterface_start_time: "%s"\n' % (res.group(1))
+                            '\nTFM_start_time: "%s"\n' % (res.group(1))
                         )
                         found_start_time = True
                         continue
-                    res = re.search(r"^DAQInterface stop time:\s+(.*)", line)
+                    res = re.search(r"^TFM stop time:\s+(.*)", line)
                     if res:
                         runhistory_file.write(
-                            '\nDAQInterface_stop_time: "%s"\n' % (res.group(1))
+                            '\nTFM_stop_time: "%s"\n' % (res.group(1))
                         )
                         found_stop_time = True
 
             if not found_start_time:
                 self.print_log(
                     "w",
-                    "WARNING: unable to find DAQInterface start time in %s; will not save this info into the database"
+                    "WARNING: unable to find TFM start time in %s; will not save this info into the database"
                     % (metadata_filename),
                 )
             if not found_stop_time:
                 self.print_log(
                     "w",
-                    "WARNING: unable to find DAQInterface stop time in %s; will not save this info into the database"
+                    "WARNING: unable to find TFM stop time in %s; will not save this info into the database"
                     % (metadata_filename),
                 )
 
@@ -391,7 +391,7 @@ def put_config_info_on_stop_base(self):
             )
 
         if os.environ[
-            "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"
+            "TFM_PROCESS_MANAGEMENT_METHOD"
         ] == "external_run_control" and os.path.exists(
             "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
         ):
@@ -452,7 +452,7 @@ def listconfigs_base(self):
 
 def main():
 
-    listconfigs_test = False
+    listconfigs_test     = False
     get_config_info_test = True
     put_config_info_test = False
 
@@ -465,7 +465,7 @@ def main():
 
         class MockDAQInterface:
             subconfigs_for_run = ["ToyComponent_EBwriting00025"]
-            debug_level = 2
+            debug_level        = 2
 
         mydir, mydirs = get_config_info_base(MockDAQInterface())
 
@@ -476,9 +476,9 @@ def main():
         print("Calling put_config_info_base")
 
         class MockDAQInterface:
-            run_number = 73
+            run_number       = 73
             record_directory = "/daq/artdaq/run_records/"
-            config_for_run = "push_pull_testing"
+            config_for_run   = "push_pull_testing"
 
         put_config_info_base(MockDAQInterface())
 

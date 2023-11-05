@@ -41,7 +41,7 @@ def save_run_record_base(self):
         outf.write(procinfo.fhicl_used)
         outf.close()
 
-    # For good measure, let's also save the DAQInterface configuration file
+    # For good measure, let's also save the TFM configuration file
     # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
 
     config_saved_name = "boot.txt"
@@ -67,10 +67,10 @@ def save_run_record_base(self):
     if not os.path.exists(outdir + "/setup.txt"):
         self.alert_and_recover("Problem creating file %s/setup.txt" % (outdir))
 
-    assert os.path.exists(os.environ["DAQINTERFACE_SETTINGS"])
+    assert os.path.exists(os.environ["TFM_SETTINGS"])
 
     Popen(
-        "cp -p " + os.environ["DAQINTERFACE_SETTINGS"] + " " + outdir + "/settings.txt",
+        "cp -p " + os.environ["TFM_SETTINGS"] + " " + outdir + "/settings.txt",
         shell=True,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     ).wait()
@@ -78,11 +78,11 @@ def save_run_record_base(self):
     if not os.path.exists(outdir + "/settings.txt"):
         self.alert_and_recover("Problem creating file " + outdir + "/settings.txt")
 
-    assert os.path.exists(os.environ["DAQINTERFACE_KNOWN_BOARDREADERS_LIST"])
+    assert os.path.exists(os.environ["TFM_KNOWN_BOARDREADERS_LIST"])
 
     Popen(
         "cp -p "
-        + os.environ["DAQINTERFACE_KNOWN_BOARDREADERS_LIST"]
+        + os.environ["TFM_KNOWN_BOARDREADERS_LIST"]
         + " "
         + outdir
         + "/known_boardreaders_list.txt",
@@ -124,16 +124,8 @@ def save_run_record_base(self):
     environfilename = "%s/environment.txt" % (outdir)
 
     with open(environfilename, "w") as environfile:
-        for daqinterface_var in sorted(
-            [varname for varname in os.environ if re.search(r"^DAQINTERFACE_", varname)]
-        ):
-            environfile.write(
-                "export %s=%s\n"
-                % (
-                    daqinterface_var,
-                    expand_environment_variable_in_string(os.environ[daqinterface_var]),
-                )
-            )
+        for var in sorted([varname for varname in os.environ if re.search(r"^TFM_", varname)]):
+            environfile.write("export %s=%s\n"% (var,expand_environment_variable_in_string(os.environ[var])))
 
     # JCF, 11/20/14
 
@@ -159,12 +151,12 @@ def save_run_record_base(self):
         "DAQInterface logfile: %s:%s\n"
         % (
             os.environ["HOSTNAME"],
-            expand_environment_variable_in_string(os.environ["DAQINTERFACE_LOGFILE"]),
+            expand_environment_variable_in_string(os.environ["TFM_LOGFILE"]),
         )
     )
 
     # Now save the commit hashes / versions of the packages listed in
-    # $DAQINTERFACE_SETTINGS, along with the commit hash for
+    # $TFM_SETTINGS, along with the commit hash for
     # DAQInterface(if using DAQInterface from the repo) or version (if
     # using DAQInterface as a ups product)
 
@@ -181,44 +173,34 @@ def save_run_record_base(self):
         "\n# <package version> <BuildInfo build time (if available)> <BuildInfo version (if available)>\n\n"
     )
 
-    assert "ARTDAQ_DAQINTERFACE_DIR" in os.environ and os.path.exists(
-        os.environ["ARTDAQ_DAQINTERFACE_DIR"]
-    )
+    assert "TFM_DIR" in os.environ and os.path.exists(os.environ["TFM_DIR"])
 
     buildinfo_packages = [
         pkg for pkg in self.package_hashes_to_save
     ]  # Directly assigning would make buildinfo_packages a reference, not a copy
-    buildinfo_packages.append("artdaq_daqinterface")
+    buildinfo_packages.append("tfm")
 
     package_buildinfo_dict = get_build_info(buildinfo_packages, self.daq_setup_script)
-
     
     try:
         commit_info_fullpathname = "%s/%s" % (
             os.path.dirname(self.daq_setup_script),
-            get_commit_info_filename("DAQInterface"),
+            get_commit_info_filename("tfm_start"),
         )
         if os.path.exists(commit_info_fullpathname):
             with open(commit_info_fullpathname) as commitfile:
                 outf.write("%s" % (commitfile.read()))
         else:
-            outf.write(
-                "%s"
-                % (
-                    get_commit_info(
-                        "DAQInterface", os.environ["ARTDAQ_DAQINTERFACE_DIR"]
-                    )
-                )
-            )
+            outf.write("%s" % (get_commit_info("tfm_start",os.environ["TFM_DIR"])))
     except Exception:
         # Not an exception in a bad sense as the throw just means we're using DAQInterface as a ups product
-        self.fill_package_versions(["artdaq_daqinterface"])
+        self.fill_package_versions(["tfm"])
         outf.write(
-            "DAQInterface commit/version: %s"
-            % (self.package_versions["artdaq_daqinterface"])
+            "tfm commit/version: %s"
+            % (self.package_versions["tfm"])
         )
 
-    outf.write(" %s\n\n" % (package_buildinfo_dict["artdaq_daqinterface"]))
+    outf.write(" %s\n\n" % (package_buildinfo_dict["tfm"]))
 
     package_commit_dict = {}
     packages_whose_versions_we_need = []
@@ -259,23 +241,23 @@ def save_run_record_base(self):
         )
 
     for pkg in sorted(package_commit_dict.keys()):
-        outf.write("%s" % (package_commit_dict[pkg]))
+        outf.write("%s"      % (package_commit_dict[pkg]))
         outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
 
     outf.write(
         "\nprocess management method: %s\n"
-        % (os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"])
+        % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"])
     )
 
     if self.manage_processes:
 
         logtuples = [
             ("process manager", self.process_manager_log_filenames),
-            ("boardreader", self.boardreader_log_filenames),
-            ("eventbuilder", self.eventbuilder_log_filenames),
-            ("datalogger", self.datalogger_log_filenames),
-            ("dispatcher", self.dispatcher_log_filenames),
-            ("routingmanager", self.routingmanager_log_filenames),
+            ("boardreader"    , self.boardreader_log_filenames),
+            ("eventbuilder"   , self.eventbuilder_log_filenames),
+            ("datalogger"     , self.datalogger_log_filenames),
+            ("dispatcher"     , self.dispatcher_log_filenames),
+            ("routingmanager" , self.routingmanager_log_filenames),
         ]
 
         for logtuple in logtuples:
@@ -317,7 +299,6 @@ def save_run_record_base(self):
         ),
         2,
     )
-
 
 def save_metadata_value_base(self, key, value):
 

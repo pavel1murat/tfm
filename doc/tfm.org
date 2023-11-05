@@ -30,6 +30,7 @@
 - defined in [[file:../bin/send_transition.sh]]              
 - For whatever reason, commands are translated and sent to the TF server 
 are translated commands. Why ?
+- what is it? an excersize in linguistics of making gerunds from verbs ?
 |-----------+--------------------|
 | command   | translated command |
 |-----------+--------------------|
@@ -42,11 +43,8 @@ are translated commands. Why ?
 | shutdown  | shutting           |
 | terminate | terminating        |
 |-----------+--------------------|
-
-- what is it? an excersize in linguistics of making gerunds from verbs ?
-
-** start example                                
-#+begin_src 
+* start example                                
+#+begin_src  initialize environment                                          
 mkdir DAQInterface
 cd DAQInterface
 cp $ARTDAQ_DAQINTERFACE_DIR/docs/user_sourcefile_example         source_me
@@ -74,13 +72,15 @@ export DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
 export                       ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition8_murat.fcl
 # source 'global' source_me (it also sources the local source_me)
 source $ARTDAQ_DAQINTERFACE_DIR/source_me
-DAQInterface.sh &
 #+end_src
-- DAQInterface is a shell script submitting python server into background, which is *nonsense*
-#+begin_src                          
-/bin/bash /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/bin/DAQInterface.sh
-tail -n0 -f /tmp/daqinterface_murat/DAQInterface_partition0.log
-python3 /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/rc/control/daqinterface.py --partition-number 0 --rpc-port 10000
+At this point need to make sure that the tfm_test/settings file has everything needed defined
+
+Next step:
+#+begin_src source tfm_start.sh                                                     
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>source tfm_start.sh &
+[2] 13415
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>[tfm_start.sh:19] : $TFM_LOGFILE=/tmp/tfm_mu2etrk/partition_08.log $TFM_PORT=18000
+Sun Nov  5 11:10:45 CST 2023: FarmManager in partition 8 launched and now in "stopped" state, listening on port 18000
 #+end_src
 - management methods are defined in  
    file:../../artdaq_daqinterface/rc/control/daqinterface.py::/process_management_methods/
@@ -128,14 +128,57 @@ Tue Oct 31 15:10:44 CDT 2023: DAQInterface in partition 8 launched and now in "s
 #+end_src
 * XMLRPC commands                                                            
   RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
-- *status*                                      
-#+begin_src
+** status                                                                    
+#+begin_src                                                                   
                 xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
+#+end_src 
+** TODO listdaqcomps                                                         
+for some reason, listdaqcomps output doesn't show up on the screen immediately, 
+but it shows up when the next command is executed - a TODO item
+#+begin_src                                                                  
+xmlrpc http://localhost:$TFM_PORT/RPC2 listdaqcomps
 #+end_src
-- *listdaqcomps*                                                              
-#+begin_src
-                xmlrpc http://localhost:$TFM_PORT/RPC2 listdaqcomps
-#+end_src
+** listconfigs                                                               
+- lists available farm configurations defined in subdirectories of the $TFM_FHICL_DIRECTORY
+- output saved in /tmp/listconfigs_mu2etrk.txt 
+#+begin_src                                                                  
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>xmlrpc http://localhost:$TFM_PORT/RPC2 listconfigs
+Available configurations: 
+ascii_simulator_example
+circular_buffer_mode_example
+circular_buffer_mode_withRM
+complex_subsystems
+complicated_subsystems
+config_includes
+demo
+demo_largesystem
+dune_sample_system
+eventbuilder_diskwriting
+file_closing_example
+mediumsystem_with_routing_manager
+missed_requests
+mu2e_sample_system
+multiple_art_processes_example
+multiple_dataloggers
+multiple_fragment_ids
+multiple_fragments_per_read
+pdune_swtrig_DFO
+protodune_mock_system
+request_based_dataflow_example
+routing_manager_example
+simple_subsystems
+subconfigs
+subrun_example
+See file "/tmp/listconfigs_mu2etrk.txt" for saved record of the above configurations
+
+Please note that for the time being, the optional
+max_configurations_to_list variable which may be set in
+/home/mu2etrk/test_stand/pasha_019/tfm_test/settings is only applicable
+when working with the database
+Result:
+
+Nil
+#+end_src 
 * TFM environment variables                                                  
 - *TFM_DISABLE_BOOKKEEPING*                                                  
   defined in [[file:../rc/control/farm_manager.py::/TFM_DISABLE_BOOKKEEPING/]]
@@ -391,7 +434,7 @@ https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterfac
 * startup steps                                                              
 *** setdaqcomps.sh component01 component02                                   
   - components are defined in the 'known_boardreaders_list'
-  - which is the DAQINTERFACE_KNOWN_BOARDREADERS_LIST
+  - which is the $TFM_KNOWN_BOARDREADERS_LIST
 *** send_transition.sh boot boot.txt  
 *** send_transition.sh config demo                                           
   - demo is a subdirectory under /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/simple_test_config
