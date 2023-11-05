@@ -1,7 +1,6 @@
 #!/usr/bin/bash
 
 function cleanup() {
-    
     export PATH=$(echo $PATH | sed -r 's!'${TFM_DIR}/bin':*!!')
 
     unset TFM_LOGDIR
@@ -234,7 +233,6 @@ cat<<EOF
 EOF
  
 echo
-
 export TFM_STANDARD_SOURCEFILE_SOURCED=true
 
 return 0

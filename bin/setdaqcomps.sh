@@ -15,7 +15,7 @@ fi
 components=$@
 
 source $TFM_DIR/bin/tfm_utils.sh
-daqinterface_preamble
+tfm_preamble
 
 scriptdir="$(dirname "$0")"
 . $scriptdir/package_setup.sh xmlrpc_c
@@ -61,7 +61,7 @@ for comp in $components; do
             
 	          cat<<EOF >&2
 
-An unquoted sixth field was found in $DAQINTERFACE_KNOWN_BOARDREADERS_LIST on this line:
+An unquoted sixth field was found in $TFM_KNOWN_BOARDREADERS_LIST on this line:
 
 $comp_line
 
@@ -96,7 +96,7 @@ EOF
 	      cat>&2<<EOF
 
 	Unable to find listing for component "$comp" in
-	$components_file; will not send component list to DAQInterface
+	$components_file; will not send component list to TF manager
 
 EOF
 	      exit 20

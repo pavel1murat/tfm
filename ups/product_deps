@@ -1,6 +1,8 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent  artdaq_daqinterface
+parent  tfm
+
+defaultqual	e28:s124
 
 noarch
 no_fq_dir
@@ -36,14 +38,13 @@ bindir product_dir bin
 # list all products here
 # the 4th field may be either optional or only_for_build
 product		 version
-xmlrpc_c   v1_54_06b
-# cetmodules	v3_21_02	-	only_for_build
+xmlrpc_c   v1_54_06b    e28:prof only_for_build
 end_product_list
  
 # -nq- here means there is no qualifier
 # a - here means the dependent product is not required by the parent and will not be setup
-qualifier	notes
--nq-            
+qualifier	          xmlrpc_c      notes
+e28:s124:prof    	  e28:prof      -std=c++20
 end_qualifier_list
 
 table_fragment_begin

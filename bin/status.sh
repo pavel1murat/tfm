@@ -1,7 +1,7 @@
 #!/bin/env bash
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
-daqinterface_preamble
+tfm_preamble
 
 scriptdir="$(dirname "$0")"
 . $scriptdir/package_setup.sh xmlrpc_c
@@ -13,7 +13,7 @@ if [[ "$xmlrpc_retval" != "0" ]]; then
     exit 40
 fi
 
-full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint "
+full_cmd="xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint "
 eval $full_cmd
 
 exit 0

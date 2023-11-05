@@ -28,15 +28,15 @@ done
 
 # JCF, Mar-22-2019
 
-# Since I discovered that getting DAQInterface to recover gracefully
+# Since I discovered that getting Tfm to recover gracefully
 # in the event of a window close (SIGHUP) required that I stop tee-ing
 # the output and instead tail -f its logfile as a way to get output to
 # screen, I need to make sure that we don't leave any zombie tail
 # -f's...otherwise double (triple, etc.) lines of output may get
 # printed to screen!
 
-# Note that the assumed basename of $DAQINTERFACE_LOGFILE is
-# DAQInterface_partition<partition number>.log as defined in
+# Note that the assumed basename of $TFM_LOGFILE is
+# Tfm_partition<partition number>.log as defined in
 # source_me; if this changes, the logic here will need to change as
 # well
 
@@ -54,16 +54,16 @@ for partition in "$@"; do
 	      exit 1
     fi
 
-    cmd_to_get_daqinterface_pid="ps aux | grep -E \"python.*tfm.py.*--partition-number\s+$partition\" | grep -v grep | awk '{print \$2}'"
-    daqinterface_pid=$( eval $cmd_to_get_daqinterface_pid )
+    cmd="ps aux | grep -E \"python.*tfm.py.*--partition-number\s+$partition\" | grep -v grep | awk '{print \$2}'"
+    tfm_pid=$( eval $cmd )
     
-    if [[ -n $daqinterface_pid ]]; then
+    if [[ -n $tfm_pid ]]; then
 	      
 	      if ! $forcibly_kill ; then
 
             cat <<EOF
-Checking to make sure that DAQInterface on partition $partition is in the "stopped" state.
-If the script appears to hang here, there's an issue communicating with DAQInterface; hit Ctrl-c, 
+Checking to make sure that Tfm on partition $partition is in the "stopped" state.
+If the script appears to hang here, there's an issue communicating with Tfm; hit Ctrl-c, 
 and then re-run this script with the "--force" option added at the end.
 EOF
 
@@ -85,23 +85,23 @@ EOF
 		            read response
       
 		            if ! [[ "$response" =~ ^[yY]$ ]]; then
-		                echo "Will skip the killing of DAQInterface instance on partition $partition"
+		                echo "Will skip the killing of Tfm instance on partition $partition"
 		                continue
 		            fi
 	          fi
 
 	          echo "Killing TF manager listening on partition $partition"
-	          kill $daqinterface_pid 
+	          kill $tfm_pid 
 	          kill_tail_f $partition
 	      else
-	          kill $daqinterface_pid 
+	          kill $tfm_pid 
 	          kill_tail_f $partition	     
             
-	          daqinterface_pid=$( eval $cmd_to_get_daqinterface_pid )
+	          tfm_pid=$( eval $cmd )
 
-	          if [[ -n $daqinterface_pid ]]; then
+	          if [[ -n $tfm_pid ]]; then
 		            echo "Regular kill didn't work on TF manager listening on partition $partition; use 'kill -9'"
-		            kill -9 $daqinterface_pid
+		            kill -9 $tfm_pid
 		            kill_tail_f $partition
 	          fi
 	      fi

@@ -3,42 +3,36 @@
 import os
 import sys
 
-sys.path.append(os.environ["ARTDAQ_DAQINTERFACE_DIR"])
-if "DAQINTERFACE_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
-    sys.path.append(os.environ["DAQINTERFACE_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
+sys.path.append(os.environ["TFM_DIR"])
 
-# sys.stdout = os.fdopen(
+if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
+    sys.path.append(os.environ["TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
+
 import argparse
 import datetime
 import subprocess
-from subprocess import Popen
-from time import sleep, time
+from   time       import sleep, time
 import traceback
 import re
 import string
 import glob
 import stat
-from threading import RLock
+from   threading  import RLock
 import shutil
-from shutil import copyfile
+from   shutil     import copyfile
 import random
 import signal
 
-from rc.io.timeoutclient import TimeoutServerProxy
-from rc.control.component import Component
-
+from rc.io.timeoutclient        import TimeoutServerProxy
+from rc.control.component       import Component
 from rc.control.save_run_record import save_run_record_base
 from rc.control.save_run_record import save_metadata_value_base
 
-if (
-    "DAQINTERFACE_DISABLE_BOOKKEEPING" in os.environ
-    and not os.environ["DAQINTERFACE_DISABLE_BOOKKEEPING"] == "false"
-):
-    from rc.control.all_functions_noop import (
-        bookkeeping_for_fhicl_documents_artdaq_v3_base,
-    )
+disable_bookkeeping = os.environ.get("TFM_DISABLE_BOOKKEEPING");
+if (disable_bookkeeping and (disable_bookkeeping != "false")):
+    from rc.control.all_functions_noop import bookkeeping_for_fhicl_documents_artdaq_v3_base
 else:
-    from rc.control.bookkeeping import bookkeeping_for_fhicl_documents_artdaq_v3_base
+    from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
 from rc.control.utilities import expand_environment_variable_in_string
 from rc.control.utilities import make_paragraph
@@ -59,7 +53,7 @@ from rc.control.utilities import RaisingThread
 
 try:
     import python_artdaq
-    from python_artdaq import swig_artdaq
+    from   python_artdaq import swig_artdaq
 
     # Here, "True" means that if python_artdaq is available, it's assumed
     # that artdaq_mfextensions is as well
@@ -119,34 +113,33 @@ try:
 except:
     from rc.control.all_functions_noop import check_config_base
 
-
 process_management_methods = ["direct", "external_run_control"]
 
-if "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
+if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
     raise Exception(
         make_paragraph(
-            "Need to have the DAQINTERFACE_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
+            "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
         )
     )
 else:
     legal_method_found = False
     for pmm in process_management_methods:
-        if os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == pmm:
+        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
             legal_method_found = True
 
     if not legal_method_found:
         raise Exception(
             make_paragraph(
-                'DAQInterface can\'t interpret the current value of the DAQINTERFACE_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values are: %s'
+                'can\'t interpret the current value of TFM_PROCESS_MANAGEMENT_METHOD ("%s"); legal values are: %s'
                 % (
-                    os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"],
+                    os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
                     ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
                 )
             )
         )
 
-if os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == "direct":
+if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "direct":
     from rc.control.manage_processes_direct import launch_procs_base
     from rc.control.manage_processes_direct import kill_procs_base
     from rc.control.manage_processes_direct import check_proc_heartbeats_base
@@ -165,7 +158,7 @@ if os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == "direct":
     from rc.control.manage_processes_direct import get_pid_for_process_base
     from rc.control.manage_processes_direct import process_launch_diagnostics_base
     from rc.control.manage_processes_direct import mopup_process_base
-elif os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == "external_run_control":
+elif os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control":
     from rc.control.all_functions_noop import launch_procs_base
     from rc.control.all_functions_noop import kill_procs_base
     from rc.control.all_functions_noop import check_proc_heartbeats_base
@@ -185,14 +178,14 @@ elif os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == "external_run_contr
 
 
 # This is the end of if-elifs of process management methods
-if not "DAQINTERFACE_FHICL_DIRECTORY" in os.environ:
+if not "TFM_FHICL_DIRECTORY" in os.environ:
     print
     raise Exception(
         make_paragraph(
-            "The DAQINTERFACE_FHICL_DIRECTORY environment variable must be defined; if you wish to use the database rather than the local filesystem for FHiCL document retrieval, set DAQINTERFACE_FHICL_DIRECTORY to IGNORED"
+            "The TFM_FHICL_DIRECTORY environment variable must be defined; if you wish to use the database rather than the local filesystem for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"
         )
     )
-elif os.environ["DAQINTERFACE_FHICL_DIRECTORY"] == "IGNORED":
+elif os.environ["TFM_FHICL_DIRECTORY"] == "IGNORED":
     from rc.control.config_functions_database_v2 import get_config_info_base
     from rc.control.config_functions_database_v2 import put_config_info_base
     from rc.control.config_functions_database_v2 import put_config_info_on_stop_base
@@ -211,10 +204,7 @@ class DAQInterface(Component):
     configuration database, and artdaq processes
 
     """
-
-    # "Procinfo" is basically just a simple structure containing all
-    # the info about a given artdaq process that DAQInterface might
-    # care about
+    # "Procinfo" is a simple structure containing the info about a given artdaq process 
 
     # However, it also contains a less-than function which allows it
     # to be sorted s.t. processes you'd want shutdown first appear
@@ -224,10 +214,9 @@ class DAQInterface(Component):
     # JCF, Nov-17-2015
 
     # I add the "fhicl_file_path" variable, which is a sequence of
-    # paths which are searched in order to cut-and-paste #include'd
-    # files (see also the description of the DAQInterface class's
-    # fhicl_file_path variable, whose sole purpose is to be passed to
-    # Procinfo's functions)
+    # paths which are searched in order to cut-and-paste #include'd files 
+    # (see also the description of the DAQInterface class's
+    # fhicl_file_path variable, whose sole purpose is to be passed to Procinfo's functions)
 
     # JCF, Apr-26-2018
 
@@ -283,10 +272,10 @@ class DAQInterface(Component):
 
             self.lastreturned = "DAQInterface: ARTDAQ PROCESS NOT YET CALLED"
             self.socketstring = "http://" + self.host + ":" + self.port + "/RPC2"
-            self.state = "nonexistent"
+            self.state        = "nonexistent"
 
         def update_fhicl(self, fhicl):
-            self.fhicl = fhicl
+            self.fhicl      = fhicl
             self.fhicl_used = ""
             self.recursive_include(self.fhicl)
 
@@ -415,25 +404,25 @@ class DAQInterface(Component):
                 if severity == "e":
                     self.messageviewer_sender.write_error(
                         "DAQInterface partition %s"
-                        % (os.environ["DAQINTERFACE_PARTITION_NUMBER"]),
+                        % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "w":
                     self.messageviewer_sender.write_warning(
                         "DAQInterface partition %s"
-                        % (os.environ["DAQINTERFACE_PARTITION_NUMBER"]),
+                        % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "i":
                     self.messageviewer_sender.write_info(
                         "DAQInterface partition %s"
-                        % (os.environ["DAQINTERFACE_PARTITION_NUMBER"]),
+                        % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
                 elif severity == "d":
                     self.messageviewer_sender.write_debug(
                         "DAQInterface partition %s"
-                        % (os.environ["DAQINTERFACE_PARTITION_NUMBER"]),
+                        % (os.environ["TFM_PARTITION_NUMBER"]),
                         printstr,
                     )
 
@@ -458,7 +447,7 @@ class DAQInterface(Component):
 
     # The purpose of reset_variables is to reset those members that
     # (A) aren't necessarily persistent to the process (thus excluding
-    # the parameters in $DAQINTERFACE_SETTINGS) and (B) won't
+    # the parameters in $TFM_SETTINGS) and (B) won't
     # necessarily be set explicitly during the transitions up from the
     # "stopped" state. E.g., you wouldn't want to return to the
     # "stopped" state with self.exception == True and then try a
@@ -748,7 +737,7 @@ class DAQInterface(Component):
                 % (
                     self.procinfos[i_procinfo].label,
                     os.environ["USER"],
-                    os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                    os.environ["TFM_PARTITION_NUMBER"],
                 ),
                 "w",
             ) as trace_get_output:
@@ -774,7 +763,7 @@ class DAQInterface(Component):
                 % (
                     procinfo.label,
                     os.environ["USER"],
-                    os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                    os.environ["TFM_PARTITION_NUMBER"],
                 )
             ) as inf:
                 all_trace_get_info_in_one_string += "\n\n%s:\n" % (procinfo.label)
@@ -850,15 +839,15 @@ class DAQInterface(Component):
         print
 
     def read_settings(self):
-        if not os.path.exists(os.environ["DAQINTERFACE_SETTINGS"]):
+        if not os.path.exists(os.environ["TFM_SETTINGS"]):
             raise Exception(
                 make_paragraph(
                     'Unable to find settings file "%s"'
-                    % os.environ["DAQINTERFACE_SETTINGS"]
+                    % os.environ["TFM_SETTINGS"]
                 )
             )
 
-        inf = open(os.environ["DAQINTERFACE_SETTINGS"])
+        inf = open(os.environ["TFM_SETTINGS"])
         assert inf
 
         self.log_directory = None
@@ -926,7 +915,7 @@ class DAQInterface(Component):
                     raise Exception(
                         make_paragraph(
                             "Unable to parse package_hashes_to_save line in the settings file, %s"
-                            % (os.environ["DAQINTERFACE_SETTINGS"])
+                            % (os.environ["TFM_SETTINGS"])
                         )
                     )
 
@@ -960,7 +949,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'Incorrectly formatted line "%s" in %s'
-                        % (line.strip(), os.environ["DAQINTERFACE_SETTINGS"])
+                        % (line.strip(), os.environ["TFM_SETTINGS"])
                     )
             elif (
                 "boardreader_priorities_on_config:" in line
@@ -977,7 +966,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'Incorrectly formatted line "%s" in %s'
-                        % (line.strip(), os.environ["DAQINTERFACE_SETTINGS"])
+                        % (line.strip(), os.environ["TFM_SETTINGS"])
                     )
             elif (
                 "boardreader_priorities_on_start:" in line
@@ -994,7 +983,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'Incorrectly formatted line "%s" in %s'
-                        % (line.strip(), os.environ["DAQINTERFACE_SETTINGS"])
+                        % (line.strip(), os.environ["TFM_SETTINGS"])
                     )
             elif (
                 "boardreader_priorities_on_stop:" in line
@@ -1011,7 +1000,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'Incorrectly formatted line "%s" in %s'
-                        % (line.strip(), os.environ["DAQINTERFACE_SETTINGS"])
+                        % (line.strip(), os.environ["TFM_SETTINGS"])
                     )
 
             elif "max_fragment_size_bytes" in line or "max fragment size bytes" in line:
@@ -1027,7 +1016,7 @@ class DAQInterface(Component):
                 if self.max_fragment_size_bytes % 8 != 0:
                     raise Exception(
                         'Value for "max_fragment_size_bytes" in settings file "%s" should be a multiple of 8'
-                        % (os.environ["DAQINTERFACE_SETTINGS"])
+                        % (os.environ["TFM_SETTINGS"])
                     )
             elif (
                 "max_configurations_to_list" in line
@@ -1046,7 +1035,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'disable_unique_rootfile_labels must be set to either [Tt]rue or [Ff]alse in settings file "%s"'
-                        % (os.environ["DAQINTERFACE_SETTINGS"])
+                        % (os.environ["TFM_SETTINGS"])
                     )
             elif (
                 "disable_private_network_bookkeeping" in line
@@ -1060,7 +1049,7 @@ class DAQInterface(Component):
                 else:
                     raise Exception(
                         'disable_private_network_bookkeeping must be set to either [Tt]rue or [Ff]alse in settings file "%s"'
-                        % (os.environ["DAQINTERFACE_SETTINGS"])
+                        % (os.environ["TFM_SETTINGS"])
                     )
             elif "use_messageviewer" in line or "use messageviewer" in line:
                 token = line.split()[-1].strip()
@@ -1139,7 +1128,7 @@ class DAQInterface(Component):
             raise Exception(
                 make_paragraph(
                     "Since advanced_memory_usage is set to true in the settings file (%s), max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)"
-                    % (os.environ["DAQINTERFACE_SETTINGS"])
+                    % (os.environ["TFM_SETTINGS"])
                 )
             )
 
@@ -1150,7 +1139,7 @@ class DAQInterface(Component):
                 make_paragraph(
                     "Unable to parse the following variable(s) meant to be set in the "
                     "settings file, %s"
-                    % (os.environ["DAQINTERFACE_SETTINGS"] + ": " + missing_vars_string)
+                    % (os.environ["TFM_SETTINGS"] + ": " + missing_vars_string)
                 )
             )
 
@@ -1159,7 +1148,7 @@ class DAQInterface(Component):
                 make_paragraph(
                     "max_fragment_size_bytes isn't set in the settings file, "
                     "%s; this needs to be set since advanced_memory_usage isn't set to true"
-                    % os.environ["DAQINTERFACE_SETTINGS"]
+                    % os.environ["TFM_SETTINGS"]
                 )
             )
 
@@ -1171,7 +1160,7 @@ class DAQInterface(Component):
             raise Exception(
                 make_paragraph(
                     'Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config", "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" are defined in %s; this is not allowed. For further information, take a look at "The settings file reference" in the DAQInterface Manual'
-                    % (os.environ["DAQINTERFACE_SETTINGS"])
+                    % (os.environ["TFM_SETTINGS"])
                 )
             )
 
@@ -1295,7 +1284,7 @@ class DAQInterface(Component):
 
         checked_cmd = construct_checked_command(cmds)
 
-        status = Popen(
+        status = subprocess.Popen(
             checked_cmd,
             executable="/bin/bash",
             shell=True,
@@ -1321,7 +1310,7 @@ class DAQInterface(Component):
             'if [ -n "$SETUP_ARTDAQ_MFEXTENSIONS" ]; then printenv SETUP_ARTDAQ_MFEXTENSIONS; else echo "artdaq_mfextensions $ARTDAQ_MFEXTENSIONS_VERSION $MRB_QUALS";fi'
         )
 
-        proc = Popen(
+        proc = subprocess.Popen(
             ";".join(cmds),
             executable="/bin/bash",
             shell=True,
@@ -1366,7 +1355,7 @@ class DAQInterface(Component):
 
         msgviewercmd = construct_checked_command(cmds)
 
-        proc = Popen(
+        proc = subprocess.Popen(
             msgviewercmd,
             executable="/bin/bash",
             shell=True,
@@ -1507,14 +1496,14 @@ class DAQInterface(Component):
                     absolute_count += 1
             return int(round(absolute_count * fraction + 0.499999))  # round up
 
-        if "DAQINTERFACE_PROCESS_REQUIREMENTS_LIST" in os.environ:
-            if not os.path.exists(os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"]):
+        if "TFM_PROCESS_REQUIREMENTS_LIST" in os.environ:
+            if not os.path.exists(os.environ["TFM_PROCESS_REQUIREMENTS_LIST"]):
                 raise Exception(
-                    'The file "%s" referred to by the environment variable DAQINTERFACE_PROCESS_REQUIREMENTS_LIST doesn\'t appear to exist'
-                    % (os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"])
+                    'The file "%s" referred to by the environment variable TFM_PROCESS_REQUIREMENTS_LIST doesn\'t appear to exist'
+                    % (os.environ["TFM_PROCESS_REQUIREMENTS_LIST"])
                 )
 
-            with open(os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"]) as inf:
+            with open(os.environ["TFM_PROCESS_REQUIREMENTS_LIST"]) as inf:
                 for line in inf.readlines():
 
                     if re.search(r"^\s*$", line) or re.search(r"^\s*#", line):
@@ -1560,7 +1549,7 @@ class DAQInterface(Component):
                                     % (
                                         line,
                                         os.environ[
-                                            "DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"
+                                            "TFM_PROCESS_REQUIREMENTS_LIST"
                                         ],
                                         strictest_count_of_matching_required,
                                         regexp_to_match,
@@ -1581,14 +1570,14 @@ class DAQInterface(Component):
                         raise Exception(
                             'Error in file %s: line "%s" does not parse as "<process label regexp> <process fraction required> <process count required>"'
                             % (
-                                os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"],
+                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
                                 line,
                             )
                         )
 
     def throw_exception_if_losing_process_violates_requirements(self, procinfo):
 
-        process_matches_requirements_regexp = False  # As in, the requirements found in $DAQINTERFACE_PROCESS_REQUIREMENTS_LIST
+        process_matches_requirements_regexp = False  # As in, the requirements found in $TFM_PROCESS_REQUIREMENTS_LIST
         # should it exist
 
         for i_r, requirement_tuple in enumerate(self.overriding_process_requirements):
@@ -1613,7 +1602,7 @@ class DAQInterface(Component):
                                 current_count,
                                 original_count,
                                 minimum_count,
-                                os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"],
+                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
                             )
                         ),
                     )
@@ -1621,7 +1610,7 @@ class DAQInterface(Component):
                         "Loss of process %s violates at least one of the requirements in %s; scroll up for more details"
                         % (
                             procinfo.label,
-                            os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"],
+                            os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
                         )
                     )
 
@@ -1653,7 +1642,7 @@ class DAQInterface(Component):
                     process_description = "EventBuilder in a run with no RoutingManager"
 
             if process_description != "":
-                if "DAQINTERFACE_PROCESS_REQUIREMENTS_LIST" in os.environ:
+                if "TFM_PROCESS_REQUIREMENTS_LIST" in os.environ:
                     self.print_log(
                         "e",
                         make_paragraph(
@@ -1661,7 +1650,7 @@ class DAQInterface(Component):
                             % (
                                 procinfo.label,
                                 process_description,
-                                os.environ["DAQINTERFACE_PROCESS_REQUIREMENTS_LIST"],
+                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
                             )
                         ),
                     )
@@ -1673,14 +1662,14 @@ class DAQInterface(Component):
                             % (
                                 procinfo.label,
                                 process_description,
-                                os.environ["ARTDAQ_DAQINTERFACE_DIR"],
+                                os.environ["TFM_DIR"],
                             )
                         ),
                     )
 
                 raise Exception(
                     make_paragraph(
-                        "Loss of process %s violates one of DAQInterface's default requirements; scroll up for more details. You can override this behavior by adding a rule to the file referred to by the DAQINTERFACE_PROCESS_REQUIREMENTS_LIST environment variable"
+                        "Loss of process %s violates one of DAQInterface's default requirements; scroll up for more details. You can override this behavior by adding a rule to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
                         % (procinfo.label)
                     )
                 )
@@ -1845,7 +1834,7 @@ class DAQInterface(Component):
 
                 num_logfile_checks += 1
 
-                proc = Popen(
+                proc = subprocess.Popen(
                     cmd,
                     executable="/bin/bash",
                     shell=True,
@@ -2006,7 +1995,7 @@ class DAQInterface(Component):
             if not host_is_local(host):
                 link_logfile_cmd = "ssh %s '%s'" % (host, link_logfile_cmd)
 
-            proc = Popen(
+            proc = subprocess.Popen(
                 link_logfile_cmd,
                 executable="/bin/bash",
                 shell=True,
@@ -2062,7 +2051,7 @@ class DAQInterface(Component):
             )
 
         if cmd != "":
-            proc = Popen(
+            proc = subprocess.Popen(
                 cmd,
                 executable="/bin/bash",
                 shell=True,
@@ -2134,22 +2123,22 @@ class DAQInterface(Component):
 
     def execute_trace_script(self, transition):
 
-        if "DAQINTERFACE_TRACE_SCRIPT" not in os.environ:
+        if "TFM_TRACE_SCRIPT" not in os.environ:
             self.print_log(
                 "d",
                 make_paragraph(
-                    "Environment variable DAQINTERFACE_TRACE_SCRIPT not defined; will not execute the would-be trace script pointed to by the variable"
+                    "Environment variable TFM_TRACE_SCRIPT not defined; will not execute the would-be trace script pointed to by the variable"
                 ),
                 3,
             )
             return
 
-        trace_script = os.environ["DAQINTERFACE_TRACE_SCRIPT"]
+        trace_script = os.environ["TFM_TRACE_SCRIPT"]
 
-        if re.search(r"^%s" % (os.environ["ARTDAQ_DAQINTERFACE_DIR"]), trace_script):
+        if re.search(r"^%s" % (os.environ["TFM_DIR"]), trace_script):
             raise Exception(
                 make_paragraph(
-                    'The trace script referred to by the DAQINTERFACE_TRACE_SCRIPT environment variable, "%s", appears to be located inside the DAQInterface package itself. Please copy it somewhere else before using it, and revert any edits which may have been made to %s.'
+                    'The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", appears to be located inside the DAQInterface package itself. Please copy it somewhere else before using it, and revert any edits which may have been made to %s.'
                     % (trace_script, trace_script)
                 )
             )
@@ -2196,7 +2185,7 @@ class DAQInterface(Component):
             )
             self.print_log("d", 'Executing "%s"' % (cmd), 2)
 
-            out = Popen(
+            out = subprocess.Popen(
                 cmd,
                 executable="/bin/bash",
                 shell=True,
@@ -2226,8 +2215,8 @@ class DAQInterface(Component):
 
         else:  # trace script doesn't exist
             raise Exception(
-                'Unable to find trace script referred to by environment variable DAQINTERFACE_TRACE_SCRIPT ("%s")'
-                % (os.environ["DAQINTERFACE_TRACE_SCRIPT"])
+                'Unable to find trace script referred to by environment variable TFM_TRACE_SCRIPT ("%s")'
+                % (os.environ["TFM_TRACE_SCRIPT"])
             )
 
     # JCF, Nov-8-2015
@@ -2349,7 +2338,7 @@ class DAQInterface(Component):
                         procinfo_index
                     ].lastreturned[
                         0:200
-                    ] + " // REMAINDER TRUNCATED BY DAQINTERFACE, SEE %s FOR FULL FHiCL DOCUMENT" % (
+                    ] + " // REMAINDER TRUNCATED BY TFM, SEE %s FOR FULL FHiCL DOCUMENT" % (
                         self.tmp_run_record
                     )
 
@@ -2653,7 +2642,7 @@ class DAQInterface(Component):
 
     def add_ranks_from_ranksfile(self):
 
-        ranksfile = "/tmp/ranks%s.txt" % (os.environ["DAQINTERFACE_PARTITION_NUMBER"])
+        ranksfile = "/tmp/ranks%s.txt" % (os.environ["TFM_PARTITION_NUMBER"])
 
         if not os.path.exists(ranksfile):
             raise Exception(
@@ -2703,7 +2692,7 @@ class DAQInterface(Component):
                                 'Error: the process label "%s" didn\'t match with any of the regular expressions used to rank transition priorities in the settings file, %s'
                                 % (
                                     self.procinfos[i_proc].label,
-                                    os.environ["DAQINTERFACE_SETTINGS"],
+                                    os.environ["TFM_SETTINGS"],
                                 )
                             )
                         )
@@ -2735,7 +2724,7 @@ class DAQInterface(Component):
                         % (
                             self.record_directory,
                             inode_fullname,
-                            os.environ["ARTDAQ_DAQINTERFACE_DIR"],
+                            os.environ["TFM_DIR"],
                             self.record_directory,
                             inode_fullname,
                             os.getcwd(),
@@ -2764,19 +2753,19 @@ class DAQInterface(Component):
 
     # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
     def create_setup_fhiclcpp_if_needed(self):
-        if not os.path.exists(os.environ["DAQINTERFACE_SETUP_FHICLCPP"]):
+        if not os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
             self.print_log(
                 "w",
                 make_paragraph(
                     'File "%s", needed for formatting FHiCL configurations, does not appear to exist; will attempt to auto-generate one...'
-                    % (os.environ["DAQINTERFACE_SETUP_FHICLCPP"])
+                    % (os.environ["TFM_SETUP_FHICLCPP"])
                 ),
             )
-            with open(os.environ["DAQINTERFACE_SETUP_FHICLCPP"], "w") as outf:
+            with open(os.environ["TFM_SETUP_FHICLCPP"], "w") as outf:
                 outf.write("\n".join(get_setup_commands(self.productsdir, self.spackdir)))
                 outf.write("\n\n")
                 if self.productsdir != None:
-                    lines = Popen(
+                    lines = subprocess.Popen(
                         '%s;ups list -aK+ fhiclcpp | sort -n'
                         % (";".join(get_setup_commands(self.productsdir, self.spackdir))),
                         executable="/bin/bash",
@@ -2787,11 +2776,11 @@ class DAQInterface(Component):
                     if len(lines) > 0:
                         fhiclcpp_to_setup_line = lines[-1].decode("utf-8")
                     else:
-                        os.unlink(os.environ["DAQINTERFACE_SETUP_FHICLCPP"])
+                        os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
                         raise Exception(
                             make_paragraph(
                                 'Unable to find fhiclcpp ups product in products directory "%s" provided in the DAQInterface settings file, "%s"'
-                                % (self.productsdir, os.environ["DAQINTERFACE_SETTINGS"])
+                                % (self.productsdir, os.environ["TFM_SETTINGS"])
                             )
                         )
 
@@ -2806,17 +2795,17 @@ class DAQInterface(Component):
                 elif self.spackdir != None:
                     outf.write("spack load --first fhicl-cpp")
 
-            if os.path.exists(os.environ["DAQINTERFACE_SETUP_FHICLCPP"]):
+            if os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
                 self.print_log(
                     "w",
                     '"%s" has been auto-generated; you may want to check to see that it correctly sets up the fhiclcpp package...'
-                    % (os.environ["DAQINTERFACE_SETUP_FHICLCPP"]),
+                    % (os.environ["TFM_SETUP_FHICLCPP"]),
                 )
             else:
                 raise Exception(
                     make_paragraph(
                         'Error: was unable to find or create a file "%s"'
-                        % (os.environ["DAQINTERFACE_SETUP_FHICLCPP"])
+                        % (os.environ["TFM_SETUP_FHICLCPP"])
                     )
                 )
 
@@ -2872,21 +2861,21 @@ class DAQInterface(Component):
 
             self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (
                 os.environ["USER"],
-                os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                os.environ["TFM_PARTITION_NUMBER"],
             )
             if os.path.exists(self.boot_filename):
                 os.unlink(self.boot_filename)
 
             assert os.path.exists(
                 "%s/bin/defhiclize_boot_file.sh"
-                % (os.environ["ARTDAQ_DAQINTERFACE_DIR"])
+                % (os.environ["TFM_DIR"])
             )
             cmd = "%s/bin/defhiclize_boot_file.sh %s > %s" % (
-                os.environ["ARTDAQ_DAQINTERFACE_DIR"],
+                os.environ["TFM_DIR"],
                 boot_filename,
                 self.boot_filename,
             )
-            status = Popen(
+            status = subprocess.Popen(
                 cmd,
                 executable="/bin/bash",
                 shell=True,
@@ -2900,10 +2889,7 @@ class DAQInterface(Component):
             self.get_boot_info(self.boot_filename)
             self.check_boot_info()
         except Exception:
-            revert_failed_boot(
-                'when trying to read the DAQInterface boot file "%s"'
-                % (self.boot_filename)
-            )
+            revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename))
             return
 
         if (
@@ -2918,11 +2904,11 @@ class DAQInterface(Component):
 
         for boardreader_rank, compname in enumerate(self.daq_comp_list):
 
-            boardreader_port = "-1"
-            boardreader_subsystem = "1"
+            boardreader_port               = "-1"
+            boardreader_subsystem          = "1"
             boardreader_allowed_processors = "-1"
-            boardreader_prepend = ""
-            boardreader_target = "EventBuilder"
+            boardreader_prepend            = ""
+            boardreader_target             = "EventBuilder"
 
             if len(self.daq_comp_list[compname]) == 1:
                 boardreader_host = self.daq_comp_list[compname]
@@ -2956,12 +2942,11 @@ class DAQInterface(Component):
                         % (compname)
                     )
                 )
-
-            # Make certain the formula below for calculating the port
-            # # matches with the formula used to calculate the ports
-            # for the other artdaq processes when the boot file is
-            # read in
-
+#------------------------------------------------------------------------------
+# Make certain the formula below for calculating the port number matches 
+# the formula used to calculate the ports for the other artdaq processes 
+# when the boot file is read in
+#------------------------------------------------------------------------------
             if boardreader_port == "-1":
                 boardreader_port = str(
                     int(os.environ["ARTDAQ_BASE_PORT"])
@@ -3125,7 +3110,7 @@ class DAQInterface(Component):
                     cmd,
                 )
 
-            out = Popen(
+            out = subprocess.Popen(
                 cmd,
                 executable="/bin/bash",
                 shell=True,
@@ -3202,7 +3187,7 @@ class DAQInterface(Component):
                         logdircmd,
                     )
 
-                proc = Popen(
+                proc = subprocess.Popen(
                     logdircmd,
                     executable="/bin/bash",
                     shell=True,
@@ -3248,7 +3233,7 @@ class DAQInterface(Component):
             cmds = []
             cmds.append(
                 "if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-                % (";".join(get_setup_commands(self.productsdir, self.spackdir)), os.environ["DAQINTERFACE_SETUP_FHICLCPP"])
+                % (";".join(get_setup_commands(self.productsdir, self.spackdir)), os.environ["TFM_SETUP_FHICLCPP"])
             )
             cmds.append(
                 "if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi"
@@ -3258,7 +3243,7 @@ class DAQInterface(Component):
                 % (get_messagefacility_template_filename())
             )
 
-            proc = Popen(
+            proc = subprocess.Popen(
                 "; ".join(cmds),
                 executable="/bin/bash",
                 shell=True,
@@ -3434,7 +3419,7 @@ class DAQInterface(Component):
             # now wait/check status from msgviewer
             if self.msgviewer_proc.wait() != 0:
                 self.alert_and_recover(
-                    'Status error raised in msgviewer call within Popen; tried the following commands: \n\n"%s"'
+                    'Status error raised in msgviewer call within subprocess.Popen; tried the following commands: \n\n"%s"'
                     % " ;\n".join(cmds)
                 )
                 return
@@ -3473,7 +3458,7 @@ class DAQInterface(Component):
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
         if (
-            os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"]
+            os.environ["TFM_PROCESS_MANAGEMENT_METHOD"]
             == "external_run_control"
         ):
             self.add_ranks_from_ranksfile()
@@ -3618,7 +3603,7 @@ class DAQInterface(Component):
             raise
 
         reformatted_fhicl_documents = reformat_fhicl_documents(
-            os.environ["DAQINTERFACE_SETUP_FHICLCPP"], self.procinfos
+            os.environ["TFM_SETUP_FHICLCPP"], self.procinfos
         )
 
         for i_proc, reformatted_fhicl_document in enumerate(
@@ -3645,12 +3630,12 @@ class DAQInterface(Component):
 
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%s" % (
             os.environ["USER"],
-            os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+            os.environ["TFM_PARTITION_NUMBER"],
         )
 
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (
             os.environ["USER"],
-            Popen(
+            subprocess.Popen(
                 "date +%a_%b_%d_%H:%M:%S.%N",
                 executable="/bin/bash",
                 shell=True,
@@ -3801,7 +3786,7 @@ class DAQInterface(Component):
                     )
                 )
                 return
-            Popen(
+            subprocess.Popen(
                 "touch %s" % (run_record_directory),
                 executable="/bin/bash",
                 shell=True,
@@ -3831,7 +3816,7 @@ class DAQInterface(Component):
             return
 
         if os.environ[
-            "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"
+            "TFM_PROCESS_MANAGEMENT_METHOD"
         ] == "external_run_control" and os.path.exists(
             "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
         ):
@@ -3870,7 +3855,7 @@ class DAQInterface(Component):
 
         self.save_metadata_value(
             "DAQInterface start time",
-            Popen(
+            subprocess.Popen(
                 "date --utc",
                 executable="/bin/bash",
                 shell=True,
@@ -3916,7 +3901,7 @@ class DAQInterface(Component):
 
         self.save_metadata_value(
             "DAQInterface stop time",
-            Popen(
+            subprocess.Popen(
                 "date --utc",
                 executable="/bin/bash",
                 shell=True,
@@ -3940,7 +3925,7 @@ class DAQInterface(Component):
         self.stop_datataking()
 
         if os.environ[
-            "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"
+            "TFM_PROCESS_MANAGEMENT_METHOD"
         ] == "external_run_control" and os.path.exists(
             "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
         ):
@@ -4372,7 +4357,9 @@ class DAQInterface(Component):
             "\n%s: RECOVER transition complete%s"
             % (date_and_time(), run_number_string),
         )
-
+#------------------------------------------------------------------------------
+# tfm::artdaq_process_info
+#------------------------------------------------------------------------------
     def artdaq_process_info(self, name):
 
         try:
@@ -4384,7 +4371,7 @@ class DAQInterface(Component):
         else:
             tmpfile = "/tmp/artdaq_process_info_%s_partition%s" % (
                 os.environ["USER"],
-                os.environ["DAQINTERFACE_PARTITION_NUMBER"],
+                os.environ["TFM_PARTITION_NUMBER"],
             )
             infostring = ""
             for procinfo in self.procinfos:
@@ -4406,15 +4393,15 @@ class DAQInterface(Component):
             self.print_log("d", infostring, 5)
 
         return infostring
-
-    # Override of the parent class Component's runner function. As of
-    # 5/30/14, called every 1s by control.py
-
+#------------------------------------------------------------------------------
+# tfm::runner
+# Override of the parent class Component's runner function. 
+# As of 5/30/14, called every 1s by control.py
+#------------------------------------------------------------------------------
     def runner(self):
 
         """
-        Component "ops" loop.  Called at threading hearbeat frequency,
-        currently 1/sec.
+        Component "ops" loop.  Called at threading hearbeat frequency, currently 1/sec.
         """
 
         try:
@@ -4423,9 +4410,7 @@ class DAQInterface(Component):
                 pass
 
             if self.exception:
-                raise Exception(
-                    "Error: at some point DAQInterface set an exception state"
-                )
+                raise Exception("ERROR: an exception was raised")
 
             elif self.__do_boot:
                 self.__do_boot = False
@@ -4505,7 +4490,7 @@ def get_args():  # no-coverage
     )
 
     default_partition = 888;
-    x = os.environ.get("DAQINTERFACE_PARTITION_NUMBER");
+    x = os.environ.get("TFM_PARTITION_NUMBER");
     if (x) :
         default_partition = int(x);
     
@@ -4548,67 +4533,66 @@ def get_args():  # no-coverage
     )
 
     return parser.parse_args()
-
-
+#------------------------------------------------------------------------------
+# main
+#------------------------------------------------------------------------------
 def main():  # no-coverage
 
-    if "DAQINTERFACE_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
+    if "TFM_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
+        print(
+            make_paragraph('Won\'t launch DAQInterface; you first need to run "source $TFM_DIR/source_me"')
+        )
+        print
+        return
+
+    if "TFM_SETTINGS" not in os.environ.keys():
         print(
             make_paragraph(
-                'Won\'t launch DAQInterface; you first need to run "source $ARTDAQ_DAQINTERFACE_DIR/source_me"'
+                "Need to have the TFM_SETTINGS environment variable set to refer to the DAQInterface settings file"
             )
         )
         print
         return
 
-    if "DAQINTERFACE_SETTINGS" not in os.environ.keys():
+    if not os.path.exists(os.environ["TFM_SETTINGS"]):
         print(
             make_paragraph(
-                "Need to have the DAQINTERFACE_SETTINGS environment variable set to refer to the DAQInterface settings file"
+                'The file referred to by the TFM_SETTINGS environment variable, "%s", does not appear to exist'
+                % (os.environ["TFM_SETTINGS"])
             )
         )
         print
         return
 
-    if not os.path.exists(os.environ["DAQINTERFACE_SETTINGS"]):
+    if "TFM_KNOWN_BOARDREADERS_LIST" not in os.environ.keys():
         print(
             make_paragraph(
-                'The file referred to by the DAQINTERFACE_SETTINGS environment variable, "%s", does not appear to exist'
-                % (os.environ["DAQINTERFACE_SETTINGS"])
-            )
-        )
-        print
-        return
-
-    if "DAQINTERFACE_KNOWN_BOARDREADERS_LIST" not in os.environ.keys():
-        print(
-            make_paragraph(
-                "Need to have the DAQINTERFACE_KNOWN_BOARDREADERS_LIST environment variable set to refer to the list of boardreader types DAQInterface can use"
+                "Need to have the TFM_KNOWN_BOARDREADERS_LIST environment variable set to refer to the list of boardreader types DAQInterface can use"
             )
         )
         print
         return
 
     process_management_methods = ["direct", "pmt", "external_run_control"]
-    if "DAQINTERFACE_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
+    if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
         raise Exception(
             make_paragraph(
-                "Need to have the DAQINTERFACE_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
+                "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
                 % (",".join(['"' + pmm + '"' for pmm in process_management_methods]))
             )
         )
     else:
         legal_method_found = False
         for pmm in process_management_methods:
-            if os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"] == pmm:
+            if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
                 legal_method_found = True
 
         if not legal_method_found:
             raise Exception(
                 make_paragraph(
-                    'DAQInterface can\'t interpret the current value of the DAQINTERFACE_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
+                    'DAQInterface can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
                     % (
-                        os.environ["DAQINTERFACE_PROCESS_MANAGEMENT_METHOD"],
+                        os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
                         ",".join(
                             ['"' + pmm + '"' for pmm in process_management_methods]
                         ),
@@ -4616,11 +4600,11 @@ def main():  # no-coverage
                 )
             )
 
-    if not os.path.exists(os.environ["DAQINTERFACE_KNOWN_BOARDREADERS_LIST"]):
+    if not os.path.exists(os.environ["TFM_KNOWN_BOARDREADERS_LIST"]):
         print(
             make_paragraph(
-                'The file referred to by the DAQINTERFACE_KNOWN_BOARDREADERS_LIST environment variable, "%s", does not appear to exist'
-                % (os.environ["DAQINTERFACE_KNOWN_BOARDREADERS_LIST"])
+                'The file referred to by the TFM_KNOWN_BOARDREADERS_LIST environment variable, "%s", does not appear to exist'
+                % (os.environ["TFM_KNOWN_BOARDREADERS_LIST"])
             )
         )
         print
@@ -4634,7 +4618,7 @@ def main():  # no-coverage
             )
         )
         os.environ["HOSTNAME"] = (
-            Popen(
+            subprocess.Popen(
                 "hostname",
                 executable="/bin/bash",
                 shell=True,
@@ -4659,7 +4643,7 @@ def main():  # no-coverage
         print
         print(
             make_paragraph(
-                "Error: requested partition has the value %d while it needs to be between 0 and %d, inclusive; please set the DAQINTERFACE_PARTITION_NUMBER environment variable accordingly and try again"
+                "Error: requested partition has the value %d while it needs to be between 0 and %d, inclusive; please set the TFM_PARTITION_NUMBER environment variable accordingly and try again"
                 % (partition_number, max_partitions - 1)
             )
         )
@@ -4672,7 +4656,7 @@ def main():  # no-coverage
     if len(pids) > 1:
         print(
             make_paragraph(
-                'There already appears to be a DAQInterface instance running on the requested partition number (%s); please either kill the instance (if it\'s yours) or use a different partition. Run "listdaqinterfaces.sh" for more info.'
+                'There already appears to be a TFM instance running on the requested partition number (%s); please either kill the instance (if it\'s yours) or use a different partition. Run "listdaqinterfaces.sh" for more info.'
                 % (partition_number)
             )
         )

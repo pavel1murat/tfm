@@ -26,10 +26,27 @@
   - disable
   - stop
   - terminate
-* commands XMLRPC:                                                           
-- status      : xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint
-- listdaqcomps: xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listdaqcomps
-#+begin_src
+* TFM transitions                                                            
+- defined in [[file:../bin/send_transition.sh]]              
+- For whatever reason, commands are translated and sent to the TF server 
+are translated commands. Why ?
+|-----------+--------------------|
+| command   | translated command |
+|-----------+--------------------|
+| boot      | booting            |
+| config    | configuring        |
+| start     | starting           |
+| enable    | enabling           |
+| disable   | disabling          |
+| stop      | stopping           |
+| shutdown  | shutting           |
+| terminate | terminating        |
+|-----------+--------------------|
+
+- what is it? an excersize in linguistics of making gerunds from verbs ?
+
+** start example                                
+#+begin_src 
 mkdir DAQInterface
 cd DAQInterface
 cp $ARTDAQ_DAQINTERFACE_DIR/docs/user_sourcefile_example         source_me
@@ -59,14 +76,14 @@ export                       ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition8_mu
 source $ARTDAQ_DAQINTERFACE_DIR/source_me
 DAQInterface.sh &
 #+end_src
-- DAQInterface is a shell script submitting python script into background, which is *nonsense*
-#+begin_src
+- DAQInterface is a shell script submitting python server into background, which is *nonsense*
+#+begin_src                          
 /bin/bash /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/bin/DAQInterface.sh
 tail -n0 -f /tmp/daqinterface_murat/DAQInterface_partition0.log
 python3 /projects/mu2e/tdaq/pasha_013/srcs/artdaq_daqinterface/rc/control/daqinterface.py --partition-number 0 --rpc-port 10000
 #+end_src
-- management methods are defined in 
-file:../../artdaq_daqinterface/rc/control/daqinterface.py::/process_management_methods/
+- management methods are defined in  
+   file:../../artdaq_daqinterface/rc/control/daqinterface.py::/process_management_methods/
 *** environment                                                              
 /projects/mu2e/tdaq/pasha_013/DAQInterface>env | grep DAQINTERFACE
 DAQINTERFACE_PARTITION_NUMBER=8
@@ -109,37 +126,59 @@ Configuring metrics with parameter set:
 Tue Oct 31 15:10:44 CDT 2023: DAQInterface in partition 8 launched and now in "stopped" state, listening on port 18000
 %MSG
 #+end_src
+* XMLRPC commands                                                            
+  RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
+- *status*                                      
+#+begin_src
+                xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
+#+end_src
+- *listdaqcomps*                                                              
+#+begin_src
+                xmlrpc http://localhost:$TFM_PORT/RPC2 listdaqcomps
+#+end_src
 * TFM environment variables                                                  
-- TFM_FHICL_DIRECTORY                                                        
+- *TFM_DISABLE_BOOKKEEPING*                                                  
+  defined in [[file:../rc/control/farm_manager.py::/TFM_DISABLE_BOOKKEEPING/]]
+- *TFM_FHICL_DIRECTORY*                                                      
   the name of the directory containing the configurations you can pass 
   on the config transition. If set to "IGNORED", this means the database is used. 
-- TFM_KNOWN_BOARDREADERS_LIST                                                
+- *TFM_KNOWN_BOARDREADERS_LIST*                                              
   the name of the file containing the list of possible boardreaders to select from for a run
-- TFM_LOGDIR                                                                 
+- *TFM_LOGDIR*                                                               
   the directory in which the file which logs TFM output to screen is located.
-- TFM_LOGFILE                                                                
+- *TFM_LOGFILE*                                                              
   the name of the file which logs TFM output to screen. 
   Default: /tmp/tfm_${USER}/tfm_partition\$TFM_PARTITION_NUMBER}.log 
 
   Notice that since the variable name itself includes a reference to the
   partition variable, you can't directly use it (e.g., "less $TFM_LOGFILE" 
   wouldn't do what you'd think it would do)
-- TFM_PARTITION_NUMBER                                                       
+- *TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR*                                  
+  defined in [[file:../rc/control/farm_manager.py::/TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR/]]
+- *TFM_PARTITION_NUMBER*                                                     
   The partition TFM (and ARTDAQ) will run on. Defaults to 0.
   I guess, both should be the same
-- TFM_PROCESS_MANAGEMENT_METHOD                                              
+- *TFM_PROCESS_MANAGEMENT_METHOD*                                            
   The method used to control processes. 
   Options are "direct", "pmt", and "external_run_control". 
-- TFM_PROCESS_REQUIREMENTS_LIST                                              
-  an (optional) file users can edit to control which processes are run-
-  critical, assuming the process management method is in "direct" mode
+- *TFM_PROCESS_REQUIREMENTS_LIST*                                            
+  an (optional) file users can edit to control which processes are 
+  run-critical, assuming the process management method is in "direct" mode
 
   P.M. calling a file 'a list' doesn't make much sense
-- TFM_SETTINGS                                                               
+- *TFM_SETTINGS*                                                             
   The name of the file containing unlikely-to-be-changed-often parameters 
   controlling TFM behavior (process timeouts, output directory 
   for artdaq logfiles, etc.)
-- TFM_USER_SOURCEFILE                                                        
+- *TFM_SETUP_FHICLCPP*                                                       
+  defined in [[file:../rc/control/farm_manager.py::/TFM_SETUP_FHICLCPP/]]
+- *TFM_STANDARD_SOURCE_FILE_SOURCED*                                         
+  - set to "true" by sourcing file:../source_me::/TFM_STANDARD_SOURCEFILE_SOURCED/
+  which defines other TFM environment variables
+  - required by all shell scripts
+- *TFM_TRACE_SCRIPT*                                                         
+  defined in [[file:../rc/control/farm_manager.py::/TFM_TRACE_SCRIPT/]]
+- *TFM_USER_SOURCEFILE*                                                      
   The name of the experiment-defined script which the generic TFM source_me 
   script will in turn source when you set up the environment
 - ---------------------------------------------------------------------------                                                        

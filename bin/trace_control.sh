@@ -8,16 +8,12 @@
 
 cat <<EOF >&2
 
-Before using this script in DAQInterface, you'll want to: 
-
-1) Make sure you're using a copy of the original located in
-$ARTDAQ_DAQINTERFACE_DIR, and not the original itself. The copy should
-*not* be in $ARTDAQ_DAQINTERFACE_DIR
+1) Make sure you're using a copy of the original located in $TFM_DIR, and not the original itself. 
+   The copy should *not* be in $TFM_DIR
 
 2) Alter user-specific code in the script (references to "biery" and ProtoDUNE-cluster-specific paths)
 
 3) Eliminate this error message as well as the "exit 1" right after it in the script
-
 EOF
 
 exit 1

@@ -10,7 +10,7 @@ runnum=$1
 proclabel=$2
 examine=$3
 
-source $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh
+source $TFM_DIR/bin/diagnostic_tools.sh
 
 if [[ "$runnum" =~ ^[0-9]+$ ]]; then
     echo "Run number is $runnum"

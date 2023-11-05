@@ -58,11 +58,11 @@ def expand_environment_variable_in_string(line):
 def make_paragraph(userstring, chars_per_line=75):
     userstring.strip()
 
-    string_index = chars_per_line
+    string_index          = chars_per_line
     previous_string_index = -1
-    ignore_algorithm = False
+    ignore_algorithm      = False
 
-    userstring = userstring.replace("\n", " ")
+    userstring            = userstring.replace("\n", " ")
 
     while len(userstring) - string_index > 0:
 

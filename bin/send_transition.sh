@@ -5,10 +5,10 @@ cmd=$1
 xmlrpc_arg=
 translated_cmd=
 
-source $ARTDAQ_DAQINTERFACE_DIR/bin/tfm_utils.sh
-daqinterface_preamble
+source $TFM_DIR/bin/tfm_utils.sh
+tfm_preamble
 
-source $ARTDAQ_DAQINTERFACE_DIR/bin/diagnostic_tools.sh  # provides recorddir
+source $TFM_DIR/bin/diagnostic_tools.sh  # provides recorddir
 
 case $cmd in
     "boot")
@@ -78,7 +78,7 @@ if [[ "$badargs" = true ]]; then
 fi
 
 
-full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state_change daqint "${translated_cmd}
+full_cmd="xmlrpc http://localhost:$TFM_PORT/RPC2 state_change daqint "${translated_cmd}
 
 if [[ -n $xmlrpc_arg ]]; then
     full_cmd=${full_cmd}" 'struct/{"${xmlrpc_arg}"}'"

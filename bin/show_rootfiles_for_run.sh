@@ -51,36 +51,34 @@ elif (( $nmatches == 1 )); then
     #echo "tablename is $tablename in $proclabel"
 
     modules_grep_result=$( cat $file | tr "\n" " " | sed -r -n '/.*my_output_modules\s*:\s*\[[^]]*'$tablename'/p' )
-
-    if [[ -z $modules_grep_result ]]; then
-	continue
-    fi
-
+    
+    if [[ -z $modules_grep_result ]]; then continue ; fi
+    
     file_format=$( sed -r -n $sedline $file )
 
     runnum_format=$( echo $file_format | sed -r -n 's/.*(%0[0-9])[rR].*/\1d/p' )
-
+    
     if [[ -z $runnum_format ]]; then
-	runnum_format=$( echo $file_format | sed -r -n 's/.*(%)[rR].*/\1d/p' )
+	      runnum_format=$( echo $file_format | sed -r -n 's/.*(%)[rR].*/\1d/p' )
     fi
 
     if [[ -n $runnum_format ]]; then
-	runnum_token=$( printf $runnum_format $runnum )
-	file_format=$( echo $file_format | sed -r 's/%0[0-9][rR]/'$runnum_token'/' )
-	file_format=$( echo $file_format | sed -r 's/%[rR]/'$runnum_token'/' )
+	      runnum_token=$( printf $runnum_format $runnum )
+	      file_format=$( echo $file_format | sed -r 's/%0[0-9][rR]/'$runnum_token'/' )
+	      file_format=$( echo $file_format | sed -r 's/%[rR]/'$runnum_token'/' )
     fi
 
     file_format=$( echo $file_format | sed -r 's/%[^_\.]+/\*/g' )
     file_format=$( echo $file_format | sed -r 's/"//g' )
 
     if [[ -e $recorddir/$runnum/ranks.txt ]]; then
-	prochost=$( sed -r -n 's/^(\S+)\s+([0-9]+)\s+'$proclabel'.*/\1/p' $recorddir/$runnum/ranks.txt )
+	      prochost=$( sed -r -n 's/^(\S+)\s+([0-9]+)\s+'$proclabel'.*/\1/p' $recorddir/$runnum/ranks.txt )
 
-	if [[ -n $prochost ]]; then
-	    cmd="ls -l $file_format"
-	    
-	    if (( $nevents > 0 )); then
-		cmd="$cmd ; echo ; if [[ -z \$( type rawEventDump 2>/dev/null ) ]]; then \
+	      if [[ -n $prochost ]]; then
+	          cmd="ls -l $file_format"
+	          
+	          if (( $nevents > 0 )); then
+		            cmd="$cmd ; echo ; if [[ -z \$( type rawEventDump 2>/dev/null ) ]]; then \
 if [[ \"$( grep -El "^\s*alias rawEventDump" $recorddir/$runnum/setup.txt )\" != \"\" ]] ; then \
   echo Using the rawEventDump alias found in $recorddir/$runnum/setup.txt ; \
   . $recorddir/$runnum/setup.txt > /dev/null ; \
@@ -90,55 +88,42 @@ else \
   echo -Will try to run a generic, experiment-independent version of rawEventDump ; \
   echo -Will source the DAQ setup script in order to set up art \($recorddir/$runnum/setup.txt\) ; \
   . $recorddir/$runnum/setup.txt ; \
-  art -c $ARTDAQ_DAQINTERFACE_DIR/docs/rawEventDump.fcl \$( ls -tr1 $file_format | head -1 ) -n $nevents  ; \
+  art -c $TFM_DIR/docs/rawEventDump.fcl \$( ls -tr1 $file_format | head -1 ) -n $nevents  ; \
 fi ; \
                      else \
 echo Using the rawEventDump which is already available, if a rawEventDump alias exists in $recorddir/$runnum/setup.txt it will be ignored ; \
 rawEventDump \$( ls -tr1 $file_format | head -1 ) -n $nevents ; \
                      fi ; \
 $cmd "
-	    fi
+	          fi
 
-	    echo
-	    echo
-	    echo
-	    echo =======================================${prochost}=======================================
-	    if [[ "$prochost" != "$HOSTNAME" ]]; then
-		cmd="ssh $prochost '"$cmd"' "
-	    fi
-	    eval $cmd
-
-	    if [[ "$?" != "0" ]]; then
-
-		cat <<EOF
-
+	          echo
+	          echo
+	          echo
+	          echo =======================================${prochost}=======================================
+	          if [[ "$prochost" != "$HOSTNAME" ]]; then cmd="ssh $prochost '"$cmd"' " ; fi
+	          eval $cmd
+            
+	          if [[ "$?" != "0" ]]; then cat <<EOF
 The command 
 "$cmd" 
 returned nonzero; this almost certainly means you
 won't get the info you want about the root file, if any, written by
 the $proclabel process on $prochost for run $runnum.
-
 EOF
-
-	    fi
-	    
-	    echo ==============================================================================================
-	else
-	    cat<<EOF >&2
-
+	          fi
+	          echo ==============================================================================================
+	      else cat<<EOF >&2
 Unable to determine host that artdaq process $proclabel from run
 $runnum ran on based on examination of
 $recorddir/$runnum/ranks.txt. Exiting...
-
 EOF
-		exit 1
-	fi
-
+		        exit 1
+	      fi
     else
-	echo "Unable to find expected artdaq process info file \"$recorddir/$runnum/ranks.txt\"; exiting..." >&2
-	exit 1
+	      echo "Unable to find expected artdaq process info file \"$recorddir/$runnum/ranks.txt\"; exiting..." >&2
+	      exit 1
     fi
-
 elif (( $nmatches > 1 )); then
     echo "Error: found more than one potential root file listed in $file; exiting..." >&2
     sed -r -n $sedline $file >&2

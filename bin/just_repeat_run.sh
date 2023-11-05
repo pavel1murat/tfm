@@ -88,7 +88,7 @@ else
 fi
 
 echo
-echo -n "Checking that the known boardreaders list pointed to by DAQINTERFACE_KNOWN_BOARDREADERS_LIST is the same as was used in run $runnum..."
+echo -n "Checking that the known boardreaders list pointed to by TFM_KNOWN_BOARDREADERS_LIST is the same as was used in run $runnum..."
 
 if [[ -n $( diff $TFM_KNOWN_BOARDREADERS_LIST $recorddir/$runnum/known_boardreaders_list.txt ) ]]; then
     cat <<EOF >&2
@@ -99,7 +99,7 @@ to by the TFM_KNOWN_BOARDREADERS_LIST environment variable
 during run $runnum; unless you're running this script with the
 --nostrict option, this attempt to repeat run $runnum will not
 proceed. To address this warning, you can kill the current instance of
-DAQInterface on your partition and execute the following two commands:
+Tfm on your partition and execute the following two commands:
 
 cp $recorddir/$runnum/known_boardreaders_list.txt /tmp/known_boardreaders_list.txt
 export TFM_KNOWN_BOARDREADERS_LIST=/tmp/known_boardreaders_list.txt
@@ -113,19 +113,19 @@ else
 fi
 
 echo
-echo -n "Checking that DAQInterface is being run on the same host as was used for run $runnum..."
-daqinterface_host_from_run=$( sed -r -n 's/DAQInterface directory: ([^:]+).*/\1/p' $recorddir/$runnum/metadata.txt)
-current_daqinterface_host=$( hostname )
+echo -n "Checking that Tfm is being run on the same host as was used for run $runnum..."
+tfm_host_from_run=$( sed -r -n 's/Tfm directory: ([^:]+).*/\1/p' $recorddir/$runnum/metadata.txt)
+current_tfm_host=$( hostname )
 
-if [[ $current_daqinterface_host != $daqinterface_host_from_run ]]; then
+if [[ $current_tfm_host != $tfm_host_from_run ]]; then
 	
     cat<<EOF >&2
 
 A difference was found between the host TF manager was run on for
-run $runnum ($daqinterface_host_from_run) and the host you're
-currently on ($current_daqinterface_host). Consequently, any artdaq
+run $runnum ($tfm_host_from_run) and the host you're
+currently on ($current_tfm_host). Consequently, any artdaq
 process specified to run on "localhost" in either the boot file or the
-known boardreaders list won't run on $daqinterface_host_from_run,
+known boardreaders list won't run on $tfm_host_from_run,
 unlike run $runnum. Unless you're running this script with the
 --nostrict option, this attempt to repeat run $runnum will not
 proceed.

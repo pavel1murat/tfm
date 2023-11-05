@@ -20,7 +20,7 @@ fi
 if [[ ! -e $TFM_SETUP_FHICLCPP ]]; then
     cat<<EOF >&2
 Error: the fhiclcpp setup script referred to by
-\$DAQINTERFACE_SETUP_FHICLCPP, "$DAQINTERFACE_SETUP_FHICLCPP", does
+\$TFM_SETUP_FHICLCPP, "$TFM_SETUP_FHICLCPP", does
 not appear to exist. Exiting...
 EOF
     exit 1

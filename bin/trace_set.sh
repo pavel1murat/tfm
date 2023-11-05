@@ -2,7 +2,7 @@
 #------------------------------------------------------------------------------
 # depends on XMLRPC_C, that is addressed via UPS setup
 #------------------------------------------------------------------------------
-source $ARTDAQ_DAQINTERFACE_DIR/bin/tfm_utils.sh
+source $TFM_DIR/bin/tfm_utils.sh
 daqinterface_preamble
 
 if (( "$#" != 3 )); then
