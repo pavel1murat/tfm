@@ -1,24 +1,25 @@
 #!/bin/env bash
+script=`basename $0`
 #------------------------------------------------------------------------------
 # some info on running processes
 # call signature: artdaq_process_info.sh <partition>
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
-partition=0
-if [ -n $1 ] ; then partition=$1 ; fi
+function artdaq_process_info() {
+    local debug=0
+    source $TFM_DIR/bin/tfm_utils.sh
+    port=$TFM_PORT
+    if [ -n $1 ] ; then 
+        partition=$1 ; 
+        port=`tfm_port $partition`
+    fi
 
-scriptdir="$(dirname "$0")"
-source $scriptdir/package_setup.sh xmlrpc_c
-
-xmlrpc_retval=$?
-
-if [[ "$xmlrpc_retval" != "0" ]]; then
-    echo "Problem attempting to setup xmlrpc_c package" >&2
-    exit 40
-fi
-
-port=`tfm_port $partition`
-cmd="xmlrpc http://localhost:$partition/RPC2 artdaq_process_info daqint"
-eval $cmd
-
-exit 0
+    cmd="xmlrpc http://localhost:$port/RPC2 artdaq_process_info daqint"
+    if [ $debug != 0 ] ; then echo [$script:$LINENO] : cmd=$cmd ; fi
+    $cmd
+}
+#------------------------------------------------------------------------------
+# always make it a function
+#------------------------------------------------------------------------------
+artdaq_process_info $@
+rc=$?
+exit $rc

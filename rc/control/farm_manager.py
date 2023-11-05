@@ -22,6 +22,10 @@ import shutil
 from   shutil     import copyfile
 import random
 import signal
+#------------------------------------------------------------------------------
+# debugging printout
+#------------------------------------------------------------------------------
+from   inspect import currentframe, getframeinfo
 
 from rc.io.timeoutclient        import TimeoutServerProxy
 from rc.control.component       import Component
