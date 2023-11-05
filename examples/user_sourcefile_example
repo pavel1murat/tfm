@@ -11,4 +11,6 @@ fi
 if [ -z $TFM_LOGDIR ] ; then export TFM_LOGDIR=/tmp/daqinterface_$USER ; fi
 
 export TFM_USER_SOURCEFILE_ERRNO=0
-export TFM_PARTITION_NUMBER=0
+export      TFM_PARTITION_NUMBER=0
+
+return 0
