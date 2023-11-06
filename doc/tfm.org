@@ -126,7 +126,13 @@ Nil
 
 * TFM scripts                                                                
 *** send_transition.sh
-*** artdaq_process_info.sh
+*** artdaq_process_info.sh                                                   
+- call signature:
+-      artdaq_process_info.sh <partition>
+
+- if partition is specified, it is use to calculate the communication port number 
+- if partition is not specified, $TFM_PORT is used
+
 *** status.sh
 *** TODO listdaqcomps.sh                                                     
 - the printout doesn't seem to come up on the screen, gets printed by the next command

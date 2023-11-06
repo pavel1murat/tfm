@@ -501,18 +501,18 @@ class FarmManager(Component):
         # configurations
         # with multiple request domains and levels of filtering.
         self.subsystems = {}
-
-    # Constructor for FarmManager begins here
-
+    #------------------------------------------------------------------------------
+    # FarmManager constructor 
+    #------------------------------------------------------------------------------
     def __init__(
         self,
-        logpath=None,
-        name="toycomponent",
-        rpc_host="localhost",
-        control_host="localhost",
-        synchronous=True,
-        rpc_port=6659,
-        partition_number=999,
+        logpath          = None,
+        name             = "toycomponent",
+        rpc_host         = "localhost",
+        control_host     = "localhost",
+        synchronous      = True,
+        rpc_port         = 6659,
+        partition_number = 999,
     ):
 
         # Initialize Component, the base class of FarmManager
@@ -531,13 +531,13 @@ class FarmManager(Component):
         self.reset_variables()
 
         self.partition_number = partition_number
-        self.transfer = "Autodetect"
-        self.rpc_port = rpc_port
+        self.transfer         = "Autodetect"
+        self.rpc_port         = rpc_port
 
-        self.boardreader_priorities = None
+        self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
-        self.boardreader_priorities_on_start = None
-        self.boardreader_priorities_on_stop = None
+        self.boardreader_priorities_on_start  = None
+        self.boardreader_priorities_on_stop   = None
 
         self.daqinterface_base_dir = os.getcwd()
 
@@ -835,56 +835,52 @@ class FarmManager(Component):
         )
         self.print_log("e", alertmsg)
         print
-        self.print_log(
-            "e",
+        self.print_log("e",
             make_paragraph(
-                'Details on how to examine the artdaq process logfiles can be found in the "Examining your output" section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output'
+                ('Details on how to examine the artdaq process logfiles can be found '
+                 'in the "Examining your output" section of the FarmManager manual, '
+                 'https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output')
             ),
         )
         print
 
     def read_settings(self):
         if not os.path.exists(os.environ["TFM_SETTINGS"]):
-            raise Exception(
-                make_paragraph(
-                    'Unable to find settings file "%s"'
-                    % os.environ["TFM_SETTINGS"]
-                )
-            )
+            raise Exception(make_paragraph('Unable to find settings file "%s"' % os.environ["TFM_SETTINGS"]))
 
         inf = open(os.environ["TFM_SETTINGS"])
         assert inf
 
-        self.log_directory = None
-        self.record_directory = None
-        self.package_hashes_to_save = []
-        self.package_versions = {}
+        self.log_directory                = None
+        self.record_directory             = None
+        self.package_hashes_to_save       = []
+        self.package_versions             = {}
         self.productsdir_for_bash_scripts = None
-        self.max_fragment_size_bytes = None
+        self.max_fragment_size_bytes      = None
 
-        self.boardreader_timeout = 30
-        self.eventbuilder_timeout = 30
-        self.datalogger_timeout = 30
-        self.dispatcher_timeout = 30
-        self.routingmanager_timeout = 30
+        self.boardreader_timeout          = 30
+        self.eventbuilder_timeout         = 30
+        self.datalogger_timeout           = 30
+        self.dispatcher_timeout           = 30
+        self.routingmanager_timeout       = 30
 
-        self.use_messageviewer = True
-        self.use_messagefacility = True
-        self.advanced_memory_usage = False
-        self.strict_fragment_id_mode = False
-        self.fake_messagefacility = False
-        self.attempt_existing_pid_kill = False
-        self.data_directory_override = None
-        self.max_configurations_to_list = 1000000
-        self.disable_unique_rootfile_labels = False
+        self.use_messageviewer                   = True
+        self.use_messagefacility                 = True
+        self.advanced_memory_usage               = False
+        self.strict_fragment_id_mode             = False
+        self.fake_messagefacility                = False
+        self.attempt_existing_pid_kill           = False
+        self.data_directory_override             = None
+        self.max_configurations_to_list          = 1000000
+        self.disable_unique_rootfile_labels      = False
         self.disable_private_network_bookkeeping = False
-        self.allowed_processors = None
+        self.allowed_processors                  = None
 
-        self.max_num_launch_procs_checks = 20
-        self.launch_procs_wait_time = 40
+        self.max_num_launch_procs_checks         = 20
+        self.launch_procs_wait_time              = 40
 
-        self.productsdir = None
-        self.spackdir = None
+        self.productsdir                         = None
+        self.spackdir                            = None
 
         for line in inf.readlines():
 
@@ -3250,13 +3246,15 @@ class FarmManager(Component):
                 self.print_log(
                     "e",
                     make_paragraph(
-                        "The FHiCL code designed to control MessageViewer, found in %s, appears to contain one or more syntax errors (Or there was a problem running fhicl-dump)"
+                        ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
+                         " one or more syntax errors (Or there was a problem running fhicl-dump)")
                         % (get_messagefacility_template_filename())
                     ),
                 )
 
                 raise Exception(
-                    "The FHiCL code designed to control MessageViewer, found in %s, appears to contain one or more syntax errors (Or there was a problem running fhicl-dump)"
+                    ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
+                     " one or more syntax errors (Or there was a problem running fhicl-dump)")
                     % (get_messagefacility_template_filename())
                 )
 
@@ -3275,7 +3273,8 @@ class FarmManager(Component):
                 launch_procs_actions = self.launch_procs()
 
                 assert type(launch_procs_actions) is dict, make_paragraph(
-                    "The launch_procs function needs to return a dictionary whose keys are the names of the hosts on which it ran commands, and whose values are those commands"
+                    ("The launch_procs function needs to return a dictionary whose keys are the names of the hosts"
+                     " on which it ran commands, and whose values are those commands")
                 )
 
             except Exception:
@@ -3443,7 +3442,9 @@ class FarmManager(Component):
         self.complete_state_change(self.name, "booting")
 
         self.print_log("i", "\n%s: BOOT transition complete" % (date_and_time()))
-
+    #------------------------------------------------------------------------------
+    # CONFIG transition
+    #------------------------------------------------------------------------------
     def do_config(self, subconfigs_for_run=[]):
 
         self.print_log("i", "\n%s: CONFIG transition underway" % (date_and_time()))
@@ -3503,6 +3504,8 @@ class FarmManager(Component):
                             )
                         )
 
+        self.print_log("i", "\n%s: CONFIG transition 001 Pasha" % (date_and_time()))
+
         for i_proc in range(len(self.procinfos)):
 
             matching_filenames = ["%s.fcl" % self.procinfos[i_proc].label]
@@ -3521,17 +3524,11 @@ class FarmManager(Component):
                         found_fhicl = True
 
             if not found_fhicl:
-                self.print_log(
-                    "e",
-                    make_paragraph(
-                        'Unable to find a FHiCL document for %s in configuration "%s"; either remove the request for %s in the setdaqcomps.sh command (boardreader) or boot file (other artdaq process types) and redo the transitions or choose a new configuration'
-                        % (
-                            self.procinfos[i_proc].label,
-                            " ".join(self.subconfigs_for_run),
-                            self.procinfos[i_proc].label,
-                        )
-                    ),
-                )
+                self.print_log("e",make_paragraph(
+                        ('Unable to find a FHiCL document for %s in configuration "%s"; '
+                         'either remove the request for %s in the setdaqcomps.sh command (boardreader) '
+                         'or boot file (other artdaq process types) and redo the transitions or choose a new configuration'
+                     ) % (self.procinfos[i_proc].label," ".join(self.subconfigs_for_run),self.procinfos[i_proc].label)))
                 self.revert_failed_transition("looking for all needed FHiCL documents")
                 return
 
@@ -3564,6 +3561,8 @@ class FarmManager(Component):
 
         endtime = time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+
+        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (date_and_time()))
 
         for procinfo in self.procinfos:
             assert not procinfo.fhicl is None and not procinfo.fhicl_used is None
@@ -3610,6 +3609,8 @@ class FarmManager(Component):
             os.environ["TFM_PARTITION_NUMBER"],
         )
 
+        self.print_log("i", "\n%s: CONFIG transition 003 Pasha" % (date_and_time()))
+
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (
             os.environ["USER"],
             subprocess.Popen(
@@ -3637,11 +3638,11 @@ class FarmManager(Component):
             self.save_run_record()
         except Exception:
             self.print_log("w", traceback.format_exc())
-            self.print_log(
-                "w",
-                make_paragraph(
-                    "WARNING: an exception was thrown when attempting to save the run record. While datataking may be able to proceed, this may also indicate a serious problem"
-                ),
+            self.print_log("w",
+                           make_paragraph(
+                               ("WARNING: an exception was thrown when attempting to save the run record. "
+                                "While datataking may be able to proceed, this may also indicate a serious problem")
+                           ),
             )
 
         endtime = time()
@@ -3655,6 +3656,8 @@ class FarmManager(Component):
                 "calling experiment-defined function check_config()"
             )
             return
+
+        self.print_log("i", "\n%s: CONFIG transition 003 Pasha" % (date_and_time()))
 
         if self.manage_processes:
 
@@ -3705,6 +3708,8 @@ class FarmManager(Component):
 
         self.complete_state_change(self.name, "configuring")
 
+        self.print_log("i", "\n%s: CONFIG transition 004 Pasha" % (date_and_time()))
+
         if self.manage_processes:
             self.print_log(
                 "i",
@@ -3715,7 +3720,9 @@ class FarmManager(Component):
             )
 
         self.print_log("i", "\n%s: CONFIG transition complete" % (date_and_time()))
-
+    #------------------------------------------------------------------------------
+    # START transition
+    #------------------------------------------------------------------------------
     def do_start_running(self, run_number=None):
 
         if not run_number:
@@ -3754,7 +3761,10 @@ class FarmManager(Component):
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover(
                     make_paragraph(
-                        'Error: Attempt to copy temporary run record "%s" into permanent run record "%s" didn\'t work; most likely reason is that you don\'t have write permission to %s, but it may also mean that your experiment\'s reusing a run number. Scroll up past the Recover transition output for further troubleshooting information.'
+                        ('Error: Attempt to copy temporary run record "%s" into permanent run record'
+                         ' "%s" didn\'t work; most likely reason is that you don\'t have write permission'
+                         ' to %s, but it may also mean that your experiment\'s reusing a run number.'
+                         ' Scroll up past the Recover transition output for further troubleshooting information.')
                         % (
                             self.tmp_run_record,
                             run_record_directory,
@@ -3792,11 +3802,8 @@ class FarmManager(Component):
             )
             return
 
-        if os.environ[
-            "TFM_PROCESS_MANAGEMENT_METHOD"
-        ] == "external_run_control" and os.path.exists(
-            "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-        ):
+        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
+           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition_number)):
 
             os.chmod(run_record_directory, 0o755)
             copyfile(
@@ -3824,8 +3831,8 @@ class FarmManager(Component):
             except Exception:
                 self.print_log("d", traceback.format_exc(), 2)
                 self.alert_and_recover(
-                    'An exception was thrown when attempting to send the "start" transition to the artdaq processes; see messages above for more info'
-                )
+                    ('An exception was thrown when attempting to send the "start" transition '
+                     'to the artdaq processes; see messages above for more info'))
                 return
 
         self.start_datataking()
@@ -3901,15 +3908,9 @@ class FarmManager(Component):
 
         self.stop_datataking()
 
-        if os.environ[
-            "TFM_PROCESS_MANAGEMENT_METHOD"
-        ] == "external_run_control" and os.path.exists(
-            "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-        ):
-            run_record_directory = "%s/%s" % (
-                self.record_directory,
-                str(self.run_number),
-            )
+        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
+           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition_number)):
+            run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
             os.chmod(run_record_directory, 0o755)
 
             copyfile(
@@ -3947,7 +3948,9 @@ class FarmManager(Component):
             "\n%s: STOP transition complete for run %d"
             % (date_and_time(), self.run_number),
         )
-
+    #------------------------------------------------------------------------------
+    #  TERMINATE transition
+    #------------------------------------------------------------------------------
     def do_terminate(self):
 
         self.print_log("i", "\n%s: TERMINATE transition underway" % (date_and_time()))
@@ -4041,7 +4044,9 @@ class FarmManager(Component):
                 "Process manager logfiles (if applicable): %s"
                 % (",".join(self.process_manager_log_filenames)),
             )
-
+    #------------------------------------------------------------------------------
+    # RECOVER transition
+    #------------------------------------------------------------------------------
     def do_recover(self):
         run_number_string = f" for run {self.run_number}" if self.run_number else ""
         print
@@ -4574,23 +4579,21 @@ def main():  # no-coverage
             )
 
     if not os.path.exists(os.environ["TFM_KNOWN_BOARDREADERS_LIST"]):
-        print(
-            make_paragraph(
-                'The file referred to by the TFM_KNOWN_BOARDREADERS_LIST environment variable, "%s", does not appear to exist'
-                % (os.environ["TFM_KNOWN_BOARDREADERS_LIST"])
-            )
+        print(make_paragraph(
+            ('The file referred to by the TFM_KNOWN_BOARDREADERS_LIST environment variable,'
+             ' "%s", does not appear to exist\n' % (os.environ["TFM_KNOWN_BOARDREADERS_LIST"]))
         )
-        print
         return
 
     if not "HOSTNAME" in os.environ:
-        print
-        print(
-            make_paragraph(
-                'WARNING: the "HOSTNAME" environment variable does not appear to be defined (or, at least, does not appear in the os.environ dictionary). Will internally set it using the system\'s "hostname" command'
-            )
-        )
+        print(make_paragraph(
+            ('\nWARNING: the "HOSTNAME" environment variable does not appear to be defined'
+             ' (or, at least, does not appear in the os.environ dictionary). '
+             'Will internally set it using the system\'s "hostname" command\n'))
         os.environ["HOSTNAME"] = socket.gethostname();
+#------------------------------------------------------------------------------
+# P.Murat: this is an example of how not to do things
+#------------------------------------------------------------------------------
 #         os.environ["HOSTNAME"] = (
 #             subprocess.Popen(
 #                 "hostname",
@@ -4601,40 +4604,39 @@ def main():  # no-coverage
 #                 encoding  = "UTF-8"
 #             ).stdout.readlines()[0].strip()
 #         )
-        print
 
     args = get_args()
-
+    #------------------------------------------------------------------------------
     # Make sure the requested partition number is in a desired range,
     # and that it isn't already being used
-
+    #------------------------------------------------------------------------------
     max_partitions = 10
     assert "partition_number" in vars(args)
     partition_number = vars(args)["partition_number"]
     if partition_number < 0 or partition_number > max_partitions - 1:
-        print
-        print(
-            make_paragraph(
-                "Error: requested partition has the value %d while it needs to be between 0 and %d, inclusive; please set the TFM_PARTITION_NUMBER environment variable accordingly and try again"
-                % (partition_number, max_partitions - 1)
-            )
-        )
+        print(make_paragraph(
+            ("\nError: requested partition has the value %d while it needs "
+             "to be between 0 and %d, inclusive; please set the TFM_PARTITION_NUMBER "
+             "environment variable accordingly and try again")
+            % (partition_number, max_partitions - 1)))
         return
 
-    greptoken = "python.*daqinterface.py.*--partition-number\s\+%d\s\+" % (
+    greptoken = "python.*farm_manager.py.*--partition-number\s\+%d\s\+" % (
         partition_number
     )
     pids = get_pids(greptoken)
     if len(pids) > 1:
         print(
             make_paragraph(
-                'There already appears to be a TFM instance running on the requested partition number (%s); please either kill the instance (if it\'s yours) or use a different partition. Run "listdaqinterfaces.sh" for more info.'
-                % (partition_number)
-            )
+                ('There already appears to be a TFM instance running on the requested partition number (%s);'
+                ' please either kill the instance (if it\'s yours) or use a different partition. '
+                'Run "listdaqinterfaces.sh" for more info.') % (partition_number))
         )
         kill_tail_f()  # Because tail -f is launched before this script is launched
         return
-
+    #------------------------------------------------------------------------------
+    # handling of KILL
+    #------------------------------------------------------------------------------
     def handle_kill_signal(signum, stack):
         daqinterface_instance.print_log(
             "e",
@@ -4649,11 +4651,9 @@ def main():  # no-coverage
             if int(time() - starttime) > timeout:
                 daqinterface_instance.print_log(
                     "e",
-                    "FarmManager signal handler recovery attempt timed out after %d seconds; FarmManager is in the %s state rather than the stopped state"
-                    % (
-                        timeout,
-                        daqinterface_instance.state(daqinterface_instance.name),
-                    ),
+                    ("FarmManager signal handler recovery attempt timed out after %d seconds; "
+                    "FarmManager is in the %s state rather than the stopped state")
+                    % (timeout,daqinterface_instance.state(daqinterface_instance.name)),
                 )
                 break
 
@@ -4664,14 +4664,10 @@ def main():  # no-coverage
 
         daqinterface_instance.__del__()
 
-        if signum == signal.SIGTERM:
-            default_sigterm_handler
-        elif signum == signal.SIGHUP:
-            default_sighup_handler
-        elif signum == signal.SIGINT:
-            default_sigint_handler
-        else:
-            assert False
+        if   signum == signal.SIGTERM: default_sigterm_handler
+        elif signum == signal.SIGHUP : default_sighup_handler
+        elif signum == signal.SIGINT : default_sigint_handler
+        else                         : assert False
 
         # JCF, Mar-25-2019
         # os._exit is harder than sys.exit; see
@@ -4682,10 +4678,7 @@ def main():  # no-coverage
     default_sighup_handler  = signal.signal(signal.SIGHUP , handle_kill_signal)
     default_sigint_handler  = signal.signal(signal.SIGINT , handle_kill_signal)
 
-    with FarmManager(
-        logpath=os.path.join(os.environ["HOME"], ".lbnedaqint.log"), **vars(args)
-    ) as daqinterface_instance:
-
+    with FarmManager(logpath=os.path.join(os.environ["HOME"], ".lbnedaqint.log"), **vars(args)) as daqinterface_instance:
         while True:
             sleep(100)
 

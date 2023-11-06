@@ -32,8 +32,7 @@
   P.M. calling a file 'a list' doesn't make much sense
 - *TFM_SETTINGS*                                                             
   The name of the file containing unlikely-to-be-changed-often parameters 
-  controlling TFM behavior (process timeouts, output directory 
-  for artdaq logfiles, etc.)
+  controlling TFM behavior (process timeouts, output directory for artdaq logfiles, etc.)
 - *TFM_SETUP_FHICLCPP*                                                       
   defined in [[file:../rc/control/farm_manager.py::/TFM_SETUP_FHICLCPP/]]
 - *TFM_STANDARD_SOURCE_FILE_SOURCED*                                         
