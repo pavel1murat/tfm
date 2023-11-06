@@ -128,9 +128,10 @@ Nil
 *** send_transition.sh
 *** artdaq_process_info.sh                                                   
 - call signature:
--      artdaq_process_info.sh <partition>
-
-- if partition is specified, it is use to calculate the communication port number 
+#+begin_src
+      artdaq_process_info.sh [partition]
+#_end_src
+- if partition is specified, it is use to determine the communication port number 
 - if partition is not specified, $TFM_PORT is used
 
 *** status.sh
