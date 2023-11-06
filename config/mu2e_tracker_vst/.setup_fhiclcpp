@@ -1,0 +1,3 @@
+export PRODUCTS="/mu2e/ups"; . /mu2e/ups/setup
+upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi
+setup "fhiclcpp" "v4_16_02" -q "e20:prof"

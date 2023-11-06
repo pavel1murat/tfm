@@ -1,17 +1,29 @@
 The files in this directory are installed in the DAQInterface directory when quick-mrb-start.sh is run.
 
-boot.txt: Example boot.txt file with entries for 2 EventBuilders, a DataLogger, and a Dispatcher
+boot.txt: 
+  Example boot.txt file with entries for 2 EventBuilders, a DataLogger, and a Dispatcher
 
-boot.mu2edaq.txt: Example boot.txt file modified for use on the mu2edaq cluster during integration tests. It defines the same applications as boot.txt, but spreads them between mu2edaq14, mu2edaq11, and mu2edaq07
+boot.mu2edaq.txt: 
+  Example boot.txt file modified for use on the mu2edaq cluster during integration tests. 
+  It defines the same applications as boot.txt, but spreads them between mu2edaq14, mu2edaq11, and mu2edaq07
 
-known_boardreaders_list_example: Example boardreaders_list file with entries for a number of components.
+known_boardreaders_list_example: 
+  Example boardreaders_list file with entries for a number of components.
 
-known_boardreaders_list_example.mu2edaq: Example boardreaders_list file for use on the mu2edaq cluster during integration tests. It defines the same components as known_boardreaders_list_example, but spread between mu2edaq14, mu2edaq11, and mu2edaq07
+known_boardreaders_list_example.mu2edaq: 
+  Example boardreaders_list file for use on the mu2edaq cluster during integration tests. 
+  It defines the same components as known_boardreaders_list_example, 
+  but spread between mu2edaq14, mu2edaq11, and mu2edaq07
 
-known_boardreaders_list_mu2edaq: Example boardreaders list file for use on the mu2edaq cluster during large-scale protoDUNE testing.
+known_boardreaders_list_mu2edaq: 
+  Example boardreaders list file for use on the mu2edaq cluster during large-scale protoDUNE testing.
 
-process_requirements_list_example: Example file which can be used to configured DAQInterface's process watching functionality
+process_requirements_list_example: 
+  Example file which can be used to configured DAQInterface's process watching functionality
 
-settings_example: Example DAQInterface settings file, with default values shown for several important variables.
+settings_example: 
+  Example TFM settings file, with default values shown for several important variables.
 
-user_sourcefile_example: Example bash script which DAQInterface will source upon startup. Defines several environmental variables which are important to DAQInterface and/or artdaq
+user_sourcefile_example: 
+  Example bash script which DAQInterface will source upon startup. 
+  Defines several environmental variables which are important to DAQInterface and/or artdaq

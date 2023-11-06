@@ -22,6 +22,7 @@ import shutil
 from   shutil     import copyfile
 import random
 import signal
+import socket
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
@@ -1800,38 +1801,31 @@ class FarmManager(Component):
             proctypes = []
 
             cmds.append('short_hostname=$( hostname | sed -r "s/([^.]+).*/\\1/" )')
-            for i_p, procinfo in enumerate(procinfos_for_host):
+            for i_p, p in enumerate(procinfos_for_host):
 
-                output_logdir = "%s/%s-$short_hostname-%s" % (
-                    self.log_directory,
-                    procinfo.label,
-                    procinfo.port,
-                )
+                output_logdir = "%s/%s-$short_hostname-%s" % (self.log_directory,p.label,p.port,)
                 cmds.append(
                     "filename_%s=$( ls -tr1 %s/%s-$short_hostname-%s*.log | tail -1 )"
-                    % (i_p, output_logdir, procinfo.label, procinfo.port)
+                    % (i_p, output_logdir, p.label, p.port)
                 )
                 cmds.append(
                     "if [[ -z $filename_%s ]]; then echo No logfile found for process %s on %s after looking in %s >&2 ; exit 1; fi"
-                    % (i_p, procinfo.label, procinfo.host, output_logdir)
+                    % (i_p, p.label, p.host, output_logdir)
                 )
                 cmds.append("timestamp_%s=$( stat -c %%Y $filename_%s )" % (i_p, i_p))
                 cmds.append(
                     'if (( $( echo "$timestamp_%s < %f" | bc -l ) )); then echo Most recent logfile found in expected output directory for process %s on %s, $filename_%s, is too old to be the logfile for the process in this run >&2 ; exit 1; fi'
-                    % (i_p, self.launch_procs_time, procinfo.label, procinfo.host, i_p)
+                    % (i_p, self.launch_procs_time, p.label, p.host, i_p)
                 )
-                cmds.append(
-                    "echo Logfile for process %s on %s is $filename_%s"
-                    % (procinfo.label, procinfo.host, i_p)
-                )
-                proctypes.append(procinfo.name)
+                cmds.append("echo Logfile for process %s on %s is $filename_%s" % (p.label, p.host, i_p))
+                proctypes.append(p.name)
 
             cmd = "; ".join(cmds)
 
             if not host_is_local(host):
                 cmd = "ssh -f " + host + " '" + cmd + "'"
 
-            num_logfile_checks = 0
+            num_logfile_checks     = 0
             max_num_logfile_checks = 5
 
             while True:
@@ -1949,9 +1943,9 @@ class FarmManager(Component):
         ]:
 
             for fulllogname in loglist:
-                host = fulllogname.split(":")[0]
+                host    = fulllogname.split(":")[0]
                 logname = "".join(fulllogname.split(":")[1:])
-                label = fulllogname.split("/")[-1].split("-")[0]
+                label   = fulllogname.split("/")[-1].split("-")[0]
 
                 proctype = ""
 
@@ -1959,39 +1953,24 @@ class FarmManager(Component):
                     if label == procinfo.label:
                         proctype = procinfo.name
 
-                if "BoardReader" in proctype:
-                    subdir = "boardreader"
-                elif "EventBuilder" in proctype:
-                    subdir = "eventbuilder"
-                elif "DataLogger" in proctype:
-                    subdir = "datalogger"
-                elif "Dispatcher" in proctype:
-                    subdir = "dispatcher"
-                elif "RoutingManager" in proctype:
-                    subdir = "routingmanager"
+                if   "BoardReader"    in proctype : subdir = "boardreader"
+                elif "EventBuilder"   in proctype : subdir = "eventbuilder"
+                elif "DataLogger"     in proctype : subdir = "datalogger"
+                elif "Dispatcher"     in proctype : subdir = "dispatcher"
+                elif "RoutingManager" in proctype : subdir = "routingmanager"
                 else:
-                    assert (
-                        False
-                    ), 'Unknown process type "%s" found when soflinking logfiles' % (
-                        proctype
-                    )
+                    assert (False),\
+                        'Unknown process type "%s" found when soflinking logfiles' % (proctype)
 
                 if host not in softlink_commands_to_run_on_host:
                     assert host not in links_printed_to_output
                     softlink_commands_to_run_on_host[host] = []
                     links_printed_to_output[host] = []
 
-                softlink = "%s/%s/run%d-%s.log" % (
-                    self.log_directory,
-                    subdir,
-                    self.run_number,
-                    label,
-                )
+                softlink         = "%s/%s/run%d-%s.log" % (self.log_directory,subdir,self.run_number,label)
                 link_logfile_cmd = "ln -s %s %s" % (logname, softlink)
                 softlink_commands_to_run_on_host[host].append(link_logfile_cmd)
-                links_printed_to_output[host].append(
-                    "%-20s %s:%s" % (label + ":", host, softlink)
-                )
+                links_printed_to_output[host].append("%-20s %s:%s" % (label + ":", host, softlink))
 
         for host in softlink_commands_to_run_on_host:
             link_logfile_cmd = "; ".join(softlink_commands_to_run_on_host[host])
@@ -1999,13 +1978,12 @@ class FarmManager(Component):
             if not host_is_local(host):
                 link_logfile_cmd = "ssh %s '%s'" % (host, link_logfile_cmd)
 
-            proc = subprocess.Popen(
-                link_logfile_cmd,
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
+            proc = subprocess.Popen(link_logfile_cmd,
+                                    executable="/bin/bash",
+                                    shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                )
             status = proc.wait()
 
             if status == 0:
@@ -2019,7 +1997,7 @@ class FarmManager(Component):
 
     def fill_package_versions(self, packages):
 
-        cmd = ""
+        cmd             = ""
         needed_packages = []
 
         for package in packages:
@@ -2425,8 +2403,8 @@ class FarmManager(Component):
 
         # ELF, Jul-17-2020
         # Subsystems can form a tree from many sources to one final subsystem.
-        # Order from leaves to trunk to ensure that
-        # on stop, all of a given subsystem's sources are stopped first.
+        # Order from leaves to trunk to ensure that on stop, 
+        # all of a given subsystem's sources are stopped first.
         subsystems_in_order = []
         while len(subsystems_in_order) < len(self.subsystems):
             for subsystem in self.subsystems:
@@ -2452,7 +2430,7 @@ class FarmManager(Component):
         self.print_log("d", "", 3)
 
         proc_starttimes = {}
-        proc_endtimes = {}
+        proc_endtimes   = {}
         for subsystem in subsystems_in_order:
             for proctype in proctypes_in_order:
 
@@ -2502,24 +2480,16 @@ class FarmManager(Component):
                 if procinfo.lastreturned != "Success"
             ]
         ):
-            for procinfo in self.procinfos:
-                total_time = "%.1f" % (
-                    proc_endtimes[procinfo.label] - proc_starttimes[procinfo.label]
-                )
+            for p in self.procinfos:
+                total_time = "%.1f" % (proc_endtimes[p.label] - proc_starttimes[p.label])
                 self.print_log(
                     "i",
                     "%s at %s:%s, after %s seconds returned string was:\n%s\n"
-                    % (
-                        procinfo.label,
-                        procinfo.host,
-                        procinfo.port,
-                        total_time,
-                        procinfo.lastreturned,
-                    ),
+                    % (p.label,p.host,p.port,total_time,p.lastreturned),
                 )
         else:
             slowest_process = ""
-            max_time = 0
+            max_time        = 0
             for procinfo in self.procinfos:
                 if (
                     proc_endtimes[procinfo.label] - proc_starttimes[procinfo.label]
@@ -2551,27 +2521,24 @@ class FarmManager(Component):
 
             verbing = ""
 
-            if command == "Pause":
-                verbing = "pausing"
-            elif command == "Resume":
-                verbing = "resuming"
-            elif command == "Shutdown":
-                verbing == "shutting"
-            else:
-                assert False
+            if   command == "Pause"   : verbing  =  "pausing"
+            elif command == "Resume"  : verbing  =  "resuming"
+            elif command == "Shutdown": verbing  =  "shutting"  # P.M. : found a bug here 
+            else                      : assert False
 
             self.complete_state_change(self.name, verbing)
-            self.print_log(
-                "i", "\n%s: %s transition complete" % (date_and_time(), command.upper())
-            )
+            self.print_log("i", "\n%s: %s transition complete" % (date_and_time(), command.upper()))
 
     def setdaqcomps(self, daq_comp_list):
+        # breakpoint()
         self.daq_comp_list = daq_comp_list
+
+        module = os.path.splitext(os.path.basename(__file__))[0];
         self.print_log(
             "i",
-            "%s called with %s"
+            "%s:%s called with %s"
             % (
-                self.setdaqcomps.__name__,
+                module,self.setdaqcomps.__name__,
                 " ".join([compattr for compattr in self.daq_comp_list.keys()]),
             ),
         )
@@ -2743,17 +2710,12 @@ class FarmManager(Component):
 
             for runrec in glob.glob("%s/*" % (self.record_directory)):
                 if re.search(r"/?[0-9]+$", runrec):
-                    raise Exception(
-                        make_paragraph(
-                            "A run record (%s) was found in %s. This is unexpected as no %s file was found. A %s file has just been created, so the next time you try this you won't see this error - however, this situation suggests that the run records directory has been unexpectedly altered. PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS AS THIS MAY RESULT IN RUN NUMBER DUPLICATION."
-                            % (
-                                runrec,
-                                self.record_directory,
-                                inode_fullname,
-                                inode_fullname,
-                            )
-                        )
-                    )
+                    message = ("A run record (%s) was found in %s. This is unexpected as no %s file was found."
+                               " A %s file has just been created, so the next time you try this you won't see this error"
+                               " - however, this situation suggests that the run records directory has been unexpectedly altered."
+                               " PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS"
+                               " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
+                    raise Exception(make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
 
     # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
     def create_setup_fhiclcpp_if_needed(self):
@@ -2813,25 +2775,22 @@ class FarmManager(Component):
                     )
                 )
 
-    # do_boot(), do_config(), do_start_running(), etc., are the
-    # functions which get called in the runner() function when a
-    # transition is requested
+    # do_boot(), do_config(), do_start_running(), etc., are the functions 
+    # which get called by the runner() function when a transition is requested
 
     def do_boot(self, boot_filename=None):
         def revert_failed_boot(failed_action):
             self.reset_variables()
             self.revert_failed_transition(failed_action)
-
-        if (
-            not hasattr(self, "daq_comp_list")
-            or self.daq_comp_list is None
-            or len(self.daq_comp_list) == 0
-        ):
-            self.print_log(
-                "e",
-                make_paragraph(
-                    'No components appear to have been requested; you need to first call setdaqcomps ("setdaqcomps.sh" at the command line). System remains in "stopped" state.'
-                ),
+        #------------------------------------------------------------------------------
+        # P.M. why would a presence of boardreaders be required ? - testing loading the plugins ? 
+        #------------------------------------------------------------------------------
+        if (not hasattr(self, "daq_comp_list") or self.daq_comp_list is None or len(self.daq_comp_list) == 0):
+            self.print_log("e", make_paragraph(
+                'No components appear to have been requested; '
+                'you need to first call setdaqcomps ("setdaqcomps.sh" at the command line). '
+                'System remains in "stopped" state.'
+            ),
             )
             self.revert_state_change(self.name, self.state(self.name))
             return
@@ -2853,7 +2812,9 @@ class FarmManager(Component):
             )
 
         dummy, file_extension = os.path.splitext(boot_filename)
-
+        #------------------------------------------------------------------------------
+        # it looks that a boot file name could be in FHICL format
+        #------------------------------------------------------------------------------
         if file_extension != ".fcl":
             self.boot_filename = boot_filename
         else:
@@ -3016,7 +2977,8 @@ class FarmManager(Component):
                         2,
                     )
 
-        # WK 8/31/21
+        self.print_log("i", "\n%s: BOOT transition: 001 Pasha : start msgviewer" % (date_and_time()))
+       # WK 8/31/21
         # Startup msgviewer early. check on it later
         self.msgviewer_proc = None  # initialize
         if self.use_messageviewer:
@@ -3067,6 +3029,7 @@ class FarmManager(Component):
                 self.alert_and_recover("Problem during messageviewer launch stage")
                 return
 
+        self.print_log("i", "\n%s: BOOT transition underway 002 Pasha : dealt with msg viewer" % (date_and_time()))
         # JCF, Oct-18-2017
 
         # After a discussion with Ron about how trace commands need to
@@ -3095,8 +3058,8 @@ class FarmManager(Component):
 
             self.print_log(
                 "i",
-                "\nOn randomly selected node (%s), will confirm that the DAQ setup script \n%s\ndoesn't return a nonzero value when sourced..."
-                % (random_host, self.daq_setup_script),
+                "\n%s On randomly selected node (%s), will confirm that the DAQ setup script \n%s\ndoesn't return a nonzero value when sourced..."
+                % (date_and_time(),random_host, self.daq_setup_script),
                 1,
                 False,
             )
@@ -3124,6 +3087,8 @@ class FarmManager(Component):
             )
 
             out_comm = out.communicate()
+
+            self.print_log("i", "\n%s: BOOT transition underway 003 Pasha : back from running setup" % (date_and_time()))
 
             if out_comm[0] is not None:
                 out_stdout = out_comm[0]
@@ -3161,6 +3126,8 @@ class FarmManager(Component):
             endtime = time()
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
+            self.print_log("i", "\n%s: BOOT transition underway 004 Pasha : done with setup" % (date_and_time()))
+
             # Ensure the needed log directories are in place
 
             logdir_commands_to_run_on_host = []
@@ -3191,6 +3158,7 @@ class FarmManager(Component):
                         logdircmd,
                     )
 
+                self.print_log("i", "\n%s: BOOT transition underway 005 Pasha executing %s\n" % (date_and_time(),logdircmd))
                 proc = subprocess.Popen(
                     logdircmd,
                     executable="/bin/bash",
@@ -3199,6 +3167,8 @@ class FarmManager(Component):
                     stderr=subprocess.PIPE,
                     encoding="utf-8",
                 )
+                self.print_log("i", "\n%s: BOOT transition underway 006 Pasha done with mkdirs\n" % (date_and_time()))
+
                 out, err = proc.communicate()
                 status = proc.returncode
 
@@ -3229,10 +3199,13 @@ class FarmManager(Component):
                         % (host)
                     )
 
+            self.print_log("i", "\n%s: BOOT transition underway 007 Pasha : before init_process_requirements\n" % (date_and_time()))
             self.init_process_requirements()
 
             self.create_setup_fhiclcpp_if_needed()
             obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+
+            self.print_log("i", "\n%s: BOOT transition underway 008 Pasha : after messagefacility_fhicl\n" % (date_and_time()))
 
             cmds = []
             cmds.append(
@@ -3256,6 +3229,7 @@ class FarmManager(Component):
                 encoding="utf-8",
             )
 
+            self.print_log("i", "\n%s: BOOT transition underway 009 Pasha : after fhicl-dump\n" % (date_and_time()))
             out, err = proc.communicate()
             status = proc.returncode
 
@@ -3289,7 +3263,9 @@ class FarmManager(Component):
             # Now, with the info on hand about the processes contained in
             # procinfos, actually launch them
 
-            self.print_log("i", "\nLaunching the artdaq processes")
+            self.print_log("i", "\n%s: BOOT transition underway 010 Pasha : before launching artdaq processes\n" % (date_and_time()))
+
+            self.print_log("i", "\n%sLaunching the artdaq processes" % date_and_time())
             self.called_launch_procs = True
             self.launch_procs_time = (
                 time()
@@ -3311,6 +3287,8 @@ class FarmManager(Component):
                 return
 
             num_launch_procs_checks = 0
+
+            self.print_log("i", "\n%s: BOOT transition underway 011 Pasha : done launching\n" % (date_and_time()))
 
             while True:
 
@@ -3370,7 +3348,9 @@ class FarmManager(Component):
                         self.print_log(
                             "e",
                             make_paragraph(
-                                'In order to investigate what happened, you can try re-running with "debug level" in your boot file set to 4. If that doesn\'t help, you can directly recreate what FarmManager did by doing the following:'
+                                ('In order to investigate what happened, you can try re-running with "debug level"'
+                                 ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
+                                 ' what FarmManager did by doing the following:')
                             ),
                         )
 
@@ -3395,18 +3375,15 @@ class FarmManager(Component):
                         )
                         return
 
+            self.print_log("i", "\n%s: BOOT transition underway 012 Pasha : start checking timeouts\n" % (date_and_time()))
+
             for procinfo in self.procinfos:
 
-                if "BoardReader" in procinfo.name:
-                    timeout = self.boardreader_timeout
-                elif "EventBuilder" in procinfo.name:
-                    timeout = self.eventbuilder_timeout
-                elif "RoutingManager" in procinfo.name:
-                    timeout = self.routingmanager_timeout
-                elif "DataLogger" in procinfo.name:
-                    timeout = self.datalogger_timeout
-                elif "Dispatcher" in procinfo.name:
-                    timeout = self.dispatcher_timeout
+                if   "BoardReader"    in procinfo.name: timeout = self.boardreader_timeout
+                elif "EventBuilder"   in procinfo.name: timeout = self.eventbuilder_timeout
+                elif "RoutingManager" in procinfo.name: timeout = self.routingmanager_timeout
+                elif "DataLogger"     in procinfo.name: timeout = self.datalogger_timeout
+                elif "Dispatcher"     in procinfo.name: timeout = self.dispatcher_timeout
 
                 try:
                     procinfo.server = TimeoutServerProxy(procinfo.socketstring, timeout)
@@ -3428,6 +3405,7 @@ class FarmManager(Component):
                 )
                 return
 
+        self.print_log("i", "\n%s: BOOT transition underway 013 Pasha : before self.manage_processes\n" % (date_and_time()))
         if self.manage_processes:
             # JCF, 3/5/15
 
@@ -3438,12 +3416,7 @@ class FarmManager(Component):
             # taken during startup, but it's unlikely...
 
             starttime = time()
-            self.print_log(
-                "i",
-                "\nDetermining logfiles associated with the artdaq processes...",
-                1,
-                False,
-            )
+            self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." % date_and_time(),1,False,)
 
             try:
 
@@ -4328,9 +4301,8 @@ class FarmManager(Component):
 
         # JCF, Oct-15-2019
 
-        # Make sure that the runner function won't just proceed with a
-        # transition "in the queue" despite FarmManager being in the
-        # Stopped state after we've finished this recover
+        # Make sure that the runner function won't just proceed with a transition "in the queue" 
+        # despite FarmManager being in the Stopped state after we've finished this recover
 
         self.__do_boot = (
             self.__do_shutdown
@@ -4581,7 +4553,7 @@ def main():  # no-coverage
     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
         raise Exception(
             make_paragraph(
-                "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
+                "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows what method to use to control the artdaq processes (%s, etc.)"
                 % (",".join(['"' + pmm + '"' for pmm in process_management_methods]))
             )
         )
@@ -4594,13 +4566,10 @@ def main():  # no-coverage
         if not legal_method_found:
             raise Exception(
                 make_paragraph(
-                    'FarmManager can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
-                    % (
-                        os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
-                        ",".join(
-                            ['"' + pmm + '"' for pmm in process_management_methods]
-                        ),
-                    )
+                    'TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
+                    % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
+                       ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
+                   )
                 )
             )
 
@@ -4621,18 +4590,17 @@ def main():  # no-coverage
                 'WARNING: the "HOSTNAME" environment variable does not appear to be defined (or, at least, does not appear in the os.environ dictionary). Will internally set it using the system\'s "hostname" command'
             )
         )
-        os.environ["HOSTNAME"] = (
-            subprocess.Popen(
-                "hostname",
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                encoding="UTF-8"
-            )
-            .stdout.readlines()[0]
-            .strip()
-        )
+        os.environ["HOSTNAME"] = socket.gethostname();
+#         os.environ["HOSTNAME"] = (
+#             subprocess.Popen(
+#                 "hostname",
+#                 executable= "/bin/bash",
+#                 shell     = True,
+#                 stdout    = subprocess.PIPE,
+#                 stderr    = subprocess.STDOUT,
+#                 encoding  = "UTF-8"
+#             ).stdout.readlines()[0].strip()
+#         )
         print
 
     args = get_args()

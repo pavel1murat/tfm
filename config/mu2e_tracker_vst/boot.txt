@@ -1,0 +1,22 @@
+DAQ setup script: /home/mu2etrk/test_stand/pasha_018/setup_ots.sh
+debug level: 5
+
+Subsystem id: 2
+Subsystem fragmentMode: False
+
+EventBuilder host: localhost
+EventBuilder label: builder0
+EventBuilder subsystem: 2
+EventBuilder allowed_processors"0-63"
+
+DataLogger host: localhost
+DataLogger label: logger0
+DataLogger subsystem: 2
+DataLogger allowed_processors"0-63"
+
+Dispatcher host: mu2edaq09
+Dispatcher label: dispatcher0
+Dispatcher port: 10500
+Dispatcher subsystem: 2
+Dispatcher allowed_processors"0-99"
+

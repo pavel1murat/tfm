@@ -1,0 +1,23 @@
+log_directory                      : /home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/Logs
+record_directory                   : /home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations//run_records/
+data_directory_override            : /scratch/mu2e/mu2etrk_mu2e_pasha_018/OutputData
+productsdir_for_bash_scripts       : /cvmfs/mu2e.opensciencegrid.org/artexternals
+
+package_hashes_to_save             : [artdaq]
+boardreader timeout                : 600
+eventbuilder timeout               : 600
+datalogger timeout                 : 600
+dispatcher timeout                 : 600
+max_fragment_size_bytes            : 1284180560
+transfer_plugin_to_use             : TCPSocket
+all_events_to_all_dispatchers      : true
+max_configurations_to_list         : 10
+disable_unique_rootfile_labels     : false
+use_messageviewer                  : false
+use_messagefacility                : true
+fake_messagefacility               : false
+kill_existing_processes            : true
+advanced_memory_usage              : false
+strict_fragment_id_mode            : false
+disable_private_network_bookkeeping: false
+allowed_processors                 : "0-63"

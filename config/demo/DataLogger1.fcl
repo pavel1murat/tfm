@@ -1,45 +1,45 @@
+# -*- mode:tcl -*- 
 services: {
-  ArtdaqSharedMemoryServiceInterface: {
-   service_provider: ArtdaqSharedMemoryService
-  }
+    ArtdaqSharedMemoryServiceInterface: {
+        service_provider: ArtdaqSharedMemoryService
+    }
 }
 
 daq: {
-  aggregator: {
-    expected_events_per_bunch: 1
-    print_event_store_stats: true
-    event_queue_depth: 40
-    event_queue_wait_time: 5
-    buffer_count: 40
-    onmon_event_prescale: 1
-    is_data_logger: true
-
-    auto_suppression_enabled: false
-
-	routing_token_config: {
-		use_routing_manager: false
-	}
-
-	sources: { }
-  }
-
-  metrics: {
-    aggFile: {
-      metricPluginType: "file"
-      level: 4
-      fileName: "aggregator/agg_%UID%_metrics.log"
-      absolute_file_path: false
-      uniquify: true
+    aggregator: {
+        expected_events_per_bunch: 1
+        print_event_store_stats  : true
+        event_queue_depth        : 40
+        event_queue_wait_time    : 5
+        buffer_count             : 40
+        onmon_event_prescale     : 1
+        is_data_logger           : true
+        
+        auto_suppression_enabled: false
+        
+        routing_token_config: {
+            use_routing_manager: false
+        }
+        
+        sources: { }
     }
-    #ganglia: {
-    #  metricPluginType: "ganglia"
-    #  level: 4
-    #  reporting_interval: 15.0
-    #  configFile: "/etc/ganglia/gmond.conf"
-    #  group: "ARTDAQ"
-    #}
-  }
 
+    metrics: {
+        aggFile: {
+            metricPluginType: "file"
+            level: 4
+            fileName: "aggregator/agg_%UID%_metrics.log"
+            absolute_file_path: false
+            uniquify: true
+        }
+        #ganglia: {
+        #  metricPluginType: "ganglia"
+        #  level: 4
+        #  reporting_interval: 15.0
+        #  configFile: "/etc/ganglia/gmond.conf"
+        #  group: "ARTDAQ"
+        #}
+    }
 }
 
 source: {

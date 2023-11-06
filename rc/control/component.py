@@ -11,8 +11,7 @@ from rc.util.contexts import ContextObject
 
 class Component(ContextObject):
     """
-    Dummy (or subclass-able) component for use with the LBNE Run
-    Control protoype.
+    Dummy (or subclass-able) component for use with the LBNE Run Control prototype.
     """
 
     __MAXPORT = 65535
@@ -34,10 +33,10 @@ class Component(ContextObject):
         self.name = name
         self.synchronous = synchronous
 
-        self.__state = "stopped"
-        self.__rpc_host = rpc_host
-        self.__rpc_port = rpc_port
-        self.run_params = None
+        self.__state     = "stopped"
+        self.__rpc_host  = rpc_host
+        self.__rpc_port  = rpc_port
+        self.run_params  = None
         self.__dummy_val = 0
         self.contexts = [
             (
@@ -45,14 +44,14 @@ class Component(ContextObject):
                 rpc_server(
                     port=self.__rpc_port,
                     funcs={
-                        "state": self.state,
+                        "state"              : self.state,
                         "artdaq_process_info": self.artdaq_process_info,
-                        "state_change": self.state_change,
-                        "setdaqcomps": self.setdaqcomps,
-                        "listdaqcomps": self.listdaqcomps,
-                        "listconfigs": self.listconfigs,
-                        "trace_get": self.trace_get,
-                        "trace_set": self.trace_set,
+                        "state_change"       : self.state_change,
+                        "setdaqcomps"        : self.setdaqcomps,
+                        "listdaqcomps"       : self.listdaqcomps,
+                        "listconfigs"        : self.listconfigs,
+                        "trace_get"          : self.trace_get,
+                        "trace_set"          : self.trace_set,
                     },
                 ),
             ),
@@ -60,36 +59,36 @@ class Component(ContextObject):
         ]
 
         self.dict_state_to = {
-            "booting": "booted",
-            "shutting": "booted",
-            "stopping": "ready",
+            "booting"    : "booted",
+            "shutting"   : "booted",
+            "stopping"   : "ready",
             "configuring": "ready",
-            "starting": "running",
-            "pausing": "paused",
-            "resuming": "running",
+            "starting"   : "running",
+            "pausing"    : "paused",
+            "resuming"   : "running",
             "terminating": "stopped",
-            "recovering": "stopped",
+            "recovering" : "stopped",
         }
 
         self.dict_state_from = {
-            "booting": "stopped",
-            "shutting": "ready",
-            "stopping": "running",
+            "booting"    : "stopped",
+            "shutting"   : "ready",
+            "stopping"   : "running",
             "configuring": "booted",
-            "starting": "ready",
-            "pausing": "running",
-            "resuming": "paused",
+            "starting"   : "ready",
+            "pausing"    : "running",
+            "resuming"   : "paused",
             "terminating": "ready|booted",
         }
 
         self.dict_correct_grammar = {
-            "booting": "boot",
-            "shutting": "shutdown",
-            "stopping": "stop",
+            "booting"    : "boot",
+            "shutting"   : "shutdown",
+            "stopping"   : "stop",
             "configuring": "config",
-            "starting": "start",
-            "pausing": "pause",
-            "resuming": "resume",
+            "starting"   : "start",
+            "pausing"    : "pause",
+            "resuming"   : "resume",
             "terminating": "terminate",
         }
 
@@ -146,13 +145,13 @@ class Component(ContextObject):
     def trace_get(self, name, trace_args):
         if name != self.name:
             return
-        self.run_params = trace_args
+        self.run_params           = trace_args
         self.do_trace_get_boolean = True
 
     def trace_set(self, name, trace_args):
         if name != self.name:
             return
-        self.run_params = trace_args
+        self.run_params           = trace_args
         self.do_trace_set_boolean = True
 
     def state_change(self, name, requested, state_args):

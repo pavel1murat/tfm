@@ -1,0 +1,44 @@
+# -*- mode:tcl -*- 
+###########################################################
+#
+# artdaq reader fcl configuration file produced by otsdaq.
+#   Creation time:            Tue Oct  3 21:00:58 2023 CDT
+#   Original filename:        /home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations/reader-trackervst.fcl
+# otsdaq-ARTDAQ Reader UID: tracker_vst
+#
+###########################################################
+daq: {
+    fragment_receiver: {
+        generator    : TrackerVST  # daq generator plug-in type
+        fragment_type: Mu2e        # generator data fragment type
+
+        board_id         : 0
+        simFileName      : "undefined"
+        loadSimFile      : false
+        heartbeatInterval: 2000                # P.Murat: reduce to 300x25ns to see all teststand#0 96 channels with hits
+        rawOutputFile    : "./TrackerVST.bin"  # P.Murat: add rawOutputFile, more pain
+        rawOutputEnable  : false               # P.Murat: why is this so painful?
+        debugLevel       : 1                   # P.Murat: add debugLevel=0, enduring the pain
+        sendEmpties      : false               # P.Murat: continue taking pain
+        activeLinks      : [  0 ]              # P.Murat: add active ROC links
+        heartbeatsAfter  : 16                  # P.Murat: add heartBeatsAfter, how more painful editing of the FCL could be?
+        dtcId            : -1                  # P.Murat: the most painful way of dealing with FCL I know
+        readoutMode      : 0                   # P.Murat: to whoever designed this - try updating multiple configurations!
+
+        max_fragment_size_bytes: 0x100000
+        generated_fragments_per_event: 2       # P.Murat: Why on earth this only definition is forced to come from FCL ?
+        fragment_ids                 : [ 0 , 11 ]
+        
+        destinations: {
+        }
+
+        routing_table_config: {
+            use_routing_manager: false
+        }
+    }
+
+    metrics: {
+    }
+
+}
+

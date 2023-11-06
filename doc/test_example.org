@@ -1,6 +1,5 @@
 #
-* running the TFM test example 
-* ------------------------------------------------------------------------------
+* running the TFM test example                                               
 ** 1) initialize the TFM environment                                         
 - standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
 #+begin_src *command output*                                                 
@@ -36,7 +35,8 @@ source $TFM_DIR/source_me
 1.1) make sure that the tfm_test/settings file has everything needed defined
 1.2) edit tfm_test/boot.txt to define the DAQ setup script 
 ** 2) START THE TF manager : source tfm_start.sh &                           
-   sourcing defines the env var TFM_PORT everywhere - smth to look at 
+- sourcing defines the env var TFM_PORT everywhere - smth to look at 
+- FarmManager logs its output to $TFM_LOGFILE
 #+begin_src                                                                  
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>source tfm_start.sh &
 [2] 13415

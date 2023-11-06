@@ -269,96 +269,85 @@ def launch_procs_base(self):
                     'Status error raised in %s executing "%s"'
                     % (launch_procs_base.__name__, cmd)
                 )
+    #------------------------------------------------------------------------------
+    # Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
+    # Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
+    #------------------------------------------------------------------------------
+    launch_commands_to_run_on_host            = {}
+    launch_commands_to_run_on_host_background = {}
+    launch_commands_on_host_to_show_user      = {}
 
-    launch_commands_to_run_on_host = {}
-    launch_commands_to_run_on_host_background = (
-        {}
-    )  # Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
-    launch_commands_on_host_to_show_user = (
-        {}
-    )  # Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
+    self.launch_attempt_files                 = {}
 
-    self.launch_attempt_files = {}
+    for p in self.procinfos:
 
-    for procinfo in self.procinfos:
+        if p.host == "localhost":
+            p.host = get_short_hostname()
 
-        if procinfo.host == "localhost":
-            procinfo.host = get_short_hostname()
-
-        if not procinfo.host in launch_commands_to_run_on_host:
-            self.launch_attempt_files[
-                procinfo.host
-            ] = "%s/pmt/launch_attempt_%s_%s_partition%s_%s" % (
+        if not p.host in launch_commands_to_run_on_host:
+            #------------------------------------------------------------------------------
+            # thisis where the name of the PMT log file is formed 
+            #------------------------------------------------------------------------------
+            self.launch_attempt_files[p.host] = "%s/pmt/launch_attempt_%s_%s_partition_%02i_%s" % (
                 self.log_directory,
-                procinfo.host,
+                p.host,
                 os.environ["USER"],
-                os.environ["TFM_PARTITION_NUMBER"],
+                int(os.environ["TFM_PARTITION_NUMBER"]),
                 date_and_time_filename(),
             )
 
-            launch_commands_to_run_on_host[procinfo.host] = []
-            launch_commands_to_run_on_host_background[procinfo.host] = []
-            launch_commands_on_host_to_show_user[procinfo.host] = []
+            launch_commands_to_run_on_host[p.host]            = []
+            launch_commands_to_run_on_host_background[p.host] = []
+            launch_commands_on_host_to_show_user[p.host]      = []
 
-            launch_commands_to_run_on_host[procinfo.host].append("set +C")
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "echo > %s" % (self.launch_attempt_files[procinfo.host])
+            launch_commands_to_run_on_host[p.host].append("set +C")
+            launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
+            launch_commands_to_run_on_host[p.host] += get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
+            launch_commands_to_run_on_host[p.host].append("source %s for_running >> %s 2>&1 " % (
+                self.daq_setup_script, self.launch_attempt_files[p.host])
             )
-            launch_commands_to_run_on_host[procinfo.host] += get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[procinfo.host])
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "source %s for_running >> %s 2>&1 "
-                % (self.daq_setup_script, self.launch_attempt_files[procinfo.host])
-            )
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "export ARTDAQ_LOG_ROOT=%s" % (self.log_directory)
-            )
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "export ARTDAQ_LOG_FHICL=%s" % (messagefacility_fhicl_filename)
-            )
-
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "which boardreader >> %s 2>&1 "
-                % (self.launch_attempt_files[procinfo.host])
-            )  # Assume if this works, eventbuilder, etc. are also there
-            launch_commands_to_run_on_host[procinfo.host].append(
-                "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1"
-                % (
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s" % (self.log_directory))
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s" % (messagefacility_fhicl_filename))
+            launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "%(self.launch_attempt_files[p.host]))  
+            #------------------------------------------------------------------------------
+            # Assume if this works, eventbuilder, etc. are also there
+            #------------------------------------------------------------------------------
+            launch_commands_to_run_on_host[p.host].append(
+                "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1" % (
                     os.environ["TFM_DIR"],
                     os.environ["TFM_PARTITION_NUMBER"],
-                    self.launch_attempt_files[procinfo.host],
+                    self.launch_attempt_files[p.host],
                 )
             )
-            # launch_commands_to_run_on_host[ procinfo.host ].append("setup valgrind v3_13_0")
-            # launch_commands_to_run_on_host[ procinfo.host ].append("export LD_PRELOAD=libasan.so")
-            # launch_commands_to_run_on_host[ procinfo.host ].append("export ASAN_OPTIONS=alloc_dealloc_mismatch=0")
+            # launch_commands_to_run_on_host[ p.host ].append("setup valgrind v3_13_0")
+            # launch_commands_to_run_on_host[ p.host ].append("export LD_PRELOAD=libasan.so")
+            # launch_commands_to_run_on_host[ p.host ].append("export ASAN_OPTIONS=alloc_dealloc_mismatch=0")
 
-            for command in launch_commands_to_run_on_host[procinfo.host]:
+            for command in launch_commands_to_run_on_host[p.host]:
                 res = re.search(
-                    r"^([^>]*).*%s.*$" % (self.launch_attempt_files[procinfo.host]),
+                    r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),
                     command,
                 )
                 if not res:
-                    launch_commands_on_host_to_show_user[procinfo.host].append(command)
+                    launch_commands_on_host_to_show_user[p.host].append(command)
                 else:
-                    launch_commands_on_host_to_show_user[procinfo.host].append(
-                        res.group(1)
-                    )
+                    launch_commands_on_host_to_show_user[p.host].append(res.group(1))
 
-        prepend = procinfo.prepend.strip('"')
+        prepend = p.prepend.strip('"')
         base_launch_cmd = (
             '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %s"'
             % (
                 prepend,
-                bootfile_name_to_execname(procinfo.name),
-                procinfo.port,
-                procinfo.rank,
-                procinfo.label,
+                bootfile_name_to_execname(p.name),
+                p.port,
+                p.rank,
+                p.label,
                 os.environ["TFM_PARTITION_NUMBER"],
             )
         )
-        if procinfo.allowed_processors is not None:
+        if p.allowed_processors is not None:
             base_launch_cmd = "taskset --cpu-list %s %s" % (
-                procinfo.allowed_processors,
+                p.allowed_processors,
                 base_launch_cmd,
             )
         elif self.allowed_processors is not None:
@@ -368,15 +357,10 @@ def launch_procs_base(self):
             )
 
         # base_launch_cmd = "valgrind --tool=callgrind %s" % (base_launch_cmd)
-        launch_cmd = "%s >> %s 2>&1 & " % (
-            base_launch_cmd,
-            self.launch_attempt_files[procinfo.host],
-        )
+        launch_cmd = "%s >> %s 2>&1 & " % (base_launch_cmd,self.launch_attempt_files[p.host],)
 
-        launch_commands_to_run_on_host_background[procinfo.host].append(launch_cmd)
-        launch_commands_on_host_to_show_user[procinfo.host].append(
-            "%s &" % (base_launch_cmd)
-        )
+        launch_commands_to_run_on_host_background[p.host].append(launch_cmd)
+        launch_commands_on_host_to_show_user[p.host].append("%s &" % (base_launch_cmd))
 
     print
 
@@ -764,17 +748,15 @@ def mopup_process_base(self, procinfo):
         )
 
     if not related_process_mopup_ok:
-        self.print_log(
-            "w",
-            make_paragraph(
-                "At least some of the processes on %s related to deceased artdaq process %s at %s:%s (e.g. art processes) had to be forcibly killed; there *may* be issues with the next run using that host and port as a result"
-                % (procinfo.host, procinfo.label, procinfo.host, procinfo.port)
-            ),
+        self.print_log("w", make_paragraph(
+            (   "At least some of the processes on %s related to deceased artdaq process "
+                "%s at %s:%s (e.g. art processes) had to be forcibly killed; there *may* be "
+                "issues with the next run using that host and port as a result"
+            ) % (procinfo.host, procinfo.label, procinfo.host, procinfo.port)),
         )
-
-
-# If you change what this function returns, you should rename it for obvious
-# reasons
+#------------------------------------------------------------------------------
+# If you change what this function returns, you should rename it for obvious reasons
+#------------------------------------------------------------------------------
 def get_pids_and_labels_on_host(host, procinfos):
 
     greptoken = (
@@ -912,7 +894,6 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
 
     return found_processes
 
-
 def main():
 
     # JCF, Dec-7-2018
@@ -939,12 +920,8 @@ def main():
             daq_setup_script = "/home/jcfree/artdaq-demo_multiple_fragments_per_boardreader/setupARTDAQDEMO"
 
             procinfos = []
-            procinfos.append(
-                Procinfo("BoardReader", "0", "localhost", "10100", "MockBoardReader")
-            )
-            procinfos.append(
-                Procinfo("EventBuilder", "1", "localhost", "10101", "MockEventBuilder")
-            )
+            procinfos.append(Procinfo("BoardReader" , "0", "localhost", "10100", "MockBoardReader" ))
+            procinfos.append(Procinfo("EventBuilder", "1", "localhost", "10101", "MockEventBuilder"))
 
             def print_log(self, ignore, string_to_print, ignore2):
                 print(string_to_print)

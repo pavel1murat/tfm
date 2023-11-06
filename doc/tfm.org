@@ -36,9 +36,9 @@
   - terminate
 * TFM transitions                                                            
 - defined in [[file:../bin/send_transition.sh]]              
-- For whatever reason, commands are translated and sent to the TF server 
-are translated commands. Why ?
-- what is it? an excersize in linguistics of making gerunds from verbs ?
+- commands are translated, and sent to the TF server are the translated commands. 
+- "translated" commands are different from the original ones by "ing" 
+- what is it? a linquistic exersize of defining gerunds ?
 |-----------+--------------------+---------------|
 | command   | translated command | XMLRPC string |
 |-----------+--------------------+---------------|

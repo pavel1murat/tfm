@@ -1,0 +1,12 @@
+{ 
+  "setup_script":"/home/mu2etrk/test_stand/pasha_019/setup_ots.sh" , 
+  "debug_level" :"1",
+
+  "BoardReader" : {"label":"BoardReader0" , "host":"localhost", "port":"-1", "subsystem":"1"},
+  "BoardReader" : {"label":"BoardReader1" , "host":"localhost", "port":"-1", "subsystem":"1"},
+
+  "EventBuilder": {"label":"EventBuilder1", "host":"localhost" },
+  "EventBuilder": {"label":"EventBuilder2", "host":"localhost" },
+  "DataLogger"  : {"label":"DataLogger1"  , "host":"localhost" },
+  "Dispatcher"  : {"label":"Dispatcher1"  , "host":"localhost" }
+}
