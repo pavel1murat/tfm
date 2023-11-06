@@ -130,7 +130,7 @@ Nil
 - call signature:
 #+begin_src
       artdaq_process_info.sh [partition]
-#_end_src
+#+end_src
 - if partition is specified, it is use to determine the communication port number 
 - if partition is not specified, $TFM_PORT is used
 
