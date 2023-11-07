@@ -302,13 +302,14 @@ def save_run_record_base(self):
 
 def save_metadata_value_base(self, key, value):
 
-    metadata_filename = "%s/%s/metadata.txt" % (
-        self.record_directory,
-        str(self.run_number),
-    )
-    assert os.path.exists(metadata_filename)
+#     metadata_filename = "%s/%s/metadata.txt" % (
+#         self.record_directory,
+#         str(self.run_number),
+#     )
+    fn = self.metadata_filename();
+    assert os.path.exists(fn)
 
-    os.chmod(metadata_filename, 0o644)
-    with open(metadata_filename, "a") as metadata_file:
-        metadata_file.write("\n%s: %s\n" % (key, value))
-    os.chmod(metadata_filename, 0o444)
+    os.chmod(fn, 0o644)
+    with open(fn, "a") as f:
+        f.write("\n%s: %s\n" % (key, value))
+    os.chmod(fn, 0o444)

@@ -5,6 +5,8 @@
 # artdaq/artdaq/DAQdata/Globals.hh also uses ARTDAQ_PARTITION_NUMBER
 #------------------------------------------------------------------------------
 script=$(basename $0)
+echo [$script:$LINENO] : $*
+echo [$script:$LINENO] : script=$script
 
 source $TFM_DIR/bin/tfm_utils.sh
 #------------------------------------------------------------------------------
@@ -12,9 +14,10 @@ source $TFM_DIR/bin/tfm_utils.sh
 # -The "stdbuf -oL" is there so that DAQInterface output makes it into the logfile in realtime
 # -The "<&-" is there to avoid hangs if users type in the terminal DAQInterface is running in (see Issue #21804)
 #------------------------------------------------------------------------------
-export TFM_PORT=`tfm_port $TFM_PARTITION_NUMBER`
+export    TFM_PORT=`tfm_port $TFM_PARTITION_NUMBER`
+export TFM_LOGFILE=$TFM_LOGDIR/tfm_partition_`printf %02i $TFM_PARTITION_NUMBER`.log
 
-logfile=$(echo $(eval echo $TFM_LOGFILE))
+logfile=$TFM_LOGFILE
 touch $logfile 
 echo [$script:$LINENO] : \$TFM_LOGFILE=$TFM_LOGFILE \$TFM_PORT=$TFM_PORT
 

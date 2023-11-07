@@ -105,7 +105,8 @@ def get_config_info_base(self):
                 if subconfig in getListOfMaskedRunConfigurations():
                     raise Exception(
                         make_paragraph(
-                            'Error: (sub)config "%s" has been invalidated (i.e., it appears in a call to conftool.getListOfMaskedRunConfigurations given the flags file %s)'
+                            ('Error: (sub)config "%s" has been invalidated (i.e., it appears '
+                             'in a call to conftool.getListOfMaskedRunConfigurations given the flags file %s)')
                             % (subconfig, tmpflagsfile)
                         )
                     )
@@ -193,7 +194,9 @@ def put_config_info_base(self):
     if os.getenv("ARTDAQ_DATABASE_CONFDIR") is None:
         raise Exception(
             make_paragraph(
-                "Environment variable ARTDAQ_DATABASE_CONFDIR needs to be set in order for TFM to determine where to find the schema.fcl file needed to archive configurations to the database; since ARTDAQ_DATABASE_CONFDIR is not set this may indicate that the version of artdaq_database you're using is old"
+                ("Environment variable ARTDAQ_DATABASE_CONFDIR needs to be set in order for TFM to determine "
+                 "where to find the schema.fcl file needed to archive configurations to the database; "
+                 "since ARTDAQ_DATABASE_CONFDIR is not set this may indicate that the version of artdaq_database you're using is old")
             )
         )
 

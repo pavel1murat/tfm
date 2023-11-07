@@ -125,16 +125,16 @@ Nil
   --  2 sec - associating log files
 
 * TFM scripts                                                                
-*** send_transition.sh
+*** tfm_transition
 *** artdaq_process_info.sh                                                   
 - call signature:
 #+begin_src
       artdaq_process_info.sh [partition]
 #+end_src
-- if partition is specified, it is use to determine the communication port number 
-- if partition is not specified, $TFM_PORT is used
+- if partition is specified, it is used to determine the communication port number 
+- otherwise, the value of $TFM_PARTITION is used
 
-*** status.sh
+*** tfm_status
 *** TODO listdaqcomps.sh                                                     
 - the printout doesn't seem to come up on the screen, gets printed by the next command
 #+begin_src                                                                  

@@ -1,14 +1,14 @@
 #!/bin/env bash
 script=`basename $0`
 
-function send_transition() {
+function tfm_transition_() {
     local debug=1
 
     if [ $debug != 0 ] ; then echo [$script:$LINENO] : parameters:$@ ; fi
 
-    badargs=false
-    cmd=$1
-    xmlrpc_arg=
+           badargs=false
+               cmd=$1
+        xmlrpc_arg=
     translated_cmd=
 
     source $TFM_DIR/bin/tfm_utils.sh
@@ -97,6 +97,6 @@ function send_transition() {
 #------------------------------------------------------------------------------
 # start execution
 #------------------------------------------------------------------------------
-send_transition $@
+tfm_transition_ $@
 rc=$?
 exit $rc

@@ -1,7 +1,7 @@
 #!/bin/env bash
 script=`basename $0`
 
-function setdaqcomps() {
+function tfm_set_components_() {
     local debug=1
 
     if [ $debug != 0 ] ; then echo [$script:$LINENO] parameters:$@ ; fi
@@ -109,5 +109,5 @@ EOF
 }
 
 echo $0
-setdaqcomps $@
+tfm_set_components_ $@
 exit $?

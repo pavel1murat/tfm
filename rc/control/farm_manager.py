@@ -9,7 +9,8 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
     sys.path.append(os.environ["TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
 
 import argparse
-import datetime
+# import datetime
+from   datetime import datetime, timezone
 import subprocess
 from   time       import sleep, time
 import traceback
@@ -68,12 +69,10 @@ try:
         not "ARTDAQ_LOG_FHICL" in os.environ
         #or os.environ["ARTDAQ_LOG_FHICL"] != messagefacility_fhicl_filename
     ):
-        raise Exception(
-            make_paragraph(
-                "Although the swig_artdaq python module is available, it needs the environment variable ARTDAQ_LOG_FHICL to point to %s"
-                % (messagefacility_fhicl_filename)
-            )
-        )
+        raise Exception(make_paragraph(
+            ("Although the swig_artdaq python module is available, "
+             "it needs the environment variable ARTDAQ_LOG_FHICL to point to %s"
+         ) % (messagefacility_fhicl_filename)))
 
 except ImportError:
     pass  # Users shouldn't need to worry if their installations don't yet have
@@ -374,14 +373,9 @@ class FarmManager(Component):
     # artdaq subsystem.
 
     class Subsystem(object):
-        def __init__(
-            self,
-            sources=[],
-            destination=None,
-            fragmentMode=True,
-        ):
-            self.sources = sources
-            self.destination = destination
+        def __init__(self,sources=[],destination=None,fragmentMode=True,):
+            self.sources      = sources
+            self.destination  = destination
             self.fragmentMode = fragmentMode
 
         def __lt__(self, other):
@@ -501,6 +495,15 @@ class FarmManager(Component):
         # configurations
         # with multiple request domains and levels of filtering.
         self.subsystems = {}
+
+    #------------------------------------------------------------------------------
+    # want run number to be always printed with 6 digits
+    #------------------------------------------------------------------------------
+    def metadata_filename(self):
+        return "%s/%06i/metadata.txt" % (self.record_directory,self.run_number);
+
+    # assert os.path.exists(metadata_filename)
+        
     #------------------------------------------------------------------------------
     # FarmManager constructor 
     #------------------------------------------------------------------------------
@@ -550,40 +553,39 @@ class FarmManager(Component):
 
         self.fhicl_file_path = []
 
-        self.__do_boot = False
-        self.__do_shutdown = False
-        self.__do_config = False
-        self.__do_start_running = False
-        self.__do_stop_running = False
-        self.__do_terminate = False
-        self.__do_pause_running = False
-        self.__do_resume_running = False
-        self.__do_recover = False
-        self.__do_enable = False
-        self.__do_disable = False
+        self.__do_boot            = False
+        self.__do_shutdown        = False
+        self.__do_config          = False
+        self.__do_start_running   = False
+        self.__do_stop_running    = False
+        self.__do_terminate       = False
+        self.__do_pause_running   = False
+        self.__do_resume_running  = False
+        self.__do_recover         = False
+        self.__do_enable          = False
+        self.__do_disable         = False
 
         self.do_trace_get_boolean = False
         self.do_trace_set_boolean = False
 
         self.messageviewer_sender = None
-        self.printlock = RLock()
+        self.printlock            = RLock()
 
-        # Here, states refers to individual artdaq process states, not the
-        # FarmManager state
+        # Here, states refers to individual artdaq process states, not the FarmManager state
         self.target_states = {
-            "Init": "Ready",
-            "Start": "Running",
-            "Pause": "Paused",
-            "Resume": "Running",
-            "Stop": "Ready",
+            "Init"    : "Ready",
+            "Start"   : "Running",
+            "Pause"   : "Paused",
+            "Resume"  : "Running",
+            "Stop"    : "Ready",
             "Shutdown": "Stopped",
         }
         self.verbing_to_states = {
-            "Init": "Configuring",
-            "Start": "Starting",
-            "Pause": "Pausing",
-            "Resume": "Resuming",
-            "Stop": "Stopping",
+            "Init"    : "Configuring",
+            "Start"   : "Starting",
+            "Pause"   : "Pausing",
+            "Resume"  : "Resuming",
+            "Stop"    : "Stopping",
             "Shutdown": "Shutting down",
         }
 
@@ -635,34 +637,36 @@ class FarmManager(Component):
 
     def __del__(self):
         kill_tail_f()
-
-    get_config_info = get_config_info_base
-    put_config_info = put_config_info_base
-    put_config_info_on_stop = put_config_info_on_stop_base
-    get_boot_info = get_boot_info_base
-    listdaqcomps = listdaqcomps_base
-    listconfigs = listconfigs_base
-    save_run_record = save_run_record_base
-    save_metadata_value = save_metadata_value_base
-    start_datataking = start_datataking_base
-    stop_datataking = stop_datataking_base
-    bookkeeping_for_fhicl_documents = bookkeeping_for_fhicl_documents_artdaq_v3_base
-    do_enable = do_enable_base
-    do_disable = do_disable_base
-    launch_procs = launch_procs_base
-    kill_procs = kill_procs_base
-    check_proc_heartbeats = check_proc_heartbeats_base
-    softlink_process_manager_logfiles = softlink_process_manager_logfiles_base
-    find_process_manager_variable = find_process_manager_variable_base
+    #------------------------------------------------------------------------------
+    # actor functions
+    #------------------------------------------------------------------------------
+    get_config_info                       = get_config_info_base
+    put_config_info                       = put_config_info_base
+    put_config_info_on_stop               = put_config_info_on_stop_base
+    get_boot_info                         = get_boot_info_base
+    listdaqcomps                          = listdaqcomps_base
+    listconfigs                           = listconfigs_base
+    save_run_record                       = save_run_record_base
+    save_metadata_value                   = save_metadata_value_base
+    start_datataking                      = start_datataking_base
+    stop_datataking                       = stop_datataking_base
+    bookkeeping_for_fhicl_documents       = bookkeeping_for_fhicl_documents_artdaq_v3_base
+    do_enable                             = do_enable_base
+    do_disable                            = do_disable_base
+    launch_procs                          = launch_procs_base
+    kill_procs                            = kill_procs_base
+    check_proc_heartbeats                 = check_proc_heartbeats_base
+    softlink_process_manager_logfiles     = softlink_process_manager_logfiles_base
+    find_process_manager_variable         = find_process_manager_variable_base
     set_process_manager_default_variables = set_process_manager_default_variables_base
-    reset_process_manager_variables = reset_process_manager_variables_base
-    get_process_manager_log_filenames = get_process_manager_log_filenames_base
-    process_manager_cleanup = process_manager_cleanup_base
-    process_launch_diagnostics = process_launch_diagnostics_base
-    mopup_process = mopup_process_base
-    get_pid_for_process = get_pid_for_process_base
-    perform_periodic_action = perform_periodic_action_base
-    check_config = check_config_base
+    reset_process_manager_variables       = reset_process_manager_variables_base
+    get_process_manager_log_filenames     = get_process_manager_log_filenames_base
+    process_manager_cleanup               = process_manager_cleanup_base
+    process_launch_diagnostics            = process_launch_diagnostics_base
+    mopup_process                         = mopup_process_base
+    get_pid_for_process                   = get_pid_for_process_base
+    perform_periodic_action               = perform_periodic_action_base
+    check_config                          = check_config_base
 
     # The actual transition functions called by Run Control; note
     # these just set booleans which are tested in the runner()
@@ -704,7 +708,9 @@ class FarmManager(Component):
     # JCF, Jan-2-2020
 
     # See Issue #23792 for more on trace_get and trace_set
-
+    #------------------------------------------------------------------------------
+    # TRACE get
+    #------------------------------------------------------------------------------
     def do_trace_get(self, name=None):
         if name is None:
             name = self.run_params["name"]
@@ -775,13 +781,15 @@ class FarmManager(Component):
                 all_trace_get_info_in_one_string += inf.read()
 
         return all_trace_get_info_in_one_string
-
+    #------------------------------------------------------------------------------
+    # TRACE set
+    #------------------------------------------------------------------------------
     def do_trace_set(self, name=None, masktype=None, maskval=None):
 
         if name is None:
-            name = self.run_params["name"]
+            name     = self.run_params["name"    ]
             masktype = self.run_params["masktype"]
-            maskval = self.run_params["maskval"]
+            maskval  = self.run_params["maskval" ]
 
         self.print_log(
             "i",
@@ -2221,9 +2229,7 @@ class FarmManager(Component):
     def do_command(self, command):
 
         if command != "Start" and command != "Init" and command != "Stop":
-            self.print_log(
-                "i", "\n%s: %s transition underway" % (date_and_time(), command.upper())
-            )
+            self.print_log("i", "\n%s: %s transition underway" % (date_and_time(), command.upper()))
 
         # "process_command" is the function which will send a
         # transition to a single artdaq process, and be run on its own
@@ -2247,10 +2253,10 @@ class FarmManager(Component):
                 return
 
             timeout_dict = {
-                "BoardReader": self.boardreader_timeout,
-                "EventBuilder": self.eventbuilder_timeout,
-                "DataLogger": self.datalogger_timeout,
-                "Dispatcher": self.dispatcher_timeout,
+                "BoardReader"   : self.boardreader_timeout,
+                "EventBuilder"  : self.eventbuilder_timeout,
+                "DataLogger"    : self.datalogger_timeout,
+                "Dispatcher"    : self.dispatcher_timeout,
                 "RoutingManager": self.routingmanager_timeout,
             }
             timeout = timeout_dict[self.procinfos[procinfo_index].name]
@@ -2346,7 +2352,8 @@ class FarmManager(Component):
                     )
                 elif "[Errno 111] Connection refused" in traceback.format_exc():
                     output_message = (
-                        "\n%s: artdaq process %s at %s:%s appears to have died (or at least refused the connection) when sent the %s transition; try checking logfile %s for details"
+                        ("\n%s: artdaq process %s at %s:%s appears to have died (or at least refused "
+                         "the connection) when sent the %s transition; try checking logfile %s for details")
                         % (
                             date_and_time(),
                             pi.label,
@@ -2360,7 +2367,8 @@ class FarmManager(Component):
                     self.print_log("e", traceback.format_exc())
 
                     output_message = (
-                        "Exception caught sending %s transition to artdaq process %s at %s:%s; try checking logfile %s for details\n"
+                        ("Exception caught sending %s transition to artdaq process %s at %s:%s; "
+                         "try checking logfile %s for details\n")
                         % (
                             command,
                             pi.label,
@@ -2388,10 +2396,10 @@ class FarmManager(Component):
 
         proctypes_in_order = [
             "RoutingManager",
-            "Dispatcher",
-            "DataLogger",
-            "EventBuilder",
-            "BoardReader",
+            "Dispatcher"    ,
+            "DataLogger"    ,
+            "EventBuilder"  ,
+            "BoardReader"   ,
         ]
 
         if command == "Stop" or command == "Pause" or command == "Shutdown":
@@ -2417,12 +2425,7 @@ class FarmManager(Component):
 
         starttime = time()
 
-        self.print_log(
-            "i",
-            "\nSending %s transition to artdaq processes..." % (command.lower()),
-            1,
-            False,
-        )
+        self.print_log("i","\nSending %s transition to artdaq processes..." % (command.lower()),1,False)
         self.print_log("d", "", 3)
 
         proc_starttimes = {}
@@ -2542,8 +2545,7 @@ class FarmManager(Component):
     def revert_failed_transition(self, failed_action):
         self.revert_state_change(self.name, self.state(self.name))
         self.print_log("e", (traceback.format_exc()))
-        self.print_log(
-            "e",
+        self.print_log("e",
             make_paragraph(
                 'An exception was thrown when %s; exception has been caught and system remains in the "%s" state'
                 % (failed_action, self.state(self.name))
@@ -2598,10 +2600,9 @@ class FarmManager(Component):
                             )
 
     def update_archived_metadata(self):
-        with open(
-            "%s/%s/metadata.txt" % (self.record_directory, str(self.run_number))
-        ) as inf:
-            contents = inf.read()
+        fn = self.metadata_filename();
+        with open(fn) as f:
+            contents = f.read()
             contents = re.sub("'", '"', contents)
             contents = re.sub('"', '"', contents)
 
@@ -3725,16 +3726,10 @@ class FarmManager(Component):
     #------------------------------------------------------------------------------
     def do_start_running(self, run_number=None):
 
-        if not run_number:
-            self.run_number = self.run_params["run_number"]
-        else:
-            self.run_number = run_number
+        if not run_number: self.run_number = self.run_params["run_number"]
+        else             : self.run_number = run_number
 
-        self.print_log(
-            "i",
-            "\n%s: START transition underway for run %d"
-            % (date_and_time(), self.run_number),
-        )
+        self.print_log("i","\n%s: START transition underway for run %d" % (date_and_time(), self.run_number))
 
         self.check_run_record_integrity()
 
@@ -3744,16 +3739,14 @@ class FarmManager(Component):
         ]:
             raise Exception(
                 make_paragraph(
-                    'Error: requested run number "%s" is found to already exist in the run records directory "%s"; run duplicates are not allowed.'
-                    % (str(self.run_number), self.record_directory)
-                )
-            )
-
+                    ('Error: requested run number "%s" is found to already exist '
+                     'in the run records directory "%s"; run duplicates are not allowed.')
+                    % (str(self.run_number), self.record_directory)))
+        #------------------------------------------------------------------------------
+        # Mu2e run numbers take up to 6 digits
+        #------------------------------------------------------------------------------
         if os.path.exists(self.tmp_run_record):
-            run_record_directory = "%s/%s" % (
-                self.record_directory,
-                str(self.run_number),
-            )
+            run_record_directory = "%s/%06i" % (self.record_directory,self.run_number)
 
             try:
                 shutil.copytree(self.tmp_run_record, run_record_directory)
@@ -3765,14 +3758,12 @@ class FarmManager(Component):
                          ' "%s" didn\'t work; most likely reason is that you don\'t have write permission'
                          ' to %s, but it may also mean that your experiment\'s reusing a run number.'
                          ' Scroll up past the Recover transition output for further troubleshooting information.')
-                        % (
-                            self.tmp_run_record,
-                            run_record_directory,
-                            self.record_directory,
-                        )
-                    )
+                        % (self.tmp_run_record,run_record_directory,self.record_directory))
                 )
                 return
+            #------------------------------------------------------------------------------
+            # P.Murat: it looks that the run_record_directory is always local 
+            #------------------------------------------------------------------------------
             subprocess.Popen(
                 "touch %s" % (run_record_directory),
                 executable="/bin/bash",
@@ -3792,6 +3783,10 @@ class FarmManager(Component):
                 % self.tmp_run_record
             )
             return
+        #------------------------------------------------------------------------------
+        # step X) put_config_info
+        #------------------------------------------------------------------------------
+        self.print_log("i", "\n%s: START transition underway 001 Pasha : before put_config_info\n" % (date_and_time()))
 
         try:
             self.put_config_info()
@@ -3819,9 +3814,14 @@ class FarmManager(Component):
                         % (self.partition_number, run_record_directory)
                     )
                 )
-
+        #------------------------------------------------------------------------------
+        # start TRACE ???
+        #------------------------------------------------------------------------------
+        self.print_log("i", "\n%s: START transition underway 002 Pasha : before execute_trace_script\n" % (date_and_time()))
         self.execute_trace_script("start")
 
+        self.print_log("i", "\n%s: START transition underway 003 Pasha : after execute_trace_script self.manage_processes=%i\n" 
+                       % (date_and_time(),self.manage_processes))
         if self.manage_processes:
 
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
@@ -3836,45 +3836,40 @@ class FarmManager(Component):
                 return
 
         self.start_datataking()
+#------------------------------------------------------------------------------
+# P.Murat: one more example of how not to program in Python
+#------------------------------------------------------------------------------
+        start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
+#        start_time=subprocess.Popen("date --utc",
+#                                    executable="/bin/bash",
+#                                    shell=True,
+#                                    stdout=subprocess.PIPE,
+#                                    stderr=subprocess.STDOUT,
+#                                ).stdout.readlines()[0].strip().decode("utf-8");
 
-        self.save_metadata_value(
-            "FarmManager start time",
-            subprocess.Popen(
-                "date --utc",
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            .stdout.readlines()[0]
-            .strip()
-            .decode("utf-8"),
-        )
+        self.print_log("i", "\n%s: START transition underway 003 Pasha :record_directory:%s run_number: %i [%s]\n" 
+                       % (date_and_time(),self.record_directory,self.run_number,start_time))
 
+        self.save_metadata_value("FarmManager start time",start_time);
+        #------------------------------------------------------------------------------
+        # run processes have started
+        # softlinks to the logfiles of this run
+        #------------------------------------------------------------------------------
         if self.manage_processes:
             starttime = time()
-            self.print_log(
-                "i,",
-                "\nAttempting to provide run-numbered softlinks to the logfiles...",
-                1,
-                False,
-            )
+            self.print_log("i","\nAttempting to provide run-numbered softlinks to the logfiles...",1,False)
             self.print_log("d", "", 2)
             self.softlink_logfiles()
             endtime = time()
-            self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+            self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
 
-        self.print_log(
-            "i", "\nRun info can be found locally at %s\n" % (run_record_directory)
-        )
+        self.print_log("i", "\nRun info can be found locally at %s\n" % (run_record_directory))
 
         self.complete_state_change(self.name, "starting")
-        self.print_log(
-            "i",
-            "\n%s: START transition complete for run %d"
-            % (date_and_time(), self.run_number),
-        )
-
+        self.print_log("i","\n%s: START transition complete for run %d" % (date_and_time(), self.run_number))
+    #------------------------------------------------------------------------------
+    # STOP run
+    #------------------------------------------------------------------------------
     def do_stop_running(self):
 
         self.print_log(
@@ -4466,9 +4461,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
     parser = argparse.ArgumentParser(description="FarmManager")
-    parser.add_argument(
-        "-n", "--name", type=str, dest="name", default="daqint", help="Component name"
-    )
+
+    parser.add_argument("-n", "--name", type=str, dest="name", default="daqint", help="Component name")
 
     default_partition = 888;
     x = os.environ.get("TFM_PARTITION_NUMBER");
@@ -4507,10 +4501,10 @@ def get_args():  # no-coverage
     parser.add_argument(
         "-c",
         "--control-host",
-        type=str,
-        dest="control_host",
-        default="localhost",
-        help="Control host",
+        type    = str,
+        dest    = "control_host",
+        default = "localhost",
+        help    = "Control host",
     )
 
     return parser.parse_args()
@@ -4520,29 +4514,15 @@ def get_args():  # no-coverage
 def main():  # no-coverage
 
     if "TFM_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
-        print(
-            make_paragraph('Won\'t launch FarmManager; you first need to run "source $TFM_DIR/source_me"')
-        )
-        print
+        print(make_paragraph('Won\'t launch FarmManager; first run "source $TFM_DIR/source_me\n"'))
         return
 
     if "TFM_SETTINGS" not in os.environ.keys():
-        print(
-            make_paragraph(
-                "Need to have the TFM_SETTINGS environment variable set to refer to the FarmManager settings file"
-            )
-        )
-        print
+        print(make_paragraph("Make sure $TFM_SETTINGS is defined and points to the FarmManager settings file\n"))
         return
 
     if not os.path.exists(os.environ["TFM_SETTINGS"]):
-        print(
-            make_paragraph(
-                'The file referred to by the TFM_SETTINGS environment variable, "%s", does not appear to exist'
-                % (os.environ["TFM_SETTINGS"])
-            )
-        )
-        print
+        print(make_paragraph('$TFM_SETTINGS=%s points to non-existing file\n' % (os.environ["TFM_SETTINGS"])))
         return
 
     if "TFM_KNOWN_BOARDREADERS_LIST" not in os.environ.keys():
@@ -4571,7 +4551,8 @@ def main():  # no-coverage
         if not legal_method_found:
             raise Exception(
                 make_paragraph(
-                    'TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD environment variable ("%s"); legal values include %s'
+                    ('TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD '
+                    'environment variable ("%s"); legal values include %s')
                     % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
                        ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
                    )
@@ -4582,14 +4563,12 @@ def main():  # no-coverage
         print(make_paragraph(
             ('The file referred to by the TFM_KNOWN_BOARDREADERS_LIST environment variable,'
              ' "%s", does not appear to exist\n' % (os.environ["TFM_KNOWN_BOARDREADERS_LIST"]))
-        )
+        ))
         return
 
-    if not "HOSTNAME" in os.environ:
-        print(make_paragraph(
-            ('\nWARNING: the "HOSTNAME" environment variable does not appear to be defined'
-             ' (or, at least, does not appear in the os.environ dictionary). '
-             'Will internally set it using the system\'s "hostname" command\n'))
+    if (os.environ.get("HOSTNAME") == None) :
+        print(make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
+                              'Will internally set HOSTNAME using socket.gethostname\n')))
         os.environ["HOSTNAME"] = socket.gethostname();
 #------------------------------------------------------------------------------
 # P.Murat: this is an example of how not to do things
@@ -4604,36 +4583,44 @@ def main():  # no-coverage
 #                 encoding  = "UTF-8"
 #             ).stdout.readlines()[0].strip()
 #         )
-
+    #------------------------------------------------------------------------------
+    # parse the command line parameters
+    #------------------------------------------------------------------------------
     args = get_args()
     #------------------------------------------------------------------------------
     # Make sure the requested partition number is in a desired range,
     # and that it isn't already being used
+    # P.Murat:
+    # not sure what determines the range... allow partitions up to 99
+    # and comment the check out...
     #------------------------------------------------------------------------------
-    max_partitions = 10
-    assert "partition_number" in vars(args)
-    partition_number = vars(args)["partition_number"]
-    if partition_number < 0 or partition_number > max_partitions - 1:
-        print(make_paragraph(
-            ("\nError: requested partition has the value %d while it needs "
-             "to be between 0 and %d, inclusive; please set the TFM_PARTITION_NUMBER "
-             "environment variable accordingly and try again")
-            % (partition_number, max_partitions - 1)))
-        return
-
-    greptoken = "python.*farm_manager.py.*--partition-number\s\+%d\s\+" % (
-        partition_number
-    )
-    pids = get_pids(greptoken)
-    if len(pids) > 1:
-        print(
-            make_paragraph(
-                ('There already appears to be a TFM instance running on the requested partition number (%s);'
-                ' please either kill the instance (if it\'s yours) or use a different partition. '
-                'Run "listdaqinterfaces.sh" for more info.') % (partition_number))
-        )
-        kill_tail_f()  # Because tail -f is launched before this script is launched
-        return
+#     max_partitions = 10
+#     assert "partition_number" in vars(args)
+#     partition_number = vars(args)["partition_number"]
+#     if partition_number < 0 or partition_number > max_partitions - 1:
+#         print(make_paragraph(
+#             ("\nError: requested partition has the value %d while it needs "
+#              "to be between 0 and %d, inclusive; please set the TFM_PARTITION_NUMBER "
+#              "environment variable accordingly and try again")
+#             % (partition_number, max_partitions - 1)))
+#         return
+#------------------------------------------------------------------------------
+# P.Murat: 
+# the check below is more or less useless, as the partition number does not 
+# necessarily show up on the command line - an env var could be used
+# it is therefore commented out
+#------------------------------------------------------------------------------
+#     greptoken = "farm_manager.py .*--partition-number\s\+%d\s\+" % (partition_number)
+#     pids = get_pids(greptoken)
+#     if len(pids) > 1:
+#         print(
+#             make_paragraph(
+#                 ('There already appears to be a TFM instance running on the requested partition number (%s);'
+#                 ' please either kill the instance (if it\'s yours) or use a different partition. '
+#                 'Run "listdaqinterfaces.sh" for more info.') % (partition_number))
+#         )
+#         kill_tail_f()  # Because tail -f is launched before this script is launched
+#         return
     #------------------------------------------------------------------------------
     # handling of KILL
     #------------------------------------------------------------------------------
