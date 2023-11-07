@@ -80,8 +80,7 @@ try:
          ) % (messagefacility_fhicl_filename)))
 
 except ImportError:
-    pass  # Users shouldn't need to worry if their installations don't yet have
-    # python_artdaq available
+    pass  # Users shouldn't need to worry if their installations don't yet have python_artdaq available
 
 from rc.control.config_functions_local import get_boot_info_base
 from rc.control.config_functions_local import listdaqcomps_base
@@ -127,7 +126,8 @@ process_management_methods = ["direct", "external_run_control"]
 if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
     raise Exception(
         make_paragraph(
-            "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows what method to use to control the artdaq processes (%s, etc.)"
+            ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
+             "what method to use to control the artdaq processes (%s, etc.)")
             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
         )
     )
@@ -147,8 +147,12 @@ else:
                 )
             )
         )
+#------------------------------------------------------------------------------
+# supposed to be defined
+#------------------------------------------------------------------------------
+management_method = os.environ["TFM_PROCESS_MANAGEMENT_METHOD"];
 
-if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "direct":
+if (management_method == "direct"):
     from rc.control.manage_processes_direct import launch_procs_base
     from rc.control.manage_processes_direct import kill_procs_base
     from rc.control.manage_processes_direct import check_proc_heartbeats_base
@@ -167,7 +171,7 @@ if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "direct":
     from rc.control.manage_processes_direct import get_pid_for_process_base
     from rc.control.manage_processes_direct import process_launch_diagnostics_base
     from rc.control.manage_processes_direct import mopup_process_base
-elif os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control":
+elif (management_method == "external_run_control"):
     from rc.control.all_functions_noop import launch_procs_base
     from rc.control.all_functions_noop import kill_procs_base
     from rc.control.all_functions_noop import check_proc_heartbeats_base
@@ -188,11 +192,10 @@ elif os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control":
 
 # This is the end of if-elifs of process management methods
 if not "TFM_FHICL_DIRECTORY" in os.environ:
-    print
-    raise Exception(
-        make_paragraph(
-            "The TFM_FHICL_DIRECTORY environment variable must be defined; if you wish to use the database rather than the local filesystem for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"
-        )
+    raise Exception(make_paragraph(
+        ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
+         "if you wish to use the database rather than the local filesystem "
+         "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
     )
 elif os.environ["TFM_FHICL_DIRECTORY"] == "IGNORED":
     from rc.control.config_functions_database_v2 import get_config_info_base
@@ -205,7 +208,6 @@ else:
     from rc.control.config_functions_local import put_config_info_base
     from rc.control.config_functions_local import put_config_info_on_stop_base
     from rc.control.config_functions_local import listconfigs_base
-
 
 class FarmManager(Component):
     """
@@ -374,9 +376,9 @@ class FarmManager(Component):
                                     )
                                 )
 
-    # "Subsystem" is a structure containing all the info about a given
-    # artdaq subsystem.
-
+    #------------------------------------------------------------------------------
+    # "Subsystem" is a structure containing all the info about a given artdaq subsystem.
+    #------------------------------------------------------------------------------
     class Subsystem(object):
         def __init__(self,sources=[],destination=None,fragmentMode=True,):
             self.sources      = sources
@@ -621,7 +623,7 @@ class FarmManager(Component):
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
     #------------------------------------------------------------------------------
-    # FarmManager constructor 
+    # finally, the FarmManager constructor 
     #------------------------------------------------------------------------------
     def __init__(
         self,
@@ -636,15 +638,14 @@ class FarmManager(Component):
 
         # Initialize Component, the base class of FarmManager
 
-        Component.__init__(
-            self,
-            logpath=logpath,
-            name=name,
-            rpc_host=rpc_host,
-            control_host=control_host,
-            synchronous=synchronous,
-            rpc_port=rpc_port,
-            skip_init=False,
+        Component.__init__(self,
+                           logpath      = logpath,
+                           name         = name,
+                           rpc_host     = rpc_host,
+                           control_host = control_host,
+                        synchronous  = synchronous,
+                           rpc_port     = rpc_port,
+                           skip_init    = False,
         )
 
         self.reset_variables()
@@ -667,7 +668,7 @@ class FarmManager(Component):
         # document used to initialize each artdaq process, but not
         # given with an absolute path in the #include .
 
-        self.fhicl_file_path = []
+        self.fhicl_file_path      = []
 
         self.__do_boot            = False
         self.__do_shutdown        = False
@@ -740,15 +741,9 @@ class FarmManager(Component):
             )
             sys.exit(1)
 
-        self.print_log(
-            "i",
+        self.print_log("i",
             '%s: FarmManager in partition %s launched and now in "%s" state, listening on port %d'
-            % (
-                date_and_time(),
-                self.partition_number,
-                self.state(self.name),
-                self.rpc_port,
-            ),
+            % (date_and_time(),self.partition_number,self.state(self.name),self.rpc_port)
         )
 
     def __del__(self):
@@ -955,7 +950,9 @@ class FarmManager(Component):
             alertmsg = "\n\n" + make_paragraph('"' + extrainfo + '"')
 
         alertmsg += "\n" + make_paragraph(
-            'FarmManager has set the DAQ back in the "Stopped" state; you may need to scroll above the Recover transition output to find messages which could help you provide any necessary adjustments.'
+            ('FarmManager has set the DAQ back in the "Stopped" state; '
+             'you may need to scroll above the Recover transition output '
+             'to find messages which could help you provide any necessary adjustments.')
         )
         self.print_log("e", alertmsg)
         print
@@ -969,24 +966,25 @@ class FarmManager(Component):
         print
 
     def read_settings(self):
-        if not os.path.exists(os.environ["TFM_SETTINGS"]):
-            raise Exception(make_paragraph('Unable to find settings file "%s"' % os.environ["TFM_SETTINGS"]))
+        fn = os.environ["TFM_SETTINGS"];
+        if not os.path.exists(fn):
+            raise Exception(make_paragraph('Unable to find settings file "%s"' % fn))
 
         inf = open(os.environ["TFM_SETTINGS"])
         assert inf
 
-        self.log_directory                = None
-        self.record_directory             = None
-        self.package_hashes_to_save       = []
-        self.package_versions             = {}
-        self.productsdir_for_bash_scripts = None
-        self.max_fragment_size_bytes      = None
-
-        self.boardreader_timeout          = 30
-        self.eventbuilder_timeout         = 30
-        self.datalogger_timeout           = 30
-        self.dispatcher_timeout           = 30
-        self.routingmanager_timeout       = 30
+        self.log_directory                       = None
+        self.record_directory                    = None
+        self.package_hashes_to_save              = []
+        self.package_versions                    = {}
+        self.productsdir_for_bash_scripts        = None
+        self.max_fragment_size_bytes             = None
+                                                
+        self.boardreader_timeout                 = 30
+        self.eventbuilder_timeout                = 30
+        self.datalogger_timeout                  = 30
+        self.dispatcher_timeout                  = 30
+        self.routingmanager_timeout              = 30
 
         self.use_messageviewer                   = True
         self.use_messagefacility                 = True
@@ -1318,11 +1316,11 @@ class FarmManager(Component):
                 while retry_counter < max_retries and (
                     "ARTDAQ PROCESS NOT YET CALLED" in procinfo.lastreturned
                     or "Stopped" in procinfo.lastreturned
-                    or "Booted" in procinfo.lastreturned
-                    or "Ready" in procinfo.lastreturned
+                    or "Booted"  in procinfo.lastreturned
+                    or "Ready"   in procinfo.lastreturned
                     or "Running" in procinfo.lastreturned
-                    or "Paused" in procinfo.lastreturned
-                    or "busy" in procinfo.lastreturned
+                    or "Paused"  in procinfo.lastreturned
+                    or "busy"    in procinfo.lastreturned
                 ):
                     retry_counter += 1
                     sleep(1)
@@ -1432,7 +1430,8 @@ class FarmManager(Component):
         cmds += get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append(
-            'if [ -n "$SETUP_ARTDAQ_MFEXTENSIONS" ]; then printenv SETUP_ARTDAQ_MFEXTENSIONS; else echo "artdaq_mfextensions $ARTDAQ_MFEXTENSIONS_VERSION $MRB_QUALS";fi'
+            ('if [ -n "$SETUP_ARTDAQ_MFEXTENSIONS" ]; then printenv SETUP_ARTDAQ_MFEXTENSIONS; '
+             'else echo "artdaq_mfextensions $ARTDAQ_MFEXTENSIONS_VERSION $MRB_QUALS";fi ')
         )
 
         proc = subprocess.Popen(
@@ -1446,8 +1445,8 @@ class FarmManager(Component):
         proclines = proc.stdout.readlines()
 
         printenv_line = proclines[-1].decode("utf-8")
-        version = printenv_line.split()[1]
-        qualifiers = printenv_line.split()[-1]
+        version       = printenv_line.split()[1]
+        qualifiers    = printenv_line.split()[-1]
 
         return (version, qualifiers)
 
@@ -1456,7 +1455,7 @@ class FarmManager(Component):
     # and make that function run in the background
     # return a proc that can be polled.
     def launch_msgviewer(self):
-        cmds = []
+        cmds            = []
         port_to_replace = 30000
         msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (
             self.partition_number,
@@ -1465,27 +1464,19 @@ class FarmManager(Component):
         cmds += get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append("which msgviewer")
-        cmds.append(
-            "cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl)
-        )
-        cmds.append(
-            'res=$( grep -l "port: %d" %s )' % (port_to_replace, msgviewer_fhicl)
-        )
+        cmds.append("cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl))
+        cmds.append('res=$( grep -l "port: %d" %s )' % (port_to_replace, msgviewer_fhicl))
         cmds.append("if [[ -n $res ]]; then true ; else false ; fi")
-        cmds.append(
-            "sed -r -i 's/port: [^\s]+/port: %d/' %s"
-            % (10005 + self.partition_number * 1000, msgviewer_fhicl)
-        )
-        cmds.append("msgviewer -c %s >/dev/null 2>&1 &" % (msgviewer_fhicl))
+        cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition_number * 1000, msgviewer_fhicl))
+        cmds.append("msgviewer -c %s >/dev/null 2>&1 &"       % (msgviewer_fhicl))
 
         msgviewercmd = construct_checked_command(cmds)
 
-        proc = subprocess.Popen(
-            msgviewercmd,
-            executable="/bin/bash",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+        proc = subprocess.Popen(msgviewercmd,
+                                executable="/bin/bash",
+                                shell=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
         )
 
         return proc
@@ -1537,13 +1528,10 @@ class FarmManager(Component):
                     self.print_log(
                         "w",
                         make_paragraph(
-                            'An "[Errno 111] Connection refused" exception was thrown when attempting to query artdaq process %s at %s:%s; this likely means the process no longer exists -- try checking logfile %s for details'
-                            % (
-                                procinfo.label,
-                                procinfo.host,
-                                procinfo.port,
-                                self.determine_logfilename(procinfo),
-                            )
+                            ('An "[Errno 111] Connection refused" exception was thrown when attempting '
+                            'to query artdaq process %s at %s:%s; this likely means the process no longer '
+                             'exists -- try checking logfile %s for details')
+                            % (procinfo.label,procinfo.host,procinfo.port,self.determine_logfilename(procinfo))
                         ),
                     )
                     if (
@@ -1561,16 +1549,11 @@ class FarmManager(Component):
                         )
 
                 elif "[Errno 113] No route to host" in traceback.format_exc():
-                    raise Exception(
-                        make_paragraph(
-                            'Error: an "[Errno 113] No route to host" exception was thrown when attempting to query artdaq process %s at %s:%s; this likely means there\'s an XML-RPC connection issue between this host and %s'
-                            % (
-                                procinfo.label,
-                                procinfo.host,
-                                procinfo.port,
-                                procinfo.host,
-                            )
-                        )
+                    raise Exception(make_paragraph(
+                        ('Error: an "[Errno 113] No route to host" exception was thrown '
+                         'when attempting to query artdaq process %s at %s:%s; '
+                         'this likely means there\'s an XML-RPC connection issue between this host and %s')
+                        % (procinfo.label,procinfo.host,procinfo.port,procinfo.host))
                     )
                 else:
                     raise
@@ -1582,14 +1565,9 @@ class FarmManager(Component):
             if procinfo.state == "Error":
 
                 errmsg = (
-                    '%s: "Error" state found to have been returned by process %s at %s:%s; please check MessageViewer if up and/or the process logfile, %s'
-                    % (
-                        date_and_time(),
-                        procinfo.label,
-                        procinfo.host,
-                        procinfo.port,
-                        self.determine_logfilename(procinfo),
-                    )
+                    ('%s: "Error" state found to have been returned by process %s at %s:%s; '
+                     'please check MessageViewer if up and/or the process logfile, %s')
+                    % (date_and_time(),procinfo.label,procinfo.host,procinfo.port,self.determine_logfilename(procinfo))
                 )
 
                 print
@@ -1670,16 +1648,13 @@ class FarmManager(Component):
                         ):
                             raise Exception(
                                 make_paragraph(
-                                    'Logic on line "%s" of %s requires you need at least %d processes with a label matching "%s", but only %d are requested for the run'
-                                    % (
-                                        line,
-                                        os.environ[
-                                            "TFM_PROCESS_REQUIREMENTS_LIST"
-                                        ],
-                                        strictest_count_of_matching_required,
-                                        regexp_to_match,
-                                        starting_count_of_matching,
-                                    )
+                                    ('Logic on line "%s" of %s requires you need at least %d processes with a label'
+                                     ' matching "%s", but only %d are requested for the run')
+                                    % (line,
+                                       os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
+                                       strictest_count_of_matching_required,
+                                       regexp_to_match,
+                                       starting_count_of_matching)
                                 )
                             )
 
@@ -1716,27 +1691,22 @@ class FarmManager(Component):
                     minimum_count,
                     current_count,
                 )
-                if current_count < minimum_count:
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            'Error: loss of process %s drops the total number of processes whose labels match the regular expression "%s" to %d out of an original total of %d; this violates the minimum number of %d required in the file "%s"'
-                            % (
-                                procinfo.label,
-                                regexp,
-                                current_count,
-                                original_count,
-                                minimum_count,
-                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
-                            )
-                        ),
+                if (current_count < minimum_count):
+                    self.print_log("e",make_paragraph(
+                        ('Error: loss of process %s drops the total number of processes '
+                         'whose labels match the regular expression "%s" to %d '
+                         'out of an original total of %d; this violates the minimum number'
+                         ' of %d required in the file "%s"')
+                        % ( procinfo.label,
+                            regexp,
+                            current_count,
+                            original_count,
+                            minimum_count,
+                            os.environ["TFM_PROCESS_REQUIREMENTS_LIST"]))
                     )
                     raise Exception(
                         "Loss of process %s violates at least one of the requirements in %s; scroll up for more details"
-                        % (
-                            procinfo.label,
-                            os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
-                        )
+                        % (procinfo.label,os.environ["TFM_PROCESS_REQUIREMENTS_LIST"])
                     )
 
         if not process_matches_requirements_regexp:
@@ -1768,35 +1738,29 @@ class FarmManager(Component):
 
             if process_description != "":
                 if "TFM_PROCESS_REQUIREMENTS_LIST" in os.environ:
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because there are no special rules for it in %s. To learn how to add rules, see the relevant section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
-                            % (
-                                procinfo.label,
-                                process_description,
-                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
-                            )
-                        ),
+                    self.print_log("e",make_paragraph(
+                        ("Error: loss of process %s will now end the run, since it's a %s. "
+                         "This is the default action because there are no special rules for it in %s. "
+                         "To learn how to add rules, see the relevant section of the FarmManager manual, "
+                         "https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run")
+                        % (procinfo.label,process_description,os.environ["TFM_PROCESS_REQUIREMENTS_LIST"]))
                     )
                 else:
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            "Error: loss of process %s will now end the run, since it's a %s. This is the default action because FarmManager wasn't provided with a file overriding its default behavior. To learn how to override, see \"%s/docs/process_requirements_list_example\" for an example of such a file and also read the relevant section of the FarmManager manual, https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run"
-                            % (
-                                procinfo.label,
-                                process_description,
-                                os.environ["TFM_DIR"],
-                            )
-                        ),
+                    self.print_log("e",make_paragraph(
+                        ("Error: loss of process %s will now end the run, since it's a %s. "
+                         "This is the default action because FarmManager wasn't provided "
+                         "with a file overriding its default behavior. To learn how to override, "
+                         "see \"%s/docs/process_requirements_list_example\" for an example "
+                         "of such a file and also read the relevant section of the FarmManager manual, "
+                         "https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Defining_which_processes_are_critical_to_a_run")
+                        % (procinfo.label,process_description,os.environ["TFM_DIR"]))
                     )
 
-                raise Exception(
-                    make_paragraph(
-                        "Loss of process %s violates one of FarmManager's default requirements; scroll up for more details. You can override this behavior by adding a rule to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
-                        % (procinfo.label)
-                    )
+                raise Exception(make_paragraph(
+                    ("Loss of process %s violates one of FarmManager's default requirements; "
+                     "scroll up for more details. You can override this behavior by adding a rule "
+                     "to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
+                     % (procinfo.label)))
                 )
 
     def determine_logfilename(self, procinfo):
@@ -1816,7 +1780,9 @@ class FarmManager(Component):
             if "/%s-" % (procinfo.label) in logfilename
         ]
         assert len(logfilename_in_list_form) <= 1, make_paragraph(
-            'Unable to locate logfile for process "%s" out of the following list of candidates: [%s]; this may be due to incorrect assumptions made by FarmManager about the format of the logfilenames. Please contact the artdaq-developers@fnal.gov mailing list'
+            ('Unable to locate logfile for process "%s" out of the following list of candidates: [%s]; '
+            'this may be due to incorrect assumptions made by FarmManager about the format '
+             'of the logfilenames. Please contact the artdaq-developers@fnal.gov mailing list')
             % (procinfo.label, ", ".join(all_logfilenames))
         )
 
@@ -1825,37 +1791,27 @@ class FarmManager(Component):
         else:
             return "(LOGFILE UNDETERMINED)"
 
+    #------------------------------------------------------------------------------
+    # Check that the boot file actually contained the definitions we wanted
+    # The BoardReader info should be supplied by the configuration manager; 
+    # info for the other artdaq process types (excluding their FHiCL documents) 
+    # should be supplied in the boot file
+    #------------------------------------------------------------------------------
     def check_boot_info(self):
-
-        # Check that the boot file actually contained the
-        # definitions we wanted
-
-        # The BoardReader info should be supplied by the configuration
-        # manager; info for the other artdaq process types (excluding
-        # their FHiCL documents) should be supplied in the
-        # boot file
 
         undefined_var = ""
 
-        if self.daq_setup_script is None:
-            undefined_var = "DAQ setup script"
-        elif self.debug_level is None:
-            undefined_var = "debug level"
+        if   self.daq_setup_script is None: undefined_var = "DAQ setup script"
+        elif self.debug_level      is None: undefined_var = "debug level"
 
         if undefined_var != "":
-            raise Exception(
-                make_paragraph(
-                    'Error: "%s" undefined in FarmManager boot file' % (undefined_var)
-                )
-            )
+            raise Exception(make_paragraph('Error: "%s" undefined in FarmManager boot file' % (undefined_var)))
 
         if self.debug_level == 0:
-            self.print_log(
-                "w",
-                make_paragraph(
-                    '"debug level" is set to %d in the boot file, %s; while this isn\'t an error due to reasons of backwards compatibility, use of this debug level is highly discouraged'
-                    % (self.debug_level, self.boot_filename)
-                ),
+            self.print_log("w",make_paragraph(
+                ('"debug level" is set to %d in the boot file, %s; while this isn\'t an error '
+                 'due to reasons of backwards compatibility, use of this debug level is highly discouraged')
+                % (self.debug_level, self.boot_filename))
             )
 
         if not os.path.exists(self.daq_setup_script):
@@ -1869,74 +1825,63 @@ class FarmManager(Component):
             ]
         )
         if num_requested_routingmanagers > len(self.subsystems):
-            raise Exception(
-                make_paragraph(
-                    "%d RoutingManager processes defined in the boot file provided; you can't have more than the number of subsystems (%d)"
-                    % (num_requested_routingmanagers, len(self.subsystems))
-                )
+            raise Exception(make_paragraph(
+                ("%d RoutingManager processes defined in the boot file provided; "
+                 "you can't have more than the number of subsystems (%d)")
+                % (num_requested_routingmanagers, len(self.subsystems)))
             )
 
-        if len(set([procinfo.label for procinfo in self.procinfos])) < len(
-            self.procinfos
-        ):
-            raise Exception(
-                make_paragraph(
-                    "At least one of your desired artdaq processes has a duplicate label; please check the boot file to ensure that each process gets a unique label"
-                )
+        if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
+            raise Exception(make_paragraph(
+                    ("At least one of your desired artdaq processes has a duplicate label; "
+                     "please check the boot file to ensure that each process gets a unique label"))
             )
 
         for ss in self.subsystems:
             dest = self.subsystems[ss].destination
             if dest is not None:
-                if (
-                    self.subsystems[dest] == None
-                    or ss not in self.subsystems[dest].sources
-                ):
-                    raise Exception(
-                        make_paragraph(
-                            "Inconsistent subsystem configuration detected! Subsystem %s has destination %s, but subsystem %s doesn't have %s in its list of sources!"
-                            % (ss, dest, dest, ss)
-                        )
+                if (self.subsystems[dest] == None or ss not in self.subsystems[dest].sources):
+                    raise Exception(make_paragraph(
+                        ("Inconsistent subsystem configuration detected! Subsystem %s has destination %s, "
+                         "but subsystem %s doesn't have %s in its list of sources!")
+                        % (ss, dest, dest, ss))
                     )
 
     def get_artdaq_log_filenames(self):
 
-        self.boardreader_log_filenames = []
-        self.eventbuilder_log_filenames = []
-        self.datalogger_log_filenames = []
-        self.dispatcher_log_filenames = []
+        self.boardreader_log_filenames    = []
+        self.eventbuilder_log_filenames   = []
+        self.datalogger_log_filenames     = []
+        self.dispatcher_log_filenames     = []
         self.routingmanager_log_filenames = []
 
         for host in set([procinfo.host for procinfo in self.procinfos]):
 
-            if host != "localhost":
-                full_hostname = host
-            else:
-                full_hostname = os.environ["HOSTNAME"]
+            if host != "localhost": full_hostname = host
+            else                  : full_hostname = os.environ["HOSTNAME"]
 
-            procinfos_for_host = [
-                procinfo for procinfo in self.procinfos if procinfo.host == host
-            ]
-            cmds = []
+            procinfos_for_host = [ procinfo for procinfo in self.procinfos if procinfo.host == host ]
+            cmds      = []
             proctypes = []
 
             cmds.append('short_hostname=$( hostname | sed -r "s/([^.]+).*/\\1/" )')
             for i_p, p in enumerate(procinfos_for_host):
 
                 output_logdir = "%s/%s-$short_hostname-%s" % (self.log_directory,p.label,p.port,)
-                cmds.append(
-                    "filename_%s=$( ls -tr1 %s/%s-$short_hostname-%s*.log | tail -1 )"
-                    % (i_p, output_logdir, p.label, p.port)
-                )
+                cmds.append("filename_%s=$( ls -tr1 %s/%s-$short_hostname-%s*.log | tail -1 )"
+                    % (i_p, output_logdir, p.label, p.port))
+
                 cmds.append(
                     "if [[ -z $filename_%s ]]; then echo No logfile found for process %s on %s after looking in %s >&2 ; exit 1; fi"
                     % (i_p, p.label, p.host, output_logdir)
                 )
                 cmds.append("timestamp_%s=$( stat -c %%Y $filename_%s )" % (i_p, i_p))
                 cmds.append(
-                    'if (( $( echo "$timestamp_%s < %f" | bc -l ) )); then echo Most recent logfile found in expected output directory for process %s on %s, $filename_%s, is too old to be the logfile for the process in this run >&2 ; exit 1; fi'
-                    % (i_p, self.launch_procs_time, p.label, p.host, i_p)
-                )
+                    ('if (( $( echo "$timestamp_%s < %f" | bc -l ) )); then '
+                     'echo Most recent logfile found in expected output directory for process %s on %s, '
+                     '$filename_%s, is too old to be the logfile for the process in this run >&2 ; exit 1; fi')
+                    % (i_p, self.launch_procs_time, p.label, p.host, i_p))
+
                 cmds.append("echo Logfile for process %s on %s is $filename_%s" % (p.label, p.host, i_p))
                 proctypes.append(p.name)
 
@@ -1969,29 +1914,31 @@ class FarmManager(Component):
                     break  # Success
                 else:
                     if num_logfile_checks == max_num_logfile_checks:
-                        self.print_log(
-                            "e",
-                            "\nProblem associating logfiles with the artdaq processes. Output is as follows:",
+                        self.print_log("e",
+                                       "\nProblem associating logfiles with the artdaq processes. Output is as follows:",
                         )
-                        self.print_log(
-                            "e",
-                            "\nSTDOUT:\n======================================================================\n%s\n======================================================================\n"
-                            % (out),
-                        )
-                        self.print_log(
-                            "e",
-                            "STDERR:\n======================================================================\n%s\n======================================================================\n"
-                            % (err),
-                        )
-                        raise Exception(
-                            make_paragraph(
-                                "Error: there was a problem identifying the logfiles for at least some of the artdaq processes. This may be the result of you not having write access to the directories where the logfiles are meant to be written. Please scroll up to see further output."
-                            )
+
+                        self.print_log("e",
+                            ("\nSTDOUT:\n"
+                             "======================================================================\n"
+                             "%s\n"
+                             "======================================================================\n")
+                            % (out))
+
+                        self.print_log("e",
+                            ("STDERR:\n"
+                             "======================================================================\n"
+                             "%s\n"
+                             "======================================================================\n")
+                            % (err))
+                        raise Exception(make_paragraph(
+                            ("Error: there was a problem identifying the logfiles for at least some "
+                             "of the artdaq processes. This may be the result of you not having write access "
+                             "to the directories where the logfiles are meant to be written. "
+                             "Please scroll up to see further output."))
                         )
                     else:
-                        sleep(
-                            2
-                        )  # Give the logfiles a bit of time to appear before the next check
+                        sleep(2)  # Give the logfiles a bit of time to appear before the next check
 
             for i_p in range(len(proclines)):
                 if "BoardReader" in proctypes[i_p]:
@@ -2126,13 +2073,13 @@ class FarmManager(Component):
             else:
                 needed_packages.append(package if self.productsdir != None else package.replace("_", "-"))
 
-        if len(needed_packages) == 0:
-            return
+        if (len(needed_packages) == 0): return
 
-        if "artdaq_daqinterface" in packages:
-            assert (
-                len(packages) == 1
-            ), "Note to developer: you'll probably need to refactor save_run_records.py if you want to get the version of other packages alongside the version of FarmManager"
+        if "tfm" in packages:
+            assert (len(packages) == 1), ("Note to developer: you'll probably need to refactor "
+                                          "save_run_records.py if you want to get the version "
+                                          "of other packages alongside the version of FarmManager")
+                                       
             cmd = "ups active | sed -r -n 's/^artdaq_daqinterface\\s+(\\S+).*/artdaq_daqinterface \\1/p'"
         elif self.productsdir != None:
             cmd = (
@@ -2204,12 +2151,9 @@ class FarmManager(Component):
                     if not re.search(r"v[0-9]+_[0-9]+_[0-9]+.*", version):
                         raise Exception(
                             make_paragraph(
-                                'Error in %s: the version of the package "%s" this function has determined, "%s", is not the expected v<int>_<int>_<int>optionalextension format'
-                                % (
-                                    self.fill_package_versions.__name__,
-                                    package,
-                                    version,
-                                )
+                                ('Error in %s: the version of the package "%s" this function has determined, '
+                                 '"%s", is not the expected v<int>_<int>_<int>optionalextension format')
+                                % (self.fill_package_versions.__name__,package,version)
                             )
                         )
                     # print('package=%s type(package)=%s' % (package,type(package)))
@@ -2217,22 +2161,18 @@ class FarmManager(Component):
 
         for package in packages:
             if package not in self.package_versions:
-                self.print_log(
-                    "w",
-                    'Warning: there was a problem trying to determine the version of package "%s"'
-                    % (package),
+                self.print_log("w",
+                               'Warning: there was a problem trying to determine the version of package "%s"'
+                               % (package)
                 )
 
     def execute_trace_script(self, transition):
 
         if "TFM_TRACE_SCRIPT" not in os.environ:
-            self.print_log(
-                "d",
-                make_paragraph(
-                    "Environment variable TFM_TRACE_SCRIPT not defined; will not execute the would-be trace script pointed to by the variable"
-                ),
-                3,
-            )
+            self.print_log("d",make_paragraph(
+                ("Environment variable TFM_TRACE_SCRIPT not defined; "
+                 "will not execute the would-be trace script pointed to by the variable")),3)
+
             return
 
         trace_script = os.environ["TFM_TRACE_SCRIPT"]
@@ -2240,7 +2180,9 @@ class FarmManager(Component):
         if re.search(r"^%s" % (os.environ["TFM_DIR"]), trace_script):
             raise Exception(
                 make_paragraph(
-                    'The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", appears to be located inside the FarmManager package itself. Please copy it somewhere else before using it, and revert any edits which may have been made to %s.'
+                    ('The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", '
+                     'appears to be located inside the FarmManager package itself. '
+                     'Please copy it somewhere else before using it, and revert any edits which may have been made to %s.')
                     % (trace_script, trace_script)
                 )
             )
@@ -2879,11 +2821,14 @@ class FarmManager(Component):
                         % (os.environ["TFM_SETUP_FHICLCPP"])
                     )
                 )
-
+    #------------------------------------------------------------------------------
     # do_boot(), do_config(), do_start_running(), etc., are the functions 
     # which get called by the runner() function when a transition is requested
-
+    #------------------------------------------------------------------------------
     def do_boot(self, boot_filename=None):
+        #------------------------------------------------------------------------------
+        # P.Murat: why a nested function? 
+        #------------------------------------------------------------------------------
         def revert_failed_boot(failed_action):
             self.reset_variables()
             self.revert_failed_transition(failed_action)
@@ -2894,9 +2839,7 @@ class FarmManager(Component):
             self.print_log("e", make_paragraph(
                 'No components appear to have been requested; '
                 'you need to first call setdaqcomps ("setdaqcomps.sh" at the command line). '
-                'System remains in "stopped" state.'
-            ),
-            )
+                'System remains in "stopped" state.'))
             self.revert_state_change(self.name, self.state(self.name))
             return
 
@@ -2918,28 +2861,22 @@ class FarmManager(Component):
 
         dummy, file_extension = os.path.splitext(boot_filename)
         #------------------------------------------------------------------------------
-        # it looks that a boot file name could be in FHICL format
+        # P.Murat : it looks that a boot file name could have a .fcl extension... wow!
         #------------------------------------------------------------------------------
         if file_extension != ".fcl":
             self.boot_filename = boot_filename
         else:
-
             try:
                 self.create_setup_fhiclcpp_if_needed()
             except:
                 raise
 
-            self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (
-                os.environ["USER"],
-                os.environ["TFM_PARTITION_NUMBER"],
-            )
+            self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (os.environ["USER"],os.environ["TFM_PARTITION_NUMBER"])
             if os.path.exists(self.boot_filename):
                 os.unlink(self.boot_filename)
 
-            assert os.path.exists(
-                "%s/bin/defhiclize_boot_file.sh"
-                % (os.environ["TFM_DIR"])
-            )
+            assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (os.environ["TFM_DIR"]))
+
             cmd = "%s/bin/defhiclize_boot_file.sh %s > %s" % (
                 os.environ["TFM_DIR"],
                 boot_filename,
@@ -3082,9 +3019,9 @@ class FarmManager(Component):
                         2,
                     )
 
-        self.print_log("i", "\n%s: BOOT transition: 001 Pasha : start msgviewer" % (date_and_time()))
+        self.print_log("i", "\n%s: BOOT transition 001 Pasha: call start msgviewer" % (date_and_time()))
         self.start_message_viewer()
-        self.print_log("i", "\n%s: BOOT transition underway 002 Pasha : dealt with msg viewer" % (date_and_time()))
+        self.print_log("i", "\n%s: BOOT transition 002 Pasha: done with msg viewer" % (date_and_time()))
         # JCF, Oct-18-2017
 
         # After a discussion with Ron about how trace commands need to
@@ -3184,13 +3121,13 @@ class FarmManager(Component):
                         % (host)
                     )
 
-            self.print_log("i", "\n%s: BOOT transition underway 007 Pasha : before init_process_requirements\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 007 Pasha : before init_process_requirements\n" % (date_and_time()))
             self.init_process_requirements()
 
             self.create_setup_fhiclcpp_if_needed()
             obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
 
-            self.print_log("i", "\n%s: BOOT transition underway 008 Pasha : after messagefacility_fhicl\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 008 Pasha : after messagefacility_fhicl\n" % (date_and_time()))
 
             cmds = []
             cmds.append(
@@ -3214,7 +3151,7 @@ class FarmManager(Component):
                 encoding="utf-8",
             )
 
-            self.print_log("i", "\n%s: BOOT transition underway 009 Pasha : after fhicl-dump\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 009 Pasha : after fhicl-dump\n" % (date_and_time()))
             out, err = proc.communicate()
             status = proc.returncode
 
@@ -3242,7 +3179,7 @@ class FarmManager(Component):
             # Now, with the info on hand about the processes contained in
             # procinfos, actually launch them
 
-            self.print_log("i", "\n%s: BOOT transition underway 010 Pasha : before launching artdaq processes\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 010 Pasha : before launching artdaq processes\n" % (date_and_time()))
 
             self.print_log("i", "\n%sLaunching the artdaq processes" % date_and_time())
             self.called_launch_procs = True
@@ -3255,8 +3192,7 @@ class FarmManager(Component):
 
                 assert type(launch_procs_actions) is dict, make_paragraph(
                     ("The launch_procs function needs to return a dictionary whose keys are the names of the hosts"
-                     " on which it ran commands, and whose values are those commands")
-                )
+                     " on which it ran commands, and whose values are those commands"))
 
             except Exception:
                 self.print_log("e", traceback.format_exc())
@@ -3268,7 +3204,7 @@ class FarmManager(Component):
 
             num_launch_procs_checks = 0
 
-            self.print_log("i", "\n%s: BOOT transition underway 011 Pasha : done launching\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 011 Pasha : done launching\n" % (date_and_time()))
 
             while True:
 
@@ -4318,11 +4254,9 @@ class FarmManager(Component):
         try:
             self.procinfos
         except:
-            return self.state(
-                name
-            )  # OK if we haven't yet created the list of Procinfo structures
+            return self.state(name)  # OK if we haven't yet created the list of Procinfo structures
         else:
-            tmpfile = "/tmp/artdaq_process_info_%s_partition%s" % (
+            tmpfile = "/tmp/artdaq_process_info_%s_partition_%s" % (
                 os.environ["USER"],
                 os.environ["TFM_PARTITION_NUMBER"],
             )
@@ -4503,21 +4437,17 @@ def main():  # no-coverage
         return
 
     if "TFM_KNOWN_BOARDREADERS_LIST" not in os.environ.keys():
-        print(
-            make_paragraph(
-                "Need to have the TFM_KNOWN_BOARDREADERS_LIST environment variable set to refer to the list of boardreader types FarmManager can use"
-            )
-        )
-        print
+        print(make_paragraph(
+                ("Need to have the TFM_KNOWN_BOARDREADERS_LIST environment variable "
+                 "set to refer to the list of boardreader types FarmManager can use\n")))
         return
 
     process_management_methods = ["direct", "pmt", "external_run_control"]
     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-        raise Exception(
-            make_paragraph(
-                "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows what method to use to control the artdaq processes (%s, etc.)"
-                % (",".join(['"' + pmm + '"' for pmm in process_management_methods]))
-            )
+        raise Exception(make_paragraph(
+            ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
+             "what method to use to control the artdaq processes (%s, etc.)")
+            % (",".join(['"' + pmm + '"' for pmm in process_management_methods])))
         )
     else:
         legal_method_found = False
@@ -4548,7 +4478,7 @@ def main():  # no-coverage
                               'Will internally set HOSTNAME using socket.gethostname\n')))
         os.environ["HOSTNAME"] = socket.gethostname();
 #------------------------------------------------------------------------------
-# P.Murat: this is an example of how not to do things
+# P.Murat: this is an example of how not to do ask for teh host name
 #------------------------------------------------------------------------------
 #         os.environ["HOSTNAME"] = (
 #             subprocess.Popen(
@@ -4598,8 +4528,9 @@ def main():  # no-coverage
 #         )
 #         kill_tail_f()  # Because tail -f is launched before this script is launched
 #         return
+
     #------------------------------------------------------------------------------
-    # handling of KILL
+    # KILL signal handler
     #------------------------------------------------------------------------------
     def handle_kill_signal(signum, stack):
         daqinterface_instance.print_log(

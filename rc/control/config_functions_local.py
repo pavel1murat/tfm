@@ -8,7 +8,7 @@ import re
 import traceback
 import shutil
 import subprocess
-from subprocess import Popen
+from   subprocess import Popen
 
 from rc.control.utilities import expand_environment_variable_in_string
 from rc.control.utilities import make_paragraph
@@ -81,34 +81,29 @@ def get_boot_info_base(self, boot_filename):
 
     if not inf:
         raise Exception(
-            self.make_paragraph(
-                "Exception in DAQInterface: "
-                + 'unable to locate configuration file "'
-                + boot_filename
-                + '"'
-            )
+            self.make_paragraph("Exception in DAQInterface: unable to locate configuration file "+boot_filename)
         )
 
     memberDict = {
-        "name": None,
-        "label": None,
-        "host": None,
-        "port": "not set",
-        "fhicl": None,
-        "subsystem": "not set",
+        "name"              : None,
+        "label"             : None,
+        "host"              : None,
+        "port"              : "not set",
+        "fhicl"             : None,
+        "subsystem"         : "not set",
         "allowed_processors": "not set",
-        "target": "not set",
-        "prepend": "not set",
+        "target"            : "not set",
+        "prepend"           : "not set",
     }
     subsystemDict = {
-        "id": None,
-        "source": "not set",
-        "destination": "not set",
-        "fragmentMode": "not set",
+        "id"                : None,
+        "source"            : "not set",
+        "destination"       : "not set",
+        "fragmentMode"      : "not set",
     }
 
     num_expected_processes = 0
-    num_actual_processes = 0
+    num_actual_processes   = 0
 
     lines = inf.readlines()
     for i_line, line in enumerate(lines):
