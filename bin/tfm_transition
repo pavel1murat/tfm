@@ -41,7 +41,7 @@ function tfm_transition_() {
 	          translated_cmd="starting"
             
 	          runnum=0
-            highest_runnum=$( ls -1 $recorddir | sort -n | tail -1 )
+            highest_runnum=$( ls -1 $recorddir | sed s/^0*// | sort -n | tail -1 )
             
 	          if [[ $# == 1 ]]; then
                 runnum=$((highest_runnum + 1))

@@ -9,26 +9,31 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
     sys.path.append(os.environ["TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
 
 import argparse
-# import datetime
 from   datetime import datetime, timezone
-import subprocess
-from   time       import sleep, time
-import traceback
-import re
-import string
 import glob
-import stat
-from   threading  import RLock
-import shutil
-from   shutil     import copyfile
-import random
-import signal
-import socket
+
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
 from   inspect import currentframe, getframeinfo
 
+import pathlib
+import pdb
+import random
+import re
+import shutil
+from   shutil     import copyfile
+import signal
+import socket
+import stat
+import string
+import subprocess
+from   threading  import RLock
+from   time       import sleep, time
+import traceback
+#------------------------------------------------------------------------------
+# home brew
+#------------------------------------------------------------------------------
 from rc.io.timeoutclient        import TimeoutServerProxy
 from rc.control.component       import Component
 from rc.control.save_run_record import save_run_record_base
@@ -122,7 +127,7 @@ process_management_methods = ["direct", "external_run_control"]
 if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
     raise Exception(
         make_paragraph(
-            "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so DAQinterface knows what method to use to control the artdaq processes (%s, etc.)"
+            "Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows what method to use to control the artdaq processes (%s, etc.)"
             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
         )
     )
@@ -236,26 +241,26 @@ class FarmManager(Component):
             rank,
             host,
             port,
-            label=None,
-            subsystem="1",
-            allowed_processors=None,
-            target=None,
-            prepend="",
-            fhicl=None,
-            fhicl_file_path=[],
+            label              = None,
+            subsystem          = "1",
+            allowed_processors = None,
+            target             = None,
+            prepend            = "",
+            fhicl              = None,
+            fhicl_file_path    = [],
         ):
-            self.name = name
-            self.rank = rank
-            self.port = port
-            self.host = host
-            self.label = label
-            self.subsystem = subsystem
+            self.name               = name
+            self.rank               = rank
+            self.port               = port
+            self.host               = host
+            self.label              = label
+            self.subsystem          = subsystem
             self.allowed_processors = allowed_processors
-            self.target = target
-            self.prepend = prepend
-            self.fhicl = fhicl  # Name of the input FHiCL document
-            self.ffp = fhicl_file_path
-            self.priority = 999
+            self.target             = target
+            self.prepend            = prepend
+            self.fhicl              = fhicl  # Name of the input FHiCL document
+            self.ffp                = fhicl_file_path
+            self.priority           = 999
 
             # FHiCL code actually sent to the process
 
@@ -499,11 +504,122 @@ class FarmManager(Component):
     #------------------------------------------------------------------------------
     # want run number to be always printed with 6 digits
     #------------------------------------------------------------------------------
-    def metadata_filename(self):
-        return "%s/%06i/metadata.txt" % (self.record_directory,self.run_number);
+    def run_record_directory(self):
+        return "%s/%06i" % (self.record_directory,self.run_number);
 
-    # assert os.path.exists(metadata_filename)
-        
+    def metadata_filename(self):
+        return "%s/metadata.txt" % (self.run_record_directory());
+
+    #------------------------------------------------------------------------------
+    # WK 8/31/21
+    # Startup msgviewer early. check on it later
+    #------------------------------------------------------------------------------
+    def start_message_viewer(self):
+        self.msgviewer_proc = None  # initialize
+        if self.use_messageviewer:
+
+            # Use messageviewer if it's available, i.e., if there's one already up 
+            # or if it's set up via the user-supplied setup script
+
+            try:
+
+                if self.have_artdaq_mfextensions() and is_msgviewer_running():
+                    self.print_log("i",
+                                   make_paragraph(
+                                       "An instance of messageviewer already appears to be running; "
+                                       +"messages will be sent to the existing messageviewer"
+                                   ),
+                    )
+
+                elif self.have_artdaq_mfextensions():
+                    version, qualifiers = self.artdaq_mfextensions_info()
+
+                    self.print_log(
+                        "i",
+                        make_paragraph(
+                            "artdaq_mfextensions %s, %s, appears to be available; "
+                            "if windowing is supported on your host you should see the "
+                            "messageviewer window pop up momentarily"
+                            % (version, qualifiers)
+                        ),
+                    )
+
+                    self.msgviewer_proc = self.launch_msgviewer()
+
+                else:
+                    self.print_log("i",
+                                   make_paragraph(
+                                       "artdaq_mfextensions does not appear to be available; "
+                                       "unable to launch the messageviewer window. This will not affect"
+                                    " actual datataking, it just means you'll need to look at the"
+                                       " logfiles to see artdaq output.")
+                    )
+
+            except Exception:
+                self.print_log("e", traceback.format_exc())
+                self.alert_and_recover("Problem during messageviewer launch stage")
+                return
+
+    #------------------------------------------------------------------------------
+    # make sure that the setup script to be executed on each nore runs successfully 
+    #------------------------------------------------------------------------------
+    def validate_setup_script(self,node):
+        ssh_timeout_in_seconds = 30
+        starttime              = time()
+        debug_level            = 3
+
+        self.print_log("i",
+                       ("\n%s On randomly selected node (%s), will confirm that the DAQ setup script \n"
+                        "%s\ndoesn't return a nonzero value when sourced...")
+                       % (date_and_time(),node, self.daq_setup_script),
+                       1,
+                       False,
+                )
+
+        cmd = "%s ; . %s for_running" % (
+            ";".join(get_setup_commands(self.productsdir, self.spackdir)),
+            self.daq_setup_script,
+        )
+
+        if not host_is_local(node):
+            cmd = "timeout %d ssh %s '%s'" % (ssh_timeout_in_seconds,node,cmd)
+
+        out = subprocess.Popen(cmd,
+                               executable="/bin/bash",
+                               shell=True,
+                               stderr=subprocess.PIPE,
+                               stdout=subprocess.PIPE,
+                               encoding="utf-8")
+
+        out_comm = out.communicate()
+
+        if out_comm[0] is not None:
+            out_stdout = out_comm[0]
+            self.print_log("d","\nSTDOUT: \n%s" % (out_stdout),debug_level)
+
+        if out_comm[1] is not None:
+            out_stderr = out_comm[1]
+            self.print_log("d","STDERR: \n%s"   % (out_stderr),debug_level)
+        status = out.returncode
+
+        if status != 0:
+            errmsg = ('\nNonzero value (%d) returned in attempt to source script %s on host "%s"'
+                      % (status, self.daq_setup_script, node))
+            if status != 124:
+                errmsg = "%s." % (errmsg)
+            else:
+                errmsg = (
+                    ("%s; returned value suggests that the ssh call to %s timed out. "
+                     "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
+                    % (errmsg, node)
+                )
+            self.print_log("e", make_paragraph(errmsg))
+            raise Exception("Problem source-ing %s on %s" % (self.daq_setup_script, node))
+
+
+        endtime = time()
+        self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+
     #------------------------------------------------------------------------------
     # FarmManager constructor 
     #------------------------------------------------------------------------------
@@ -542,7 +658,7 @@ class FarmManager(Component):
         self.boardreader_priorities_on_start  = None
         self.boardreader_priorities_on_stop   = None
 
-        self.daqinterface_base_dir = os.getcwd()
+        self.base_dir = os.getcwd()
 
         # JCF, Nov-17-2015
 
@@ -2657,11 +2773,9 @@ class FarmManager(Component):
                     if not found_priority_ranking:
                         raise Exception(
                             make_paragraph(
-                                'Error: the process label "%s" didn\'t match with any of the regular expressions used to rank transition priorities in the settings file, %s'
-                                % (
-                                    self.procinfos[i_proc].label,
-                                    os.environ["TFM_SETTINGS"],
-                                )
+                                ('Error: the process label "%s" didn\'t match with any of the regular expressions'
+                                 ' used to rank transition priorities in the settings file, %s')
+                                % (self.procinfos[i_proc].label,os.environ["TFM_SETTINGS"])
                             )
                         )
                 else:
@@ -2672,17 +2786,13 @@ class FarmManager(Component):
         inode_fullname = "%s/%s" % (self.record_directory, inode_basename)
         if os.path.exists(inode_fullname):
             with open(inode_fullname) as inf:
-                if not inf.read().strip() == record_directory_info(
-                    self.record_directory
-                ):
+                if not inf.read().strip() == record_directory_info(self.record_directory):
                     preface = make_paragraph(
-                        "Contents of existing %s file and returned value of call to the %s function don't match. This suggests that since the %s file was created the run records directory has been unexpectedly altered. PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS AS THIS MAY RESULT IN RUN NUMBER DUPLICATION. Then replace the existing %s file by executing: "
-                        % (
-                            inode_fullname,
-                            record_directory_info.__name__,
-                            inode_fullname,
-                            inode_fullname,
-                        )
+                        ("Contents of existing %s file and returned value of call to the %s function don't match."
+                         " This suggests that since the %s file was created the run records directory has been "
+                         "unexpectedly altered. PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS "
+                         "AS THIS MAY RESULT IN RUN NUMBER DUPLICATION. Then replace the existing %s file by executing: ")
+                        % (inode_fullname,record_directory_info.__name__,inode_fullname,inode_fullname)
                     )
                     self.print_log(
                         "e",
@@ -2698,9 +2808,7 @@ class FarmManager(Component):
                             os.getcwd(),
                         ),
                     )
-                    raise Exception(
-                        "Problem during run records check; scroll up for details"
-                    )
+                    raise Exception("Problem during run records check; scroll up for details")
         else:
             with open(inode_fullname, "w") as outf:
                 outf.write(record_directory_info(self.record_directory))
@@ -2795,7 +2903,7 @@ class FarmManager(Component):
         self.print_log("i", "\n%s: BOOT transition underway" % (date_and_time()))
 
         self.reset_variables()
-        os.chdir(self.daqinterface_base_dir)
+        os.chdir(self.base_dir)
 
         if not boot_filename:
             boot_filename = self.run_params["boot_filename"]
@@ -2975,57 +3083,7 @@ class FarmManager(Component):
                     )
 
         self.print_log("i", "\n%s: BOOT transition: 001 Pasha : start msgviewer" % (date_and_time()))
-       # WK 8/31/21
-        # Startup msgviewer early. check on it later
-        self.msgviewer_proc = None  # initialize
-        if self.use_messageviewer:
-
-            # Use messageviewer if it's available, i.e., if there's
-            # one already up or if it's set up via the user-supplied
-            # setup script
-
-            try:
-
-                if self.have_artdaq_mfextensions() and is_msgviewer_running():
-                    self.print_log(
-                        "i",
-                        make_paragraph(
-                            "An instance of messageviewer already appears to be running; "
-                            + "messages will be sent to the existing messageviewer"
-                        ),
-                    )
-
-                elif self.have_artdaq_mfextensions():
-                    version, qualifiers = self.artdaq_mfextensions_info()
-
-                    self.print_log(
-                        "i",
-                        make_paragraph(
-                            "artdaq_mfextensions %s, %s, appears to be available; "
-                            "if windowing is supported on your host you should see the "
-                            "messageviewer window pop up momentarily"
-                            % (version, qualifiers)
-                        ),
-                    )
-
-                    self.msgviewer_proc = self.launch_msgviewer()
-
-                else:
-                    self.print_log(
-                        "i",
-                        make_paragraph(
-                            "artdaq_mfextensions does not appear to be available; "
-                            "unable to launch the messageviewer window. This will not affect"
-                            " actual datataking, it just means you'll need to look at the"
-                            " logfiles to see artdaq output."
-                        ),
-                    )
-
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover("Problem during messageviewer launch stage")
-                return
-
+        self.start_message_viewer()
         self.print_log("i", "\n%s: BOOT transition underway 002 Pasha : dealt with msg viewer" % (date_and_time()))
         # JCF, Oct-18-2017
 
@@ -3046,89 +3104,17 @@ class FarmManager(Component):
         # benefit here seems to outweight the cost.
 
         if self.manage_processes:
-            hosts = [procinfo.host for procinfo in self.procinfos]
-            random_host = random.choice(hosts)
+            hosts        = [procinfo.host for procinfo in self.procinfos]
+            random_host  = random.choice(hosts)
 
-            ssh_timeout_in_seconds = 30
-            starttime = time()
-            random_node_source_debug_level = 3
+            self.validate_setup_script(random_host)
 
-            self.print_log(
-                "i",
-                "\n%s On randomly selected node (%s), will confirm that the DAQ setup script \n%s\ndoesn't return a nonzero value when sourced..."
-                % (date_and_time(),random_host, self.daq_setup_script),
-                1,
-                False,
-            )
-            # self.print_log("d", "\n", random_node_source_debug_level)
-
-            cmd = "%s ; . %s for_running" % (
-                ";".join(get_setup_commands(self.productsdir, self.spackdir)),
-                self.daq_setup_script,
-            )
-
-            if not host_is_local(random_host):
-                cmd = "timeout %d ssh %s '%s'" % (
-                    ssh_timeout_in_seconds,
-                    random_host,
-                    cmd,
-                )
-
-            out = subprocess.Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                encoding="utf-8",
-            )
-
-            out_comm = out.communicate()
-
-            self.print_log("i", "\n%s: BOOT transition underway 003 Pasha : back from running setup" % (date_and_time()))
-
-            if out_comm[0] is not None:
-                out_stdout = out_comm[0]
-                self.print_log(
-                    "d",
-                    "\nSTDOUT: \n%s" % (out_stdout),
-                    random_node_source_debug_level,
-                )
-            if out_comm[1] is not None:
-                out_stderr = out_comm[1]
-                self.print_log(
-                    "d",
-                    "STDERR: \n%s" % (out_stderr),
-                    random_node_source_debug_level,
-                )
-            status = out.returncode
-
-            if status != 0:
-                errmsg = (
-                    '\nNonzero value (%d) returned in attempt to source script %s on host "%s"'
-                    % (status, self.daq_setup_script, random_host)
-                )
-                if status != 124:
-                    errmsg = "%s." % (errmsg)
-                else:
-                    errmsg = (
-                        "%s; returned value suggests that the ssh call to %s timed out. Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?"
-                        % (errmsg, random_host)
-                    )
-                self.print_log("e", make_paragraph(errmsg))
-                raise Exception(
-                    "Problem source-ing %s on %s" % (self.daq_setup_script, random_host)
-                )
-
-            endtime = time()
-            self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
-
-            self.print_log("i", "\n%s: BOOT transition underway 004 Pasha : done with setup" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition 003 Pasha : done checking setup script" % (date_and_time()))
 
             # Ensure the needed log directories are in place
 
             logdir_commands_to_run_on_host = []
-            permissions = "0775"
+            permissions                    = "0775"
             logdir_commands_to_run_on_host.append(
                 "mkdir -p -m %s %s" % (permissions, self.log_directory)
             )
@@ -3187,12 +3173,14 @@ class FarmManager(Component):
                     self.print_log(
                         "e",
                         make_paragraph(
-                            "Returned value of %d suggests that the ssh call to %s timed out. Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?"
+                            ("Returned value of %d suggests that the ssh call to %s timed out. "
+                             "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
                             % (status, host)
                         ),
                     )
                     raise Exception(
-                        "Problem running mkdir -p for the needed logfile directories on %s; this is likely due either to an ssh issue or a directory permissions issue"
+                        ("Problem running mkdir -p for the needed logfile directories on %s; "
+                         "this is likely due either to an ssh issue or a directory permissions issue")
                         % (host)
                     )
 
@@ -3231,19 +3219,11 @@ class FarmManager(Component):
             status = proc.returncode
 
             if status != 0:
-                self.print_log(
-                    "e",
-                    "\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
-                    % (status, "\n".join(cmds)),
-                )
-                self.print_log(
-                    "e",
-                    "STDOUT output: \n%s" % (out),
-                )
-                self.print_log(
-                    "e",
-                    "STDERR output: \n%s" % (err),
-                )
+                self.print_log("e",
+                               "\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
+                               % (status, "\n".join(cmds)))
+                self.print_log("e","STDOUT output: \n%s" % (out))
+                self.print_log("e","STDERR output: \n%s" % (err))
                 self.print_log(
                     "e",
                     make_paragraph(
@@ -3420,29 +3400,24 @@ class FarmManager(Component):
 
             try:
 
-                self.process_manager_log_filenames = (
-                    self.get_process_manager_log_filenames()
-                )
+                self.process_manager_log_filenames = self.get_process_manager_log_filenames()
                 self.get_artdaq_log_filenames()
 
             except Exception:
                 self.print_log("e", traceback.format_exc())
-                self.alert_and_recover(
-                    "Unable to find logfiles for at least some of the artdaq processes"
-                )
+                self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
                 return
             endtime = time()
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
-        if (
-            os.environ["TFM_PROCESS_MANAGEMENT_METHOD"]
-            == "external_run_control"
-        ):
+        if (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
             self.add_ranks_from_ranksfile()
 
         self.complete_state_change(self.name, "booting")
 
         self.print_log("i", "\n%s: BOOT transition complete" % (date_and_time()))
+
+
     #------------------------------------------------------------------------------
     # CONFIG transition
     #------------------------------------------------------------------------------
@@ -3450,7 +3425,7 @@ class FarmManager(Component):
 
         self.print_log("i", "\n%s: CONFIG transition underway" % (date_and_time()))
 
-        os.chdir(self.daqinterface_base_dir)
+        os.chdir(self.base_dir)
 
         if not subconfigs_for_run:
             self.subconfigs_for_run = self.run_params["config"]
@@ -3729,27 +3704,32 @@ class FarmManager(Component):
         if not run_number: self.run_number = self.run_params["run_number"]
         else             : self.run_number = run_number
 
-        self.print_log("i","\n%s: START transition underway for run %d" % (date_and_time(), self.run_number))
+        # pdb.set_trace();
+
+        self.print_log("i","\n%s: START transition underway for run %d; parameter run_number:%s" % 
+                       (date_and_time(), self.run_number,run_number))
 
         self.check_run_record_integrity()
-
-        if str(self.run_number) in [
-            subdir.split("/")[-1]
-            for subdir in glob.glob("%s/[0-9]*" % (self.record_directory))
-        ]:
-            raise Exception(
-                make_paragraph(
-                    ('Error: requested run number "%s" is found to already exist '
-                     'in the run records directory "%s"; run duplicates are not allowed.')
-                    % (str(self.run_number), self.record_directory)))
+        #------------------------------------------------------------------------------
+        # make sure run numebrs could be encoded into directory names with leading zeroes
+        #------------------------------------------------------------------------------
+        for subdir in glob.glob("%s/[0-9]*" % (self.record_directory)): 
+            rn_string = subdir.split("/")[-1]
+            rn        = int(rn_string)
+            if (self.run_number == rn):
+                raise Exception(
+                    make_paragraph(
+                        ('Error: requested run number "%i" is found to already exist '
+                         'in the run records directory "%s"; run duplicates are not allowed.')
+                        % (self.run_number, subdir)))
         #------------------------------------------------------------------------------
         # Mu2e run numbers take up to 6 digits
         #------------------------------------------------------------------------------
+        rr_dir = self.run_record_directory();
         if os.path.exists(self.tmp_run_record):
-            run_record_directory = "%s/%06i" % (self.record_directory,self.run_number)
 
             try:
-                shutil.copytree(self.tmp_run_record, run_record_directory)
+                shutil.copytree(self.tmp_run_record, rr_dir)
             except:
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover(
@@ -3758,20 +3738,17 @@ class FarmManager(Component):
                          ' "%s" didn\'t work; most likely reason is that you don\'t have write permission'
                          ' to %s, but it may also mean that your experiment\'s reusing a run number.'
                          ' Scroll up past the Recover transition output for further troubleshooting information.')
-                        % (self.tmp_run_record,run_record_directory,self.record_directory))
+                        % (self.tmp_run_record,rr_dir,self.record_directory))
                 )
                 return
             #------------------------------------------------------------------------------
             # P.Murat: it looks that the run_record_directory is always local 
             #------------------------------------------------------------------------------
-            subprocess.Popen(
-                "touch %s" % (run_record_directory),
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            os.chmod(run_record_directory, 0o555)
+            pathlib.Path(rr_dir).touch();
+#            subprocess.Popen("touch %s" % (rr_dir),executable="/bin/bash",shell=True,
+#                             stdout=subprocess.DEVNULL,
+#                             stderr=subprocess.DEVNULL)
+            os.chmod(rr_dir, 0o555)
 
             assert re.search(r"^/tmp/\S", self.semipermanent_run_record)
             if os.path.exists(self.semipermanent_run_record):
@@ -3800,18 +3777,18 @@ class FarmManager(Component):
         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
            os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition_number)):
 
-            os.chmod(run_record_directory, 0o755)
+            os.chmod(rr_dir, 0o755)
             copyfile(
                 "/tmp/info_to_archive_partition%d.txt" % (self.partition_number),
-                "%s/rc_info_start.txt" % (run_record_directory),
+                "%s/rc_info_start.txt" % (rr_dir),
             )
-            os.chmod(run_record_directory, 0o555)
+            os.chmod(rr_dir, 0o555)
 
-            if not os.path.exists("%s/rc_info_start.txt" % (run_record_directory)):
+            if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
                 self.alert_and_recover(
                     make_paragraph(
                         "Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt; does original file exist?"
-                        % (self.partition_number, run_record_directory)
+                        % (self.partition_number, rr_dir)
                     )
                 )
         #------------------------------------------------------------------------------
@@ -3863,7 +3840,7 @@ class FarmManager(Component):
             endtime = time()
             self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
 
-        self.print_log("i", "\nRun info can be found locally at %s\n" % (run_record_directory))
+        self.print_log("i", "\nRun info can be found locally at %s\n" % (self.run_record_directory()))
 
         self.complete_state_change(self.name, "starting")
         self.print_log("i","\n%s: START transition complete for run %d" % (date_and_time(), self.run_number))
