@@ -18,13 +18,13 @@ class Component(ContextObject):
 
     def __init__(
         self,
-        logpath=None,
-        name="toycomponent",
-        rpc_host="localhost",
-        control_host="localhost",
-        synchronous=False,
-        rpc_port=6659,
-        skip_init=False,
+        logpath      = None,
+        name         = "toycomponent",
+        rpc_host     = "localhost",
+        control_host ="localhost",
+        synchronous  = False,
+        rpc_port     = 6659,
+        skip_init    = False,
     ):
         if rpc_port > Component.__MAXPORT:
             raise ValueError("Maximum allowed port is %s" % Component.__MAXPORT)
@@ -93,18 +93,16 @@ class Component(ContextObject):
         }
 
     def state(self, name):
-        if name != self.name:
-            return "unknown"
+        if name != self.name: return "unknown"
         return self.__state
 
     def artdaq_process_info(self, name):
         raise NotImplementedError()
 
     def complete_state_change(self, name, requested):
-        if name != self.name:
-            return
+        if name != self.name: return
         newstate = self.dict_state_to.get(requested, requested)
-        trep = datetime.datetime.utcnow()
+        trep     = datetime.datetime.utcnow()
         self.__state = newstate
 
     # JCF, Dec-15-2016
@@ -117,10 +115,10 @@ class Component(ContextObject):
     # machine
 
     def revert_state_change(self, name, requested):
-        if name != self.name:
-            return
+        if name != self.name: return
+
         oldstate = self.dict_state_from.get(requested, requested)
-        trep = datetime.datetime.utcnow()
+        trep     = datetime.datetime.utcnow()
         self.__state = oldstate
 
     def setdaqcomps(self, daqcomps):
@@ -143,20 +141,17 @@ class Component(ContextObject):
         print(printstr)
 
     def trace_get(self, name, trace_args):
-        if name != self.name:
-            return
+        if name != self.name: return
         self.run_params           = trace_args
         self.do_trace_get_boolean = True
 
     def trace_set(self, name, trace_args):
-        if name != self.name:
-            return
+        if name != self.name: return
         self.run_params           = trace_args
         self.do_trace_set_boolean = True
 
     def state_change(self, name, requested, state_args):
-        if name != self.name:
-            return
+        if name != self.name: return
         trep = datetime.datetime.utcnow()
 
         if (

@@ -461,17 +461,17 @@ class FarmManager(Component):
 
     def reset_variables(self):
 
-        self.in_recovery = False
-        self.heartbeat_failure = False
-        self.manage_processes = True
-        self.disable_recovery = False
+        self.in_recovery               = False
+        self.heartbeat_failure         = False
+        self.manage_processes          = True
+        self.disable_recovery          = False
         self.bootfile_fhicl_overwrites = {}
-        self.called_launch_procs = False
+        self.called_launch_procs       = False
         self.procs_which_already_caused_connection_refused = []
-        self.daq_setup_script = None
-        self.debug_level = 10000
-        self.request_address = None
-        self.run_number = None
+        self.daq_setup_script          = None
+        self.debug_level               = 10000
+        self.request_address           = None
+        self.run_number                = None
 
         # JCF, Nov-7-2015
 
@@ -480,12 +480,12 @@ class FarmManager(Component):
         # when an exception is thrown a thread the main thread needs
         # to know about it somehow - thus this new exception variable
 
-        self.exception = False
+        self.exception                 = False
 
         self.reset_process_manager_variables()
 
-        # "procinfos" will be an array of Procinfo structures (defined
-        # above), where Procinfo contains all the info FarmManager
+        # "procinfos" will be an array of Procinfo structures (defined above), 
+        # where Procinfo contains all the info FarmManager
         # needs to know about an individual artdaq process: name,
         # host, port, and FHiCL initialization document. Filled
         # through a combination of info in the FarmManager
@@ -493,14 +493,14 @@ class FarmManager(Component):
 
         self.procinfos = []
 
-        # "subsystems" is an dictionary of Subsystem structures (defined
-        # above),
+        # "subsystems" is an dictionary of Subsystem structures (defined above),
         # where Subsystem contains all the information FarmManager needs
         # to know about artdaq subsystems: id (dictionary key), source
         # subsystem, destination subsystem.
         # Subsystems are an optional feature that allow users to build complex
         # configurations
         # with multiple request domains and levels of filtering.
+
         self.subsystems = {}
 
     #------------------------------------------------------------------------------
@@ -622,19 +622,17 @@ class FarmManager(Component):
         endtime = time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
-    #------------------------------------------------------------------------------
-    # finally, the FarmManager constructor 
-    #------------------------------------------------------------------------------
-    def __init__(
-        self,
-        logpath          = None,
-        name             = "toycomponent",
-        rpc_host         = "localhost",
-        control_host     = "localhost",
-        synchronous      = True,
-        rpc_port         = 6659,
-        partition_number = 999,
-    ):
+#------------------------------------------------------------------------------
+# finally, the FarmManager constructor 
+####---------------------------------------------------------------------------
+    def __init__(self,
+                 logpath          = None          ,
+                 name             = "toycomponent",
+                 rpc_host         = "localhost"   ,
+                 control_host     = "localhost"   ,
+                 synchronous      = True          ,
+                 rpc_port         = 6659          ,
+                 partition_number = 999           ):
 
         # Initialize Component, the base class of FarmManager
 
@@ -643,10 +641,9 @@ class FarmManager(Component):
                            name         = name,
                            rpc_host     = rpc_host,
                            control_host = control_host,
-                        synchronous  = synchronous,
+                           synchronous  = synchronous,
                            rpc_port     = rpc_port,
-                           skip_init    = False,
-        )
+                           skip_init    = False)
 
         self.reset_variables()
 
@@ -659,7 +656,7 @@ class FarmManager(Component):
         self.boardreader_priorities_on_start  = None
         self.boardreader_priorities_on_stop   = None
 
-        self.base_dir = os.getcwd()
+        self.base_dir                         = os.getcwd()
 
         # JCF, Nov-17-2015
 
@@ -688,6 +685,14 @@ class FarmManager(Component):
         self.messageviewer_sender = None
         self.printlock            = RLock()
 
+        #------------------------------------------------------------------------------
+        # currently, self.daq_comp_list is an associative array of boardreaders,
+        # each described as a plain array of 4 words
+        # 
+        # label, host, port, subsystem
+        #------------------------------------------------------------------------------
+        self.daq_comp_list        = {}
+
         # Here, states refers to individual artdaq process states, not the FarmManager state
         self.target_states = {
             "Init"    : "Ready",
@@ -697,6 +702,7 @@ class FarmManager(Component):
             "Stop"    : "Ready",
             "Shutdown": "Stopped",
         }
+
         self.verbing_to_states = {
             "Init"    : "Configuring",
             "Start"   : "Starting",
@@ -706,12 +712,14 @@ class FarmManager(Component):
             "Shutdown": "Shutting down",
         }
 
+        #------------------------------------------------------------------------------
+        # now, read settings file - should become executing python
+        #------------------------------------------------------------------------------
         try:
             self.read_settings()
         except:
             self.print_log("e", traceback.format_exc())
-            self.print_log(
-                "e",
+            self.print_log("e",
                 make_paragraph(
                     "An exception was thrown when trying to read FarmManager settings; "
                     "FarmManager will exit. Look at the messages above, make any necessary "
@@ -732,17 +740,13 @@ class FarmManager(Component):
                 pass
 
         if not os.access(self.record_directory, os.W_OK | os.X_OK):
-            self.print_log(
-                "e",
-                make_paragraph(
-                    "FarmManager launch failed since it's been determined that you don't have write access to the run records directory \"%s\""
-                    % (self.record_directory)
-                ),
-            )
+            self.print_log("e",make_paragraph(
+                    ("FarmManager launch failed since it's been determined that you don't have"
+                     " write access to the run records directory \"%s\"")
+                    % (self.record_directory)))
             sys.exit(1)
 
-        self.print_log("i",
-            '%s: FarmManager in partition %s launched and now in "%s" state, listening on port %d'
+        self.print_log("i",'%s: FarmManager in partition %s launched and now in "%s" state, listening on port %d'
             % (date_and_time(),self.partition_number,self.state(self.name),self.rpc_port)
         )
 
@@ -965,6 +969,9 @@ class FarmManager(Component):
         )
         print
 
+    #------------------------------------------------------------------------------
+    # will go away: initialization becomes an execution of a python script
+    #------------------------------------------------------------------------------
     def read_settings(self):
         fn = os.environ["TFM_SETTINGS"];
         if not os.path.exists(fn):
@@ -1229,6 +1236,9 @@ class FarmManager(Component):
                 if res:
                     self.attempt_existing_pid_kill = True
 
+        #------------------------------------------------------------------------------
+        # make sure all needed variables were properly initialized
+        #------------------------------------------------------------------------------
         missing_vars = []
 
         # Must wait at least one seconds between checks
@@ -1250,7 +1260,8 @@ class FarmManager(Component):
         if self.advanced_memory_usage and self.max_fragment_size_bytes is not None:
             raise Exception(
                 make_paragraph(
-                    "Since advanced_memory_usage is set to true in the settings file (%s), max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)"
+                    ("Since advanced_memory_usage is set to true in the settings file (%s), "
+                    "max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)")
                     % (os.environ["TFM_SETTINGS"])
                 )
             )
@@ -1282,7 +1293,10 @@ class FarmManager(Component):
         ):
             raise Exception(
                 make_paragraph(
-                    'Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config", "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" are defined in %s; this is not allowed. For further information, take a look at "The settings file reference" in the FarmManager Manual'
+                    ('Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config",'
+                     ' "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" '
+                     'are defined in %s; this is not allowed. For further information, '
+                     'take a look at "The settings file reference" in the FarmManager Manual')
                     % (os.environ["TFM_SETTINGS"])
                 )
             )
@@ -1324,11 +1338,8 @@ class FarmManager(Component):
                 ):
                     retry_counter += 1
                     sleep(1)
-                    if (
-                        procinfo.lastreturned == "Success"
-                        or procinfo.lastreturned == target_state
-                    ):
-                        redeemed = True
+                    if (procinfo.lastreturned == "Success" or procinfo.lastreturned == target_state):
+                        redeemed       = True
                         procinfo.state = target_state
 
                 if redeemed:
@@ -1358,10 +1369,9 @@ class FarmManager(Component):
                     + '"'
                 )
                 self.print_log("w", make_paragraph(errmsg))
-                print
                 self.print_log(
                     "w",
-                    "See logfile %s for details"
+                    "\nSee logfile %s for details"
                     % (self.determine_logfilename(procinfo)),
                 )
 
@@ -1370,11 +1380,10 @@ class FarmManager(Component):
                     and target_state == "Ready"
                     and "with ParameterSet" in procinfo.lastreturned
                 ):
-                    print
                     self.print_log(
                         "w",
                         make_paragraph(
-                            "This is likely because the fragment generator constructor in %s threw an exception (see logfile %s for details)."
+                            "\nThis is likely because the fragment generator constructor in %s threw an exception (see logfile %s for details)."
                             % (procinfo.label, self.determine_logfilename(procinfo))
                         ),
                     )
@@ -1384,6 +1393,9 @@ class FarmManager(Component):
         if not is_all_ok:
             raise Exception("At least one artdaq process failed a transition")
 
+    #------------------------------------------------------------------------------
+    #
+    #------------------------------------------------------------------------------
     def have_artdaq_mfextensions(self):
 
         try:
@@ -1398,12 +1410,10 @@ class FarmManager(Component):
         else:
             return self.artdaq_mfextensions_booleans[self.daq_setup_script]
 
-        cmds = []
+        cmds  = []
         cmds += get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
-        cmds.append(
-            'if test -n "$SETUP_ARTDAQ_MFEXTENSIONS" -o -d "$ARTDAQ_MFEXTENSIONS_DIR"; then true; else false; fi'
-        )
+        cmds.append('if test -n "$SETUP_ARTDAQ_MFEXTENSIONS" -o -d "$ARTDAQ_MFEXTENSIONS_DIR"; then true; else false; fi')
 
         checked_cmd = construct_checked_command(cmds)
 
@@ -1415,12 +1425,18 @@ class FarmManager(Component):
             stderr=subprocess.DEVNULL,
         ).wait()
 
-        if status == 0:
-            self.artdaq_mfextensions_booleans[self.daq_setup_script] = True
-        else:
-            self.artdaq_mfextensions_booleans[self.daq_setup_script] = False
-
-        return self.artdaq_mfextensions_booleans[self.daq_setup_script]
+        ok = (status == 0);
+        self.artdaq_mfextensions_booleans[self.daq_setup_script] = ok;
+        return ok
+#------------------------------------------------------------------------------
+# P.Murat: someone really likes typing... don't go there - see above!
+#------------------------------------------------------------------------------
+#         if status == 0:
+#             self.artdaq_mfextensions_booleans[self.daq_setup_script] = True
+#         else:
+#             self.artdaq_mfextensions_booleans[self.daq_setup_script] = False
+# 
+#        return self.artdaq_mfextensions_booleans[self.daq_setup_script]
 
     def artdaq_mfextensions_info(self):
 
@@ -1668,13 +1684,13 @@ class FarmManager(Component):
                         )  # Last field will keep track of # of still-alive processes
                     else:
                         raise Exception(
-                            'Error in file %s: line "%s" does not parse as "<process label regexp> <process fraction required> <process count required>"'
-                            % (
-                                os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],
-                                line,
-                            )
-                        )
+                            ('Error in file %s: line "%s" does not parse as "<process label regexp> '
+                             '<process fraction required> <process count required>"')
+                            % (os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],line))
 
+    #------------------------------------------------------------------------------
+    # P.Murat: a really long one - John deserved a round of applauds
+    #------------------------------------------------------------------------------
     def throw_exception_if_losing_process_violates_requirements(self, procinfo):
 
         process_matches_requirements_regexp = False  # As in, the requirements found in $TFM_PROCESS_REQUIREMENTS_LIST
@@ -1847,6 +1863,10 @@ class FarmManager(Component):
                         % (ss, dest, dest, ss))
                     )
 
+    #------------------------------------------------------------------------------
+    # log names - this place is important: this is where they start addign timestamps etc 
+    # just because couldn't figure out how to properly use the run number
+    #------------------------------------------------------------------------------
     def get_artdaq_log_filenames(self):
 
         self.boardreader_log_filenames    = []
@@ -1939,61 +1959,29 @@ class FarmManager(Component):
                         )
                     else:
                         sleep(2)  # Give the logfiles a bit of time to appear before the next check
-
+            #------------------------------------------------------------------------------
+            # presence of oddly named processes should be checked well before this point
+            #------------------------------------------------------------------------------
             for i_p in range(len(proclines)):
-                if "BoardReader" in proctypes[i_p]:
-                    self.boardreader_log_filenames.append(
-                        "%s:%s"
-                        % (
-                            full_hostname,
-                            proclines[i_p].strip().split()[-1],
-                        )
-                    )
-                elif "EventBuilder" in proctypes[i_p]:
-                    self.eventbuilder_log_filenames.append(
-                        "%s:%s"
-                        % (
-                            full_hostname,
-                            proclines[i_p].strip().split()[-1],
-                        )
-                    )
-                elif "DataLogger" in proctypes[i_p]:
-                    self.datalogger_log_filenames.append(
-                        "%s:%s"
-                        % (
-                            full_hostname,
-                            proclines[i_p].strip().split()[-1],
-                        )
-                    )
-                elif "Dispatcher" in proctypes[i_p]:
-                    self.dispatcher_log_filenames.append(
-                        "%s:%s"
-                        % (
-                            full_hostname,
-                            proclines[i_p].strip().split()[-1],
-                        )
-                    )
-                elif "RoutingManager" in proctypes[i_p]:
-                    self.routingmanager_log_filenames.append(
-                        "%s:%s"
-                        % (
-                            full_hostname,
-                            proclines[i_p].strip().split()[-1],
-                        )
-                    )
+                fn = "%s:%s"%(full_hostname,proclines[i_p].strip().split()[-1])
+
+                if   "BoardReader"    in proctypes[i_p]: self.boardreader_log_filenames.append   (fn)
+                elif "EventBuilder"   in proctypes[i_p]: self.eventbuilder_log_filenames.append  (fn)
+                elif "DataLogger"     in proctypes[i_p]: self.datalogger_log_filenames.append    (fn)
+                elif "Dispatcher"     in proctypes[i_p]: self.dispatcher_log_filenames.append    (fn)
+                elif "RoutingManager" in proctypes[i_p]: self.routingmanager_log_filenames.append(fn)
                 else:
                     assert False, "Unknown process type found in procinfos list"
 
         self.print_log("d", "\n", 2)
         for procinfo in self.procinfos:
-            self.print_log(
-                "d",
-                "%-20s %s"
-                % (procinfo.label + ":", self.determine_logfilename(procinfo)),
-                2,
-            )
+            self.print_log("d","%-20s %s"%(procinfo.label+":",self.determine_logfilename(procinfo)),2)
+
         self.print_log("d", "\n", 2)
 
+    #------------------------------------------------------------------------------
+    # this is function which we will get rid of
+    #------------------------------------------------------------------------------
     def softlink_logfiles(self):
 
         self.softlink_process_manager_logfiles()
@@ -2587,7 +2575,7 @@ class FarmManager(Component):
             self.print_log("i", "\n%s: %s transition complete" % (date_and_time(), command.upper()))
 
     def setdaqcomps(self, daq_comp_list):
-        # breakpoint()
+        pdb.set_trace()                             # breakpoint()
         self.daq_comp_list = daq_comp_list
 
         module = os.path.splitext(os.path.basename(__file__))[0];
@@ -2834,14 +2822,18 @@ class FarmManager(Component):
             self.revert_failed_transition(failed_action)
         #------------------------------------------------------------------------------
         # P.M. why would a presence of boardreaders be required ? - testing loading the plugins ? 
+        # it is not required, moreover, can define them in the boot.txt file...
+        # 2023-101-
         #------------------------------------------------------------------------------
-        if (not hasattr(self, "daq_comp_list") or self.daq_comp_list is None or len(self.daq_comp_list) == 0):
-            self.print_log("e", make_paragraph(
-                'No components appear to have been requested; '
-                'you need to first call setdaqcomps ("setdaqcomps.sh" at the command line). '
-                'System remains in "stopped" state.'))
-            self.revert_state_change(self.name, self.state(self.name))
-            return
+        # >>> pdb.set_trace()
+
+#        if (not hasattr(self, "daq_comp_list") or self.daq_comp_list is None or len(self.daq_comp_list) == 0):
+#            self.print_log("e", make_paragraph(
+#                'No components appear to have been requested; '
+#                'you need to first call setdaqcomps ("setdaqcomps.sh" at the command line). '
+#                'System remains in "stopped" state.'))
+#            self.revert_state_change(self.name, self.state(self.name))
+#            return
 
         self.print_log("i", "\n%s: BOOT transition underway" % (date_and_time()))
 
@@ -2891,22 +2883,21 @@ class FarmManager(Component):
             ).wait()
             if status != 0:
                 raise Exception('Error: the command "%s" returned nonzero' % cmd)
-
+#------------------------------------------------------------------------------
+# P.Murat: here the boot.txt file is being read and parsed
+#-------
         try:
             self.get_boot_info(self.boot_filename)
             self.check_boot_info()
         except Exception:
             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename))
             return
-
-        if (
-            not hasattr(self, "daq_comp_list")
-            or not self.daq_comp_list
-            or self.daq_comp_list == {}
-        ):
-            revert_failed_boot(
-                'when checking for the list of components meant to be provided by the "setdaqcomps" call'
-            )
+#------------------------------------------------------------------------------
+# P.Murat: at this point, it makes sence to check whether there are any boardreaders
+#          present... But the config_check better be a separate function
+#-------
+        if (not hasattr(self, "daq_comp_list") or not self.daq_comp_list or self.daq_comp_list == {}):
+            revert_failed_boot('ERROR: no BoardReaders defined!')
             return
 
         for boardreader_rank, compname in enumerate(self.daq_comp_list):
@@ -3767,6 +3758,7 @@ class FarmManager(Component):
         #------------------------------------------------------------------------------
         # run processes have started
         # softlinks to the logfiles of this run
+        # this should go away
         #------------------------------------------------------------------------------
         if self.manage_processes:
             starttime = time()
@@ -3780,37 +3772,40 @@ class FarmManager(Component):
 
         self.complete_state_change(self.name, "starting")
         self.print_log("i","\n%s: START transition complete for run %d" % (date_and_time(), self.run_number))
+
+
+
     #------------------------------------------------------------------------------
-    # STOP run
+    # STOP the run
     #------------------------------------------------------------------------------
     def do_stop_running(self):
 
-        self.print_log(
-            "i",
-            "\n%s: STOP transition underway for run %d"
-            % (date_and_time(), self.run_number),
-        )
+        self.print_log("i","\n%s: STOP transition underway for run %d"%(date_and_time(),self.run_number))
 
-        self.save_metadata_value(
-            "FarmManager stop time",
-            subprocess.Popen(
-                "date --utc",
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            .stdout.readlines()[0]
-            .strip()
-            .decode("utf-8"),
-        )
+        run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
+        self.save_metadata_value("FarmManager stop time",run_stop_time);
+
+#         self.save_metadata_value(
+#             "FarmManager stop time",
+#             subprocess.Popen(
+#                 "date --utc",
+#                 executable="/bin/bash",
+#                 shell=True,
+#                 stdout=subprocess.PIPE,
+#                 stderr=subprocess.STDOUT,
+#             )
+#             .stdout.readlines()[0]
+#             .strip()
+#             .decode("utf-8"),
+#         )
 
         try:
             self.put_config_info_on_stop()
         except Exception:
             self.print_log("e", traceback.format_exc())
             self.alert_and_recover(
-                "An exception was thrown when trying to save configuration info; see traceback above for more info"
+                ("An exception was thrown when trying to save configuration info; "
+                 "see traceback above for more info")
             )
             return
 
@@ -3828,11 +3823,9 @@ class FarmManager(Component):
             os.chmod(run_record_directory, 0o555)
 
             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
-                self.alert_and_recover(
-                    make_paragraph(
-                        "Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; does original file exist?"
-                        % (self.partition_number, run_record_directory)
-                    )
+                self.alert_and_recover(make_paragraph(
+                    ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
+                     "does original file exist?") % (self.partition_number, run_record_directory))
                 )
 
         if self.manage_processes:
@@ -3844,41 +3837,34 @@ class FarmManager(Component):
             except Exception:
                 self.print_log("d", traceback.format_exc(), 2)
                 self.alert_and_recover(
-                    'An exception was thrown when attempting to send the "stop" transition to the artdaq processes; see messages above for more info'
+                    ('An exception was thrown when attempting to send the "stop" transition '
+                     'to the artdaq processes; see messages above for more info')
                 )
                 return
 
         self.execute_trace_script("stop")
 
         self.complete_state_change(self.name, "stopping")
-        self.print_log(
-            "i",
-            "\n%s: STOP transition complete for run %d"
-            % (date_and_time(), self.run_number),
-        )
+        self.print_log("i","\n%s: STOP transition complete for run %d"%(date_and_time(),self.run_number))
+
     #------------------------------------------------------------------------------
-    #  TERMINATE transition
+    #  TERMINATE transition - whag does it really do ?
     #------------------------------------------------------------------------------
     def do_terminate(self):
 
-        self.print_log("i", "\n%s: TERMINATE transition underway" % (date_and_time()))
-
-        print
+        self.print_log("i", "\n%s: TERMINATE transition underway\n" % (date_and_time()))
 
         if self.manage_processes:
 
             self.process_manager_cleanup()
 
             starttime = time()
-            self.print_log(
-                "i", "Sending shutdown transition to artdaq processes...", 1, False
-            )
+            self.print_log("i", "Sending shutdown transition to artdaq processes...", 1, False)
 
             proc_starttimes = {}
-            proc_endtimes = {}
+            proc_endtimes   = {}
 
             for procinfo in self.procinfos:
-
                 procinfo.state = self.verbing_to_states["Shutdown"]
 
                 try:
@@ -3935,9 +3921,7 @@ class FarmManager(Component):
             try:
                 self.kill_procs()
             except Exception:
-                self.print_log(
-                    "e", "FarmManager caught an exception in " "do_terminate()"
-                )
+                self.print_log("e", "FarmManager caught an exception in " "do_terminate()")
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover("An exception was thrown " "within kill_procs()")
                 return
@@ -3957,34 +3941,19 @@ class FarmManager(Component):
     #------------------------------------------------------------------------------
     def do_recover(self):
         run_number_string = f" for run {self.run_number}" if self.run_number else ""
-        print
-        self.print_log(
-            "w",
-            "\n%s: RECOVER transition underway%s"
-            % (date_and_time(), run_number_string),
-        )
+        self.print_log("w","\n%s: RECOVER transition underway%s"%(date_and_time(),run_number_string))
 
         self.in_recovery = True
 
         if not self.called_launch_procs:
-            self.print_log(
-                "i",
-                "FarmManager does not appear to have gotten to the point of launching the artdaq processes",
-            )
+            self.print_log("i","FarmManager does not appear to have gotten to the point of launching the artdaq processes")
 
         if self.disable_recovery or not self.called_launch_procs:
-            self.print_log(
-                "i",
-                "Skipping cleanup of artdaq processes, this recover step is effectively a no-op",
-            )
+            self.print_log("i","Skipping cleanup of artdaq processes, this recover step is effectively a no-op")
 
             self.in_recovery = False
             self.complete_state_change(self.name, "recovering")
-            self.print_log(
-                "i",
-                "\n%s: RECOVER transition complete%s"
-                % (date_and_time(), run_number_string),
-            )
+            self.print_log("i","\n%s: RECOVER transition complete %s"%(date_and_time(),run_number_string))
             return
 
         if self.state(self.name) == "running" or self.state(self.name) == "stopping":
@@ -4012,10 +3981,8 @@ class FarmManager(Component):
                 procinfo.state = self.verbing_to_states[command]
                 try:
                     transition_starttime = time()
-                    if command == "Stop":
-                        procinfo.lastreturned = procinfo.server.daq.stop()
-                    elif command == "Shutdown":
-                        procinfo.lastreturned = procinfo.server.daq.shutdown()
+                    if   command == "Stop"    : procinfo.lastreturned = procinfo.server.daq.stop()
+                    elif command == "Shutdown": procinfo.lastreturned = procinfo.server.daq.shutdown()
                     else:
                         assert False
                     transition_endtime = time()
@@ -4128,7 +4095,6 @@ class FarmManager(Component):
                         ),
                     )
                     return
-
             return
 
         if self.manage_processes:
@@ -4148,27 +4114,15 @@ class FarmManager(Component):
                     "d",
                     make_paragraph(
                         "A process previously was found to be missing; "
-                        + "therefore will wait %d seconds before attempting to send the normal transitions as part of recovery"
+                        + "therefore will wait %d seconds before attempting to send the normal transitions as part of recovery\n"
                         % (sleep_on_heartbeat_failure)
                     ),
                     2,
                 )
                 sleep(sleep_on_heartbeat_failure)
 
-            print
-            for name in [
-                "BoardReader",
-                "EventBuilder",
-                "DataLogger",
-                "Dispatcher",
-                "RoutingManager",
-            ]:
-
-                self.print_log(
-                    "i",
-                    "%s: Attempting to cleanly wind down the %ss if they (still) exist"
-                    % (date_and_time(), name),
-                )
+            for name in ["BoardReader","EventBuilder","DataLogger","Dispatcher","RoutingManager"]:
+                self.print_log("i","%s: Attempting to cleanly wind down the %ss if they (still) exist"%(date_and_time(), name))
 
                 threads = []
                 priorities_used = {}
@@ -4193,21 +4147,15 @@ class FarmManager(Component):
 
         if self.manage_processes:
             print
-            self.print_log(
-                "i",
-                "%s: Attempting to kill off the artdaq processes from this run if they still exist"
-                % (date_and_time()),
-            )
+            self.print_log("i","%s: Attempting to kill off the artdaq processes from this run if they still exist"
+                           % (date_and_time()))
             try:
                 self.kill_procs()
             except Exception:
                 self.print_log("e", traceback.format_exc())
-                self.print_log(
-                    "e",
-                    make_paragraph(
-                        "An exception was thrown "
-                        "within kill_procs(); artdaq processes may not all have been killed"
-                    ),
+                self.print_log("e",make_paragraph(
+                        ("An exception was thrown "
+                         "within kill_procs(); artdaq processes may not all have been killed"))
                 )
 
         self.in_recovery = False
@@ -4217,35 +4165,25 @@ class FarmManager(Component):
         # Make sure that the runner function won't just proceed with a transition "in the queue" 
         # despite FarmManager being in the Stopped state after we've finished this recover
 
-        self.__do_boot = (
-            self.__do_shutdown
-        ) = (
-            self.__do_config
-        ) = (
-            self.__do_recover
-        ) = (
-            self.__do_start_running
-        ) = (
-            self.__do_stop_running
-        ) = (
-            self.__do_terminate
-        ) = (
-            self.__do_pause_running
-        ) = (
-            self.__do_resume_running
-        ) = (
-            self.__do_enable
-        ) = (
-            self.__do_disable
-        ) = self.do_trace_get_boolean = self.do_trace_set_boolean = False
+        self.__do_boot            = False
+        self.__do_shutdown        = False
+        self.__do_config          = False
+        self.__do_recover         = False
+        self.__do_start_running   = False
+        self.__do_stop_running    = False
+        self.__do_terminate       = False
+        self.__do_pause_running   = False
+        self.__do_resume_running  = False
+        self.__do_enable          = False
+        self.__do_disable         = False
+
+        self.do_trace_get_boolean = False
+        self.do_trace_set_boolean = False
 
         self.complete_state_change(self.name, "recovering")
 
-        self.print_log(
-            "i",
-            "\n%s: RECOVER transition complete%s"
-            % (date_and_time(), run_number_string),
-        )
+        self.print_log("i","\n%s: RECOVER transition complete%s"%(date_and_time(),run_number_string))
+
 #------------------------------------------------------------------------------
 # tfm::artdaq_process_info
 #------------------------------------------------------------------------------

@@ -1,0 +1,18 @@
+#+startup:fold
+* ------------------------------------------------------------------------------
+* WORK IN PROGRESS:
+* ------------------------------------------------------------------------------
+* TODO get rid of KNOWN_LIST_OF_BOARDREADERS                                 
+#+begin_src
+(Pdb) p daq_comp_list
+{'component01': ['localhost', '-1', '1'], 'component02': ['localhost', '-1', '1']}
+#+end_src 
+- tfm_set_components goes                                                    
+- it reads the KNOWN_LIST_OF_BOARDREADERS file, picks up the requested board readers and sends them to to the TF manager
+* TODO move search for message viewer to construction
+* TODO  move the "boot" actions to early initialization
+* TODO config stage includes reloading of the FCL files                      
+- normally, don't change anything else from one run to another
+* ------------------------------------------------------------------------------
+* back to [[file:tfm.org]]
+* ------------------------------------------------------------------------------

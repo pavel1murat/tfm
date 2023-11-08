@@ -1,4 +1,10 @@
 #!/bin/env bash
+#------------------------------------------------------------------------------
+# scans the $TFM_KNOWN_BOARDREADERS_LIST file, chooses listed components
+# and passes them with tehir parameters, to the FarmManager
+# need to go away - the boardreaders become a part of the configuration
+# (boot.py)
+#------------------------------------------------------------------------------
 script=`basename $0`
 
 function tfm_set_components_() {
@@ -41,8 +47,7 @@ EOF
         comp_cntr=$((comp_cntr + 1))
         comp_line=$( grep -E "^$comp " $components_file )
 #------------------------------------------------------------------------------
-# line format: 5 parameters per component 
-# ---------------------------------------
+# line format: 5 parameters per component :
 # name host port subsystem allowed_processors
 #------------------------------------------------------------------------------
         if [[ -n $comp_line ]]; then

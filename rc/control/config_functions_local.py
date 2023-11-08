@@ -74,7 +74,9 @@ def put_config_info_base(self):
 def put_config_info_on_stop_base(self):
     pass
 
-
+#------------------------------------------------------------------------------
+# default input function
+#------------------------------------------------------------------------------
 def get_boot_info_base(self, boot_filename):
 
     inf = open(boot_filename)
@@ -107,14 +109,16 @@ def get_boot_info_base(self, boot_filename):
 
     lines = inf.readlines()
     for i_line, line in enumerate(lines):
-
-        if re.search(r"^\s*#", line):
-            continue
+        words = line.strip().split();
+        nwords = len(words)
+        #------------------------------------------------------------------------------
+        # skip comment but not empty lines: John uses empty lines for something
+        #------------------------------------------------------------------------------
+        if ((nwords > 0) and (words[0] == '#')):              continue
 
         line = expand_environment_variable_in_string(line)
 
-        if self.find_process_manager_variable(line):
-            continue
+        if self.find_process_manager_variable(line):        continue
 
         res = re.search(r"^\s*DAQ setup script\s*:\s*(\S+)", line)
         if res:
@@ -169,21 +173,23 @@ def get_boot_info_base(self, boot_filename):
             else:
                 subsystemDict[subsystem_key] += " %s" % (res.group(3))
 
-        if (
-            "EventBuilder" in line
-            or "DataLogger" in line
-            or "Dispatcher" in line
-            or "RoutingManager" in line
-        ):
+        if ("EventBuilder" in line) or ("DataLogger" in line) or ("Dispatcher" in line) or ("RoutingManager" in line):
 
             res = re.search(r"^\s*(\w+)\s+(\S+)\s*:\s*(\"[^\"]*\"|\S+)", line)
 
             if res:
-                memberDict["name"] = res.group(1)
+                memberDict["name"      ] = res.group(1)
                 memberDict[res.group(2)] = res.group(3)
 
-                if res.group(2) == "host":
-                    num_expected_processes += 1
+                if res.group(2) == "host": num_expected_processes += 1
+
+        if ((nwords > 0) and (words[0] == "BoardReader")):
+            #------------------------------------------------------------------------------
+            # P.Murat: expect 5 words : 'BoardReader label host port subsystem'
+            #------------------------------------------------------------------------------
+            assert (nwords == 5), "ERROR reading the line:%s" % line
+            label = words[1];
+            self.daq_comp_list[label] = words[2:4];
 
         # JCF, Mar-29-2019
 
@@ -199,51 +205,42 @@ def get_boot_info_base(self, boot_filename):
         if res:
             self.bootfile_fhicl_overwrites[res.group(1)] = res.group(2)
 
-        # Taken from Eric: if a line is blank or a comment or we've
-        # reached the last line in the boot file, check to see if
-        # we've got a complete set of info for an artdaq process
+        # Taken from Eric: if a line is blank or a comment or we've reached the last line 
+        # in the boot file, check to see if we've got a complete set of info for an artdaq process
+        #
+        # P.M. : what a kindergarten! one should read the whole input file to the end 
+        #        and perform all needed checks after that
 
-        if (
-            re.search(r"^\s*#", line)
-            or re.search(r"^\s*$", line)
-            or i_line == len(lines) - 1
-        ):
-
+        if (re.search(r"^\s*#", line) or re.search(r"^\s*$", line) or i_line == len(lines) - 1):
             filled_subsystem_info = True
 
             for key, value in subsystemDict.items():
-                if value is None:
-                    filled_subsystem_info = False
+                if value is None: filled_subsystem_info = False
 
             filled_process_info = True
 
             for key, value in memberDict.items():
-                if value is None and not key == "fhicl":
-                    filled_process_info = False
+                if value is None and not key == "fhicl": filled_process_info = False
 
             if filled_subsystem_info:
 
                 sources = []
                 if subsystemDict["source"] != "not set":
-                    sources = [
-                        source.strip() for source in subsystemDict["source"].split()
-                    ]
+                    sources = [ source.strip() for source in subsystemDict["source"].split() ]
 
                 destination = None
-                if subsystemDict["destination"] != "not set":
-                    destination = subsystemDict["destination"]
+                if subsystemDict["destination"] != "not set": destination = subsystemDict["destination"]
 
                 fragmentMode = True
-                if re.search("[Ff]alse", subsystemDict["fragmentMode"]):
-                    fragmentMode = False
+                if re.search("[Ff]alse", subsystemDict["fragmentMode"]): fragmentMode = False
 
                 self.subsystems[subsystemDict["id"]] = self.Subsystem(
                     sources, destination, fragmentMode
                 )
 
-                subsystemDict["id"] = None
-                subsystemDict["source"] = "not set"
-                subsystemDict["destination"] = "not set"
+                subsystemDict["id"          ] = None
+                subsystemDict["source"      ] = "not set"
+                subsystemDict["destination" ] = "not set"
                 subsystemDict["fragmentMode"] = "not set"
 
             # If it has been filled, then initialize a Procinfo
@@ -255,8 +252,7 @@ def get_boot_info_base(self, boot_filename):
                 num_actual_processes += 1
                 rank = len(self.daq_comp_list) + num_actual_processes - 1
 
-                if memberDict["subsystem"] == "not set":
-                    memberDict["subsystem"] = "1"
+                if memberDict["subsystem"] == "not set": memberDict["subsystem"] = "1"
 
                 if memberDict["port"] == "not set":
                     memberDict["port"] = str(
@@ -272,8 +268,7 @@ def get_boot_info_base(self, boot_filename):
                         "allowed_processors"
                     ] = None  # Where None actually means "allow all processors"
 
-                if memberDict["prepend"] == "not set":
-                    memberDict["prepend"] = ""
+                if memberDict["prepend"] == "not set": memberDict["prepend"] = ""
 
                 self.procinfos.append(
                     self.Procinfo(
@@ -291,7 +286,7 @@ def get_boot_info_base(self, boot_filename):
 
                 for varname in memberDict.keys():
                     if (
-                        varname != "port"
+                        varname     != "port"
                         and varname != "subsystem"
                         and varname != "allowed_processors"
                         and varname != "target"
@@ -314,12 +309,18 @@ def get_boot_info_base(self, boot_filename):
     if num_expected_processes != num_actual_processes:
         raise Exception(
             make_paragraph(
-                "An inconsistency exists in the boot file; a host was defined in the file for %d artdaq processes, but there's only a complete set of info in the file for %d processes. This may be the result of using a boot file designed for an artdaq version prior to the addition of a label requirement (see https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_boot_file_reference for more)"
+                ("An inconsistency exists in the boot file; a host was defined in the file"
+                 " for %d artdaq processes, but there's only a complete set of info in the file"
+                 " for %d processes. This may be the result of using a boot file designed"
+                 " for an artdaq version prior to the addition of a label requirement."
+                 " See https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_boot_file_reference for more")
                 % (num_expected_processes, num_actual_processes)
             )
         )
 
-
+#------------------------------------------------------------------------------
+# list daq components - will go away
+#------------------------------------------------------------------------------
 def listdaqcomps_base(self):
 
     components_file = os.environ["TFM_KNOWN_BOARDREADERS_LIST"]
@@ -343,10 +344,9 @@ def listdaqcomps_base(self):
 
     lines.sort()
     for line in lines:
-        if re.search(r"^\s*#", line) or re.search(r"^\s*$", line):
-            continue
+        if re.search(r"^\s*#", line) or re.search(r"^\s*$", line): continue
         component = line.split()[0].strip()
-        host = line.split()[1].strip()
+        host      = line.split()[1].strip()
 
         print("%s (runs on %s)" % (component, host))
 
@@ -359,24 +359,19 @@ def listconfigs_base(self):
 
     outf = open(listconfigs_file, "w")
 
-    print
-    print("Available configurations: ")
+    print("\nAvailable configurations: ")
     for config in sorted(configs):
         print(config)
         outf.write("%s\n" % config)
 
-    print
-    print(
-        'See file "%s" for saved record of the above configurations'
-        % (listconfigs_file)
-    )
+    print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
     print(
         make_paragraph(
-            "Please note that for the time being, the optional max_configurations_to_list variable which may be set in %s is only applicable when working with the database"
+            "Please note that for the time being, the optional max_configurations_to_list variable "
+            "which may be set in %s is only applicable when working with the database\n"
             % os.environ["TFM_SETTINGS"]
         )
     )
-    print
 
     # print(flush=True)
     sys.stdout.flush()
