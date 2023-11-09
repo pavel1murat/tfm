@@ -1,6 +1,6 @@
 #+startup:fold
 #
-* TFM : the Trigger Farm Manager
+* TFM : the Trigger Farm Manager 
 - started from artdaq_daqinterface/fc/control/DAQInterface.py
 - goals : 
   - reduce number of transitions
@@ -8,6 +8,7 @@
   - make sure that the server can provide any diagnostics information needed for 
     troubleshooting the farm performance
   - integrate with MIDAS as a frontend client
+* [[file:artdaq_daqinterface.org]]
 * ------------------------------------------------------------------------------
 * [[file:software_setup.org][software setup]]
 * farm_manager.py: server managing the trigger farm                          

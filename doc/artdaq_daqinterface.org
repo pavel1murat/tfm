@@ -1,0 +1,16 @@
+#+startup:fold
+* ------------------------------------------------------------------------------
+* documentation: https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/
+
+* RPC commands in scripts
+* ------------------------------------------------------------------------------
+srcs/artdaq_daqinterface/bin/artdaq_process_info.sh:full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 artdaq_process_info daqint"
+** list configurations
+srcs/artdaq_daqinterface/bin/listconfigs.sh:xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listconfigs
+srcs/artdaq_daqinterface/bin/listdaqcomps.sh:xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 listdaqcomps
+srcs/artdaq_daqinterface/bin/send_transition.sh:full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state_change daqint "${translated_cmd}
+srcs/artdaq_daqinterface/bin/setdaqcomps.sh:xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 setdaqcomps "struct/{$xmlrpc_arg}"
+srcs/artdaq_daqinterface/bin/status.sh:full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 state daqint "
+srcs/artdaq_daqinterface/bin/trace_get.sh:xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 trace_get daqint struct/{name:s/$trace_get_arg}
+srcs/artdaq_daqinterface/bin/trace_set.sh:xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 trace_set daqint 'struct/{name:s/'$name',masktype:s/'$masktype',maskval:s/'$maskval'}'
+#+end_src 

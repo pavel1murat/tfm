@@ -503,19 +503,21 @@ class FarmManager(Component):
 
         self.subsystems = {}
 
-    #------------------------------------------------------------------------------
-    # want run number to be always printed with 6 digits
-    #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# want run number to be always printed with 6 digits
+####
     def run_record_directory(self):
         return "%s/%06i" % (self.record_directory,self.run_number);
 
     def metadata_filename(self):
         return "%s/metadata.txt" % (self.run_record_directory());
 
-    #------------------------------------------------------------------------------
-    # WK 8/31/21
-    # Startup msgviewer early. check on it later
-    #------------------------------------------------------------------------------
+    def launch_attempt_fn_format(self):
+        return "%s/pmt/launch_attempt_%s_%s_partition_%02i_%s"
+#------------------------------------------------------------------------------
+# WK 8/31/21
+# Startup msgviewer early. check on it later
+####
     def start_message_viewer(self):
         self.msgviewer_proc = None  # initialize
         if self.use_messageviewer:

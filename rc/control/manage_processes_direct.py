@@ -286,9 +286,9 @@ def launch_procs_base(self):
 
         if not p.host in launch_commands_to_run_on_host:
             #------------------------------------------------------------------------------
-            # thisis where the name of the PMT log file is formed 
+            # this is where the name of the PMT log file is formed 
             #------------------------------------------------------------------------------
-            self.launch_attempt_files[p.host] = "%s/pmt/launch_attempt_%s_%s_partition_%02i_%s" % (
+            self.launch_attempt_files[p.host] = self.launch_attempt_fn_format() % (
                 self.log_directory,
                 p.host,
                 os.environ["USER"],
@@ -548,30 +548,21 @@ def reset_process_manager_variables_base(self):
 
 
 def get_process_manager_log_filename(self, host):
-    get_log_filename_cmd = (
-        "ls -tr1 %s/pmt/launch_attempt_%s_%s_partition%s* | tail -1"
-        % (
-            self.log_directory,
-            host,
-            os.environ["USER"],
-            os.environ["TFM_PARTITION_NUMBER"],
-        )
-    )
+    pattern = self.launch_attempt_fn_format() % (self.log_directory,
+                                                 host,
+                                                 os.environ["USER"],
+                                                 int(os.environ["TFM_PARTITION_NUMBER"]),
+                                                 "*")
+    cmd = "ls -tr1 "+pattern+" | tail -1"
 
     if not host_is_local(host):
-        get_log_filename_cmd = "ssh -f %s '%s'" % (host, get_log_filename_cmd)
+        cmd = "ssh -f %s '%s'" % (host,cmd)
 
-    log_filename_current = (
-        Popen(
-            get_log_filename_cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        .stdout.readlines()[0]
-        .decode("utf-8")
-        .strip()
-    )
+    log_filename_current = Popen(cmd,
+                                 shell=True,
+                                 stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                             ).stdout.readlines()[0].decode("utf-8").strip()
     return log_filename_current
 
 
