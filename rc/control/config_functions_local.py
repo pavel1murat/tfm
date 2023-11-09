@@ -184,12 +184,20 @@ def get_boot_info_base(self, boot_filename):
                 if res.group(2) == "host": num_expected_processes += 1
 
         if ((nwords > 0) and (words[0] == "BoardReader")):
-            #------------------------------------------------------------------------------
-            # P.Murat: expect 5 words : 'BoardReader label host port subsystem'
-            #------------------------------------------------------------------------------
-            assert (nwords == 5), "ERROR reading the line:%s" % line
+#------------------------------------------------------------------------------
+# P.Murat: expect 7 words : 
+#          'BoardReader label host port subsystem allowed_processors prepend'
+#          if the value of 'allowed_processors' is undefined (-1), set it to None
+#          prepend is smth prepenced to the boardreader launch command, looks 
+#          like a debugging tool
+#          set it to '' 
+############
+            assert (nwords == 7), "ERROR reading the line:%s" % line
             label = words[1];
-            self.daq_comp_list[label] = words[2:4];
+            if (words[5] == "-1"  ): words[5] = None
+            if (words[6] == "none"): words[6] = ''
+
+            self.daq_comp_list[label] = words[2:];
 
         # JCF, Mar-29-2019
 

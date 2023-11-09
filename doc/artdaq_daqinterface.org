@@ -1,7 +1,6 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
 * documentation: https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/
-
 * RPC commands in scripts
 * ------------------------------------------------------------------------------
 srcs/artdaq_daqinterface/bin/artdaq_process_info.sh:full_cmd="xmlrpc http://localhost:$DAQINTERFACE_PORT/RPC2 artdaq_process_info daqint"

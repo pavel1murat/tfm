@@ -239,40 +239,35 @@ def launch_procs_base(self):
         self.print_log(
             "e",
             make_paragraph(
-                "The FHiCL code designed to control MessageViewer, found in %s, appears to contain one or more syntax errors (Or there was a problem running fhicl-dump)"
+                ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
+                "one or more syntax errors, or there was a problem running fhicl-dump")
                 % (get_messagefacility_template_filename())
             ),
         )
 
         raise Exception(
-            "The FHiCL code designed to control MessageViewer, found in %s, appears to contain one or more syntax errors (Or there was a problem running fhicl-dump)"
+            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
+             "one or more syntax errors (Or there was a problem running fhicl-dump)")
             % (get_messagefacility_template_filename())
         )
 
     for host in set([procinfo.host for procinfo in self.procinfos]):
         if not host_is_local(host):
-            cmd = "scp -p %s %s:%s" % (
-                messagefacility_fhicl_filename,
-                host,
-                messagefacility_fhicl_filename,
-            )
-            status = Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            ).wait()
+            cmd = "scp -p %s %s:%s" % (messagefacility_fhicl_filename,
+                                       host,
+                                       messagefacility_fhicl_filename)
+            status = Popen(cmd,
+                           executable="/bin/bash",
+                           shell=True,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL).wait()
 
             if status != 0:
-                raise Exception(
-                    'Status error raised in %s executing "%s"'
-                    % (launch_procs_base.__name__, cmd)
-                )
-    #------------------------------------------------------------------------------
-    # Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
-    # Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
-    #------------------------------------------------------------------------------
+                raise Exception('Status error raised in %s executing "%s"' % (launch_procs_base.__name__, cmd))
+#------------------------------------------------------------------------------
+# Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
+# Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
+####
     launch_commands_to_run_on_host            = {}
     launch_commands_to_run_on_host_background = {}
     launch_commands_on_host_to_show_user      = {}
@@ -309,9 +304,9 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s" % (self.log_directory))
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s" % (messagefacility_fhicl_filename))
             launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "%(self.launch_attempt_files[p.host]))  
-            #------------------------------------------------------------------------------
-            # Assume if this works, eventbuilder, etc. are also there
-            #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Assume if this works, eventbuilder, etc. are also there
+############
             launch_commands_to_run_on_host[p.host].append(
                 "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1" % (
                     os.environ["TFM_DIR"],
