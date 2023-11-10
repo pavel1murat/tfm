@@ -2947,7 +2947,7 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
-########
+####
     def get_lognames(self):
         starttime = time()
         self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." 
@@ -2964,6 +2964,176 @@ class FarmManager(Component):
         endtime = time()
         self.print_log("i", "get_lognames done (%.1f seconds)." % (endtime - starttime))
         return 0;
+
+#------------------------------------------------------------------------------
+# P.Murat: make_logfile_dirs is a well-defined action - make it a separate function
+####
+    def make_logfile_dirs(self):
+        logdir_commands_to_run_on_host = []
+        permissions                    = "0775"
+        logdir_commands_to_run_on_host.append("mkdir -p -m %s %s" % (permissions, self.log_directory))
+
+        for subdir in [
+            "pmt",
+            "boardreader",
+            "eventbuilder",
+            "dispatcher",
+            "datalogger",
+            "routingmanager",
+        ]:
+            logdir_commands_to_run_on_host.append(
+                "mkdir -p -m %s %s/%s" % (permissions, self.log_directory, subdir)
+            )
+
+        for host in set([procinfo.host for procinfo in self.procinfos]):
+            logdircmd = construct_checked_command(logdir_commands_to_run_on_host)
+
+            if not host_is_local(host):
+                logdircmd = "timeout %d ssh -f %s '%s'" % (ssh_timeout_in_seconds,host,logdircmd)
+
+            self.print_log("i", "\n%s: BOOT transition 004 Pasha: executing %s\n" % (date_and_time(),logdircmd))
+            proc = subprocess.Popen(
+                logdircmd,
+                executable="/bin/bash",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+            )
+            self.print_log("i", "\n%s: BOOT transition underway 006 Pasha done with mkdirs\n" % (date_and_time()))
+
+            out, err = proc.communicate()
+            status   = proc.returncode
+
+            if status != 0:
+
+                self.print_log(
+                    "e",
+                    "\nNonzero return value (%d) resulted when trying to run the following on host %s:\n%s\n"
+                    % (status, host, "\n".join(logdir_commands_to_run_on_host)),
+                )
+                self.print_log("e","STDOUT output: \n%s" % (out))
+                self.print_log("e","STDERR output: \n%s" % (err),
+                )
+                self.print_log(
+                    "e",
+                    make_paragraph(
+                        ("Returned value of %d suggests that the ssh call to %s timed out. "
+                         "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
+                        % (status, host)
+                    ),
+                )
+                raise Exception(
+                    ("Problem running mkdir -p for the needed logfile directories on %s; "
+                     "this is likely due either to an ssh issue or a directory permissions issue")
+                    % (host)
+                )
+        return  # marks end of function
+
+
+#------------------------------------------------------------------------------
+# starting from this point, perform run-dependent configuration
+# look at the FCL files - they need to be looked at before the processes are launched
+# See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
+# refer to the same thing
+########
+    def check_hw_fcls(self):
+
+        starttime = time()
+        self.print_log("i", "\nObtaining FHiCL documents...", 1, False)
+        
+        try:
+            tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
+            assert "/tmp" == tmpdir_for_fhicl[:4]
+        except:
+            self.revert_failed_transition("calling get_config_info()")
+            return -1
+            
+        rootfile_cntr = 0
+        fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
+        
+        for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
+            for filename in filenames:
+                if filename.endswith(".fcl"):
+                    if filename not in fn_dictionary:
+                        fn_dictionary[filename] = True
+        
+                        if filename.endswith("_hw_cfg.fcl"):
+                            fn_dictionary[filename.replace("_hw_cfg.fcl", ".fcl")] = True
+                        else:
+                            fn_dictionary[filename.replace(".fcl", "_hw_cfg.fcl")] = True
+                    else:
+                        raise Exception(
+                            make_paragraph(
+                                ('Error: filename "%s" found more than once given the set'
+                                ' of requested subconfigurations "%s" (see %s)')
+                                % (
+                                    filename,
+                                    " ".join(self.subconfigs_for_run),
+                                    tmpdir_for_fhicl,
+                                )
+                            )
+                        )
+#------------------------------------------------------------------------------
+# it looks that here we're checking availability of the FCL files for the processes 
+# which are already running ? is the idea that one would reupload the FCL files? 
+########
+        for p in self.procinfos:
+            matching_filenames = ["%s.fcl" % p.label]
+
+            if ("BoardReader" in p.name):  # For backwards compatibility (see Issue #20803)
+                matching_filenames.append("%s_hw_cfg.fcl" % p.label)
+
+            found_fhicl = False
+            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
+                for filename in filenames:
+                    if filename in matching_filenames:
+                        fcl = "%s/%s" % (dirname, filename)
+                        found_fhicl = True
+
+            if not found_fhicl:
+                self.print_log("e",make_paragraph(
+                    ('Unable to find a FHiCL document for %s in configuration "%s"; '
+                     'either remove the request for %s in the setdaqcomps.sh command (boardreader) '
+                     'or boot file (other artdaq process types) and redo the transitions'
+                     ' or choose a new configuration')
+                    % (p.label," ".join(self.subconfigs_for_run),p.label)))
+                self.revert_failed_transition("looking for all needed FHiCL documents")
+                return
+
+            try:
+                p.ffp = self.fhicl_file_path
+                p.update_fhicl(fcl)
+            except Exception:
+                self.print_log("e", traceback.format_exc())
+                self.alert_and_recover("An exception was thrown when creating the process "
+                                       "FHiCL documents; see traceback above for more info")
+                return
+
+            if not self.disable_unique_rootfile_labels and ("EventBuilder" in p.name or "DataLogger" in p.name):
+                fhicl_before_sub     = p.fhicl_used
+                rootfile_cntr_prefix = "dl"
+                p.fhicl_used         = re.sub(
+                    r"(\n\s*[^#\s].*)\.root",
+                    r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",
+                    p.fhicl_used,
+                )
+
+                if p.fhicl_used != fhicl_before_sub:
+                    rootfile_cntr += 1
+
+        endtime = time()
+        self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (date_and_time()))
+
+        for p in self.procinfos:
+            assert not p.fhicl is None and not p.fhicl_used is None
+
+        assert "/tmp" == tmpdir_for_fhicl[:4] and len(tmpdir_for_fhicl) > 4
+        shutil.rmtree(tmpdir_for_fhicl)
+
+        return 0  # end of function
+
 #------------------------------------------------------------------------------
 # do_boot(), do_config(), do_start_running(), etc., are the functions 
 # which get called by the runner() function when a transition is requested
@@ -2972,7 +3142,7 @@ class FarmManager(Component):
 ####
     def do_boot(self, boot_filename=None):
 #------------------------------------------------------------------------------
-# P.Murat: why a nested function? 
+# P.Murat: why a nested function? - hiding the name
 ########
         def revert_failed_boot(failed_action):
             self.reset_variables()
@@ -3138,65 +3308,7 @@ class FarmManager(Component):
 # creating directories for log files - the names don't change,
 # -- enought to do just once
 ############
-            logdir_commands_to_run_on_host = []
-            permissions                    = "0775"
-            logdir_commands_to_run_on_host.append("mkdir -p -m %s %s" % (permissions, self.log_directory))
-
-            for subdir in [
-                "pmt",
-                "boardreader",
-                "eventbuilder",
-                "dispatcher",
-                "datalogger",
-                "routingmanager",
-            ]:
-                logdir_commands_to_run_on_host.append(
-                    "mkdir -p -m %s %s/%s" % (permissions, self.log_directory, subdir)
-                )
-
-            for host in set([procinfo.host for procinfo in self.procinfos]):
-                logdircmd = construct_checked_command(logdir_commands_to_run_on_host)
-
-                if not host_is_local(host):
-                    logdircmd = "timeout %d ssh -f %s '%s'" % (ssh_timeout_in_seconds,host,logdircmd)
-
-                self.print_log("i", "\n%s: BOOT transition 004 Pasha: executing %s\n" % (date_and_time(),logdircmd))
-                proc = subprocess.Popen(
-                    logdircmd,
-                    executable="/bin/bash",
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    encoding="utf-8",
-                )
-                self.print_log("i", "\n%s: BOOT transition underway 006 Pasha done with mkdirs\n" % (date_and_time()))
-
-                out, err = proc.communicate()
-                status   = proc.returncode
-
-                if status != 0:
-
-                    self.print_log(
-                        "e",
-                        "\nNonzero return value (%d) resulted when trying to run the following on host %s:\n%s\n"
-                        % (status, host, "\n".join(logdir_commands_to_run_on_host)),
-                    )
-                    self.print_log("e","STDOUT output: \n%s" % (out))
-                    self.print_log("e","STDERR output: \n%s" % (err),
-                    )
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            ("Returned value of %d suggests that the ssh call to %s timed out. "
-                             "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
-                            % (status, host)
-                        ),
-                    )
-                    raise Exception(
-                        ("Problem running mkdir -p for the needed logfile directories on %s; "
-                         "this is likely due either to an ssh issue or a directory permissions issue")
-                        % (host)
-                    )
+            self.make_logfile_dirs();
 #------------------------------------------------------------------------------
 # done creating directories for logfiles,
 # deal with message facility. 
@@ -3262,7 +3374,7 @@ class FarmManager(Component):
         self.complete_state_change(self.name, "booting")
 
         self.print_log("i", "\n%s: BOOT transition complete" % (date_and_time()))
-
+        return
 
 #------------------------------------------------------------------------------
 # CONFIG transition : 1) assume the run number is known
@@ -3273,7 +3385,9 @@ class FarmManager(Component):
 
         self.print_log("i", "\n%s: CONFIG transition underway" % (date_and_time()))
         os.chdir(self.base_dir)
-
+#------------------------------------------------------------------------------
+# check subconfigs for this run - what they are?
+########
         if not subconfigs_for_run: self.subconfigs_for_run = self.run_params["config"]
         else                     : self.subconfigs_for_run = subconfigs_for_run
 
@@ -3281,117 +3395,16 @@ class FarmManager(Component):
 
         self.print_log("d", "Config name: %s" % (" ".join(self.subconfigs_for_run)),1)
 
-        starttime = time()
-        self.print_log("i", "\nObtaining FHiCL documents...", 1, False)
-
-        try:
-            tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
-            assert "/tmp" == tmpdir_for_fhicl[:4]
-        except:
-            self.revert_failed_transition("calling get_config_info()")
-            return
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
-#------------------------------------------------------------------------------
-        rootfile_cntr       = 0
-        filename_dictionary = {}  # If we find a repeated *.fcl file, that's an error
-
-        for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
-            for filename in filenames:
-                if filename.endswith(".fcl"):
-                    if filename not in filename_dictionary:
-                        filename_dictionary[filename] = True
-#------------------------------------------------------------------------------
 # See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
 # refer to the same thing
-########################
-
-                        if filename.endswith("_hw_cfg.fcl"):
-                            filename_dictionary[
-                                filename.replace("_hw_cfg.fcl", ".fcl")
-                            ] = True
-                        else:
-                            filename_dictionary[
-                                filename.replace(".fcl", "_hw_cfg.fcl")
-                            ] = True
-                    else:
-                        raise Exception(
-                            make_paragraph(
-                                ('Error: filename "%s" found more than once given the set'
-                                ' of requested subconfigurations "%s" (see %s)')
-                                % (
-                                    filename,
-                                    " ".join(self.subconfigs_for_run),
-                                    tmpdir_for_fhicl,
-                                )
-                            )
-                        )
-
+########
         self.print_log("i", "\n%s: CONFIG transition 001 Pasha" % (date_and_time()))
-#------------------------------------------------------------------------------
-# it looks that here we're checking availability of the FCL files for the processes 
-# which are already running ? is the idea that one would reupload the FCL files? 
-#------------------------------------------------------------------------------
-        for i_proc in range(len(self.procinfos)):
-            matching_filenames = ["%s.fcl" % self.procinfos[i_proc].label]
 
-            if ("BoardReader" in self.procinfos[i_proc].name):  # For backwards compatibility (see Issue #20803)
-                matching_filenames.append("%s_hw_cfg.fcl" % self.procinfos[i_proc].label)
-
-            found_fhicl = False
-            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
-                for filename in filenames:
-                    if filename in matching_filenames:
-                        fcl = "%s/%s" % (dirname, filename)
-                        found_fhicl = True
-
-            if not found_fhicl:
-                self.print_log("e",make_paragraph(
-                    ('Unable to find a FHiCL document for %s in configuration "%s"; '
-                     'either remove the request for %s in the setdaqcomps.sh command (boardreader) '
-                     'or boot file (other artdaq process types) and redo the transitions'
-                     ' or choose a new configuration')
-                    % (self.procinfos[i_proc].label," ".join(self.subconfigs_for_run),self.procinfos[i_proc].label)))
-                self.revert_failed_transition("looking for all needed FHiCL documents")
-                return
-
-            try:
-                self.procinfos[i_proc].ffp = self.fhicl_file_path
-                self.procinfos[i_proc].update_fhicl(fcl)
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover("An exception was thrown when creating the process "
-                                       "FHiCL documents; see traceback above for more info")
-                return
-
-            if not self.disable_unique_rootfile_labels and (
-                "EventBuilder" in self.procinfos[i_proc].name
-                or "DataLogger" in self.procinfos[i_proc].name
-            ):
-                fhicl_before_sub = self.procinfos[i_proc].fhicl_used
-
-                rootfile_cntr_prefix = "dl"
-
-                self.procinfos[i_proc].fhicl_used = re.sub(
-                    r"(\n\s*[^#\s].*)\.root",
-                    r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",
-                    self.procinfos[i_proc].fhicl_used,
-                )
-
-                if self.procinfos[i_proc].fhicl_used != fhicl_before_sub:
-                    rootfile_cntr += 1
-
-        endtime = time()
-        self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
-
-        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (date_and_time()))
-
-        for procinfo in self.procinfos:
-            assert not procinfo.fhicl is None and not procinfo.fhicl_used is None
-
-        assert "/tmp" == tmpdir_for_fhicl[:4] and len(tmpdir_for_fhicl) > 4
-        shutil.rmtree(tmpdir_for_fhicl)
+        rc = self.check_hw_fcls();
+        if (rc != 0): return 
 
         starttime = time()
         self.print_log("i", "Reformatting the FHiCL documents...", 1, False)
@@ -3401,14 +3414,10 @@ class FarmManager(Component):
         except:
             raise
 
-        reformatted_fhicl_documents = reformat_fhicl_documents(
-            os.environ["TFM_SETUP_FHICLCPP"], self.procinfos
-        )
+        reformatted_fcls = reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
-        for i_proc, reformatted_fhicl_document in enumerate(
-            reformatted_fhicl_documents
-        ):
-            self.procinfos[i_proc].fhicl_used = reformatted_fhicl_document
+        for i, reformatted_fcl in enumerate(reformatted_fcls):
+            self.procinfos[i].fhicl_used = reformatted_fcl
 
         endtime = time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
@@ -3522,16 +3531,12 @@ class FarmManager(Component):
                             % (", ".join(self.process_manager_log_filenames))),
             )
 #------------------------------------------------------------------------------
-# -- it loooks, taht at this point all book-keeping and checks are done and one can submit 
+# -- it loooks, that at this point all book-keeping and checks are done and one can submit 
 #    the jobs and name the log files
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# and this is the end of the config step - run numbrer is known ! 
+#    and this is the end of the config step - run number is known ! 
 #------------------------------------------------------------------------------
         self.print_log("i", "\n%s: CONFIG transition complete" % (date_and_time()))
-
-
+        return
 
 
 #------------------------------------------------------------------------------
@@ -3683,29 +3688,15 @@ class FarmManager(Component):
 
 
 
-    #------------------------------------------------------------------------------
-    # STOP the run
-    #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# STOP the run
+####
     def do_stop_running(self):
 
         self.print_log("i","\n%s: STOP transition underway for run %d"%(date_and_time(),self.run_number))
 
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
-
-#         self.save_metadata_value(
-#             "FarmManager stop time",
-#             subprocess.Popen(
-#                 "date --utc",
-#                 executable="/bin/bash",
-#                 shell=True,
-#                 stdout=subprocess.PIPE,
-#                 stderr=subprocess.STDOUT,
-#             )
-#             .stdout.readlines()[0]
-#             .strip()
-#             .decode("utf-8"),
-#         )
 
         try:
             self.put_config_info_on_stop()
@@ -4218,50 +4209,22 @@ def get_args():  # no-coverage
 
     parser.add_argument("-n", "--name", type=str, dest="name", default="daqint", help="Component name")
 
-    default_partition = 888;
+    pn = 888;
     x = os.environ.get("TFM_PARTITION_NUMBER");
-    if (x) :
-        default_partition = int(x);
+    if (x) : pn = int(x);
     
-    parser.add_argument(
-        "-p",
-        "--partition-number",
-        type=int,
-        dest   ="partition_number",
-        default=default_partition,
-        help   ="Partition number",
-    )
-#------------------------------------------------------------------------------
-# assume artdaq is setup and its env vars are defined
-#------------------------------------------------------------------------------
-    parser.add_argument(
-        "-r", 
-        "--rpc-port", 
-        type=int, 
-        dest="rpc_port", 
-        default=5570, 
-        help="RPC port"
-    )
+    parser.add_argument("-p","--partition-number",type=int,dest="partition_number",default=pn,
+                        help="Partition number")
+
+    parser.add_argument("-r", "--rpc-port",type=int, dest="rpc_port", default=5570,help="RPC port")
     
-    parser.add_argument(
-        "-H",
-        "--rpc-host",
-        type=str,
-        dest="rpc_host",
-        default="localhost",
-        help="This hostname/IP addr",
-    )
+    parser.add_argument("-H","--rpc-host",type=str,dest="rpc_host",default="localhost",
+                        help="This hostname/IP addr")
     
-    parser.add_argument(
-        "-c",
-        "--control-host",
-        type    = str,
-        dest    = "control_host",
-        default = "localhost",
-        help    = "Control host",
-    )
+    parser.add_argument("-c","--control-host",type=str,dest="control_host",default="localhost",help="Control host")
 
     return parser.parse_args()
+
 #------------------------------------------------------------------------------
 # main
 #------------------------------------------------------------------------------
@@ -4309,22 +4272,14 @@ def main():  # no-coverage
                 )
             )
 
-#     if not os.path.exists(os.environ["TFM_KNOWN_BOARDREADERS_LIST"]):
-#         print(make_paragraph(
-#             ('The file referred to by the TFM_KNOWN_BOARDREADERS_LIST environment variable,'
-#              ' "%s", does not appear to exist\n' % (os.environ["TFM_KNOWN_BOARDREADERS_LIST"]))
-#         ))
-#         return
-# 
     if (os.environ.get("HOSTNAME") == None) :
         print(make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
                               'Will internally set HOSTNAME using socket.gethostname\n')))
         os.environ["HOSTNAME"] = socket.gethostname();
 #------------------------------------------------------------------------------
-# parse the command line parameters
+# parse command line
 ####
     args = get_args()
-
 #------------------------------------------------------------------------------
 # KILL signal handler
 ####
