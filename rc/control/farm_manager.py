@@ -409,27 +409,19 @@ class FarmManager(Component):
             if self.use_messagefacility and self.messageviewer_sender is not None:
                 if severity == "e":
                     self.messageviewer_sender.write_error(
-                        "FarmManager partition %s"
-                        % (os.environ["TFM_PARTITION_NUMBER"]),
-                        printstr,
+                        "FarmManager partition %s" % (self.partition_number),printstr
                     )
                 elif severity == "w":
                     self.messageviewer_sender.write_warning(
-                        "FarmManager partition %s"
-                        % (os.environ["TFM_PARTITION_NUMBER"]),
-                        printstr,
+                        "FarmManager partition %s" % (self.partition_number),printstr
                     )
                 elif severity == "i":
                     self.messageviewer_sender.write_info(
-                        "FarmManager partition %s"
-                        % (os.environ["TFM_PARTITION_NUMBER"]),
-                        printstr,
+                        "FarmManager partition %s" % (self.partition_number),printstr
                     )
                 elif severity == "d":
                     self.messageviewer_sender.write_debug(
-                        "FarmManager partition %s"
-                        % (os.environ["TFM_PARTITION_NUMBER"]),
-                        printstr,
+                        "FarmManager partition %s" % (self.partition_number),printstr
                     )
 
             else:
@@ -657,6 +649,7 @@ class FarmManager(Component):
 
         self.reset_variables()
 
+        self.fUser            = os.environ.get("USER");
         self.partition_number = partition_number
         self.transfer         = "Autodetect"
         self.rpc_port         = rpc_port
@@ -861,11 +854,7 @@ class FarmManager(Component):
 
             with open(
                 "/tmp/trace_get_%s_%s_partition%s.txt"
-                % (
-                    self.procinfos[i_procinfo].label,
-                    os.environ["USER"],
-                    os.environ["TFM_PARTITION_NUMBER"],
-                ),
+                % (self.procinfos[i_procinfo].label,self.fUser,self.partition_number),
                 "w",
             ) as trace_get_output:
                 trace_get_output.write(
@@ -888,9 +877,7 @@ class FarmManager(Component):
             with open(
                 "/tmp/trace_get_%s_%s_partition%s.txt"
                 % (
-                    procinfo.label,
-                    os.environ["USER"],
-                    os.environ["TFM_PARTITION_NUMBER"],
+                    procinfo.label,self.fUser,self.partition_number
                 )
             ) as inf:
                 all_trace_get_info_in_one_string += "\n\n%s:\n" % (procinfo.label)
@@ -2639,7 +2626,7 @@ class FarmManager(Component):
 
     def add_ranks_from_ranksfile(self):
 
-        ranksfile = "/tmp/ranks%s.txt" % (os.environ["TFM_PARTITION_NUMBER"])
+        ranksfile = "/tmp/ranks%s.txt" % self.partition_number
 
         if not os.path.exists(ranksfile):
             raise Exception(
@@ -2737,7 +2724,9 @@ class FarmManager(Component):
                                " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
                     raise Exception(make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
 
-    # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
+#------------------------------------------------------------------------------
+# Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
+####
     def create_setup_fhiclcpp_if_needed(self):
         if not os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
             self.print_log("w",
@@ -2794,6 +2783,188 @@ class FarmManager(Component):
                     )
                 )
 #------------------------------------------------------------------------------
+# P.Murat: factor out fhiclcpp stuff
+####
+    def do_fhiclcpp_stuff(self):
+
+        self.create_setup_fhiclcpp_if_needed()
+        obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+
+        self.print_log("i", "\n%s: BOOT transition 008 Pasha: after messagefacility_fhicl\n" % (date_and_time()))
+
+        cmds = []
+
+        cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
+            % (";".join(get_setup_commands(self.productsdir, self.spackdir)), 
+               os.environ["TFM_SETUP_FHICLCPP"])
+        )
+        cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
+        cmds.append("fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename()))
+
+        proc = subprocess.Popen("; ".join(cmds),
+                                executable="/bin/bash",
+                                shell=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                encoding="utf-8")
+
+        self.print_log("i", "\n%s: BOOT transition 009 Pasha: after fhicl-dump\n" % (date_and_time()))
+        out, err = proc.communicate()
+        status   = proc.returncode
+
+        if status != 0:
+            self.print_log("e","\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
+                           % (status, "\n".join(cmds)))
+            self.print_log("e","STDOUT output: \n%s" % (out))
+            self.print_log("e","STDERR output: \n%s" % (err))
+            self.print_log("e",
+                make_paragraph(
+                    ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
+                     " one or more syntax errors (Or there was a problem running fhicl-dump)")
+                    % (get_messagefacility_template_filename())
+                ),
+            )
+
+            raise Exception(
+                ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
+                 " one or more syntax errors (Or there was a problem running fhicl-dump)")
+                % (get_messagefacility_template_filename())
+            )
+        return
+
+#------------------------------------------------------------------------------
+# P.Murat: in order to structure the code, make check_launch_results a separate function
+####
+    def check_launch_results(self):
+
+        num_launch_procs_checks = 0
+
+        while True:
+            num_launch_procs_checks += 1
+
+            self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
+                % (num_launch_procs_checks, self.max_num_launch_procs_checks),
+                1,False)
+
+            # "False" here means "don't consider it an error if all
+            # processes aren't found"
+
+            found_processes = self.check_proc_heartbeats(False)
+            self.print_log(
+                "i",
+                "found %d of %d processes."
+                % (len(found_processes), len(self.procinfos)),
+            )
+
+            assert type(found_processes) is list, make_paragraph(
+                "check_proc_heartbeats needs to return a list of procinfos"
+                " corresponding to the processes it found alive"
+            )
+
+            if len(found_processes) == len(self.procinfos):
+
+                self.print_log("i", "All processes appear to be up")
+                break
+            else:
+                sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
+                if num_launch_procs_checks >= self.max_num_launch_procs_checks:
+                    missing_processes = [
+                        procinfo
+                        for procinfo in self.procinfos
+                        if procinfo not in found_processes
+                    ]
+
+                    self.print_log(
+                        "e",
+                        "\nThe following desired artdaq processes failed to launch:\n%s"
+                        % (
+                            ", ".join(
+                                [
+                                    "%s at %s:%s"
+                                    % (procinfo.label, procinfo.host, procinfo.port)
+                                    for procinfo in missing_processes
+                                ]
+                            )
+                        ),
+                    )
+                    self.print_log(
+                        "e",
+                        make_paragraph(
+                            ('In order to investigate what happened, you can try re-running with "debug level"'
+                             ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
+                             ' what FarmManager did by doing the following:')
+                        ),
+                    )
+
+                    for host in set(
+                        [
+                            procinfo.host
+                            for procinfo in self.procinfos
+                            if procinfo in missing_processes
+                        ]
+                    ):
+
+                        self.print_log("i",
+                                       ("\nPerform a clean login to %s, source the FarmManager environment, "
+                                        "and execute the following:\n%s")
+                                       % (host, "\n".join(launch_procs_actions[host])),
+                        )
+
+                    self.process_launch_diagnostics(missing_processes)
+
+                    self.alert_and_recover(
+                        ('Problem launching the artdaq processes; scroll above '
+                        'the output from the "RECOVER" transition for more info')
+                    )
+                    return -1
+        return 0
+#------------------------------------------------------------------------------
+# create_time_server_proxy - make it a separate function
+####
+    def create_time_server_proxy(self):
+        starttime = time()
+        for p in self.procinfos:
+
+            if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
+            elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
+            elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
+            elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
+            elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
+
+            try:
+                p.server = TimeoutServerProxy(p.socketstring, timeout)
+            except Exception:
+                self.print_log("e", traceback.format_exc())
+                self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
+                return -1
+#------------------------------------------------------------------------------
+#       everything is fine
+########
+        endtime = time()
+        self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
+        return 0
+
+
+#------------------------------------------------------------------------------
+#       get_lognames : returns 0 in case of success, -1 otherwise
+########
+    def get_lognames(self):
+        starttime = time()
+        self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." 
+                       % date_and_time(),1,False)
+        try:
+            self.process_manager_log_filenames = self.get_process_manager_log_filenames()
+            self.get_artdaq_log_filenames()
+
+        except Exception:
+            self.print_log("e", traceback.format_exc())
+            self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
+            return -1;
+
+        endtime = time()
+        self.print_log("i", "get_lognames done (%.1f seconds)." % (endtime - starttime))
+        return 0;
+#------------------------------------------------------------------------------
 # do_boot(), do_config(), do_start_running(), etc., are the functions 
 # which get called by the runner() function when a transition is requested
 # boot just once, at the initialization stage, 
@@ -2835,22 +3006,18 @@ class FarmManager(Component):
             except:
                 raise
 
-            self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (os.environ["USER"],os.environ["TFM_PARTITION_NUMBER"])
+            self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (self.fUser,self.partition_number)
             if os.path.exists(self.boot_filename):
                 os.unlink(self.boot_filename)
 
-            assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (os.environ["TFM_DIR"]))
+            assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (self.fUser))
 
-            cmd = "%s/bin/defhiclize_boot_file.sh %s > %s" % (
-                os.environ["TFM_DIR"],
-                boot_filename,
-                self.boot_filename,
-            )
+            cmd    = "%s/bin/defhiclize_boot_file.sh %s > %s" % (os.environ["TFM_DIR"],boot_filename,self.boot_filename)
             status = subprocess.Popen(cmd,
                                       executable="/bin/bash",
                                       shell=True,
                                       stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL,
                                   ).wait()
             if status != 0:
                 raise Exception('Error: the command "%s" returned nonzero' % cmd)
@@ -2968,7 +3135,7 @@ class FarmManager(Component):
 
             self.print_log("i", "\n%s: BOOT transition 003 Pasha: done checking setup script" % (date_and_time()))
 #------------------------------------------------------------------------------
-# creating directories for log files - teh names don't change,
+# creating directories for log files - the names don't change,
 # -- enought to do just once
 ############
             logdir_commands_to_run_on_host = []
@@ -3035,52 +3202,14 @@ class FarmManager(Component):
 # deal with message facility. 
 # -- also OK to do just once
 ############
+            pdb.set_trace()
             self.print_log("i", "\n%s: BOOT transition 007 Pasha: before init_process_requirements\n" % (date_and_time()))
             self.init_process_requirements()
-
-            self.create_setup_fhiclcpp_if_needed()
-            obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
-
-            self.print_log("i", "\n%s: BOOT transition 008 Pasha: after messagefacility_fhicl\n" % (date_and_time()))
-
-            cmds = []
-
-            cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-                % (";".join(get_setup_commands(self.productsdir, self.spackdir)), 
-                   os.environ["TFM_SETUP_FHICLCPP"])
-            )
-            cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
-            cmds.append("fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename()))
-
-            proc = subprocess.Popen("; ".join(cmds),
-                                    executable="/bin/bash",
-                                    shell=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    encoding="utf-8")
-
-            self.print_log("i", "\n%s: BOOT transition 009 Pasha: after fhicl-dump\n" % (date_and_time()))
-            out, err = proc.communicate()
-            status   = proc.returncode
-
-            if status != 0:
-                self.print_log("e","\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
-                               % (status, "\n".join(cmds)))
-                self.print_log("e","STDOUT output: \n%s" % (out))
-                self.print_log("e","STDERR output: \n%s" % (err))
-                self.print_log("e",
-                    make_paragraph(
-                        ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
-                         " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                        % (get_messagefacility_template_filename())
-                    ),
-                )
-
-                raise Exception(
-                    ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
-                     " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                    % (get_messagefacility_template_filename())
-                )
+#------------------------------------------------------------------------------
+# now do something with fhiclcpp - need to figure out what
+# -- also OK to do just once
+############
+            self.do_fhiclcpp_stuff();
 #------------------------------------------------------------------------------
 # done with fhicl-dump - 
 # -- that also enough to be done once
@@ -3109,121 +3238,21 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start checking if launch was successful
 ############
-            num_launch_procs_checks = 0
 
-            while True:
-                num_launch_procs_checks += 1
+            rc = self.check_launch_results();
+            if (rc != 0): return;
 
-                self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
-                    % (num_launch_procs_checks, self.max_num_launch_procs_checks),
-                    1,False)
+            self.print_log("i", "\n%s: BOOT transition 012 Pasha : before create_time_server_proxy\n" % (date_and_time()))
 
-                # "False" here means "don't consider it an error if all
-                # processes aren't found"
-
-                found_processes = self.check_proc_heartbeats(False)
-                self.print_log(
-                    "i",
-                    "found %d of %d processes."
-                    % (len(found_processes), len(self.procinfos)),
-                )
-
-                assert type(found_processes) is list, make_paragraph(
-                    "check_proc_heartbeats needs to return a list of procinfos"
-                    " corresponding to the processes it found alive"
-                )
-
-                if len(found_processes) == len(self.procinfos):
-
-                    self.print_log("i", "All processes appear to be up")
-                    break
-                else:
-                    sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
-                    if num_launch_procs_checks >= self.max_num_launch_procs_checks:
-                        missing_processes = [
-                            procinfo
-                            for procinfo in self.procinfos
-                            if procinfo not in found_processes
-                        ]
-
-                        self.print_log(
-                            "e",
-                            "\nThe following desired artdaq processes failed to launch:\n%s"
-                            % (
-                                ", ".join(
-                                    [
-                                        "%s at %s:%s"
-                                        % (procinfo.label, procinfo.host, procinfo.port)
-                                        for procinfo in missing_processes
-                                    ]
-                                )
-                            ),
-                        )
-                        self.print_log(
-                            "e",
-                            make_paragraph(
-                                ('In order to investigate what happened, you can try re-running with "debug level"'
-                                 ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
-                                 ' what FarmManager did by doing the following:')
-                            ),
-                        )
-
-                        for host in set(
-                            [
-                                procinfo.host
-                                for procinfo in self.procinfos
-                                if procinfo in missing_processes
-                            ]
-                        ):
-
-                            self.print_log("i",
-                                           ("\nPerform a clean login to %s, source the FarmManager environment, "
-                                            "and execute the following:\n%s")
-                                           % (host, "\n".join(launch_procs_actions[host])),
-                            )
-
-                        self.process_launch_diagnostics(missing_processes)
-
-                        self.alert_and_recover(
-                            ('Problem launching the artdaq processes; scroll above '
-                            'the output from the "RECOVER" transition for more info')
-                        )
-                        return
-
-            self.print_log("i", "\n%s: BOOT transition 012 Pasha : start checking timeouts\n" % (date_and_time()))
-
-            for p in self.procinfos:
-
-                if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
-                elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
-                elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
-                elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
-                elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
-
-                try:
-                    p.server = TimeoutServerProxy(p.socketstring, timeout)
-                except Exception:
-                    self.print_log("e", traceback.format_exc())
-                    self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
-                    return
+            rc = self.create_time_server_proxy();
+            if (rc != 0): return;
 
             self.print_log("i", "\n%s: BOOT transition 013 Pasha : before self.manage_processes\n" % (date_and_time()))
 #------------------------------------------------------------------------------
 #
 ############
-            starttime = time()
-            self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." 
-                           % date_and_time(),1,False)
-            try:
-                self.process_manager_log_filenames = self.get_process_manager_log_filenames()
-                self.get_artdaq_log_filenames()
-
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
-                return
-            endtime = time()
-            self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+            rc = self.get_lognames();
+            if (rc != 0): return;
 #------------------------------------------------------------------------------
 #  end of DO_BOOT
 #------------------------------------------------------------------------------
@@ -3236,7 +3265,8 @@ class FarmManager(Component):
 
 
 #------------------------------------------------------------------------------
-# CONFIG transition : assume the run number is known
+# CONFIG transition : 1) assume the run number is known
+#                     2) don't use this assumption at this point, wait ...
 ####
     def do_config(self, subconfigs_for_run=[]):
         # pdb.set_trace()
@@ -3249,7 +3279,7 @@ class FarmManager(Component):
 
         self.subconfigs_for_run.sort()
 
-        self.print_log("d", "Config name: %s" % (" ".join(self.subconfigs_for_run)), 1)
+        self.print_log("d", "Config name: %s" % (" ".join(self.subconfigs_for_run)),1)
 
         starttime = time()
         self.print_log("i", "\nObtaining FHiCL documents...", 1, False)
@@ -3262,10 +3292,9 @@ class FarmManager(Component):
             return
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
-# look at the FCL files - they need to be looked at before teh processes are launched
+# look at the FCL files - they need to be looked at before the processes are launched
 #------------------------------------------------------------------------------
-        rootfile_cntr = 0
-
+        rootfile_cntr       = 0
         filename_dictionary = {}  # If we find a repeated *.fcl file, that's an error
 
         for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
@@ -3305,7 +3334,6 @@ class FarmManager(Component):
 # which are already running ? is the idea that one would reupload the FCL files? 
 #------------------------------------------------------------------------------
         for i_proc in range(len(self.procinfos)):
-
             matching_filenames = ["%s.fcl" % self.procinfos[i_proc].label]
 
             if ("BoardReader" in self.procinfos[i_proc].name):  # For backwards compatibility (see Issue #20803)
@@ -3400,20 +3428,17 @@ class FarmManager(Component):
         endtime = time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
-        self.tmp_run_record = "/tmp/run_record_attempted_%s/%s" % (
-            os.environ["USER"],
-            os.environ["TFM_PARTITION_NUMBER"],
-        )
+        self.tmp_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,self.partition_number)
 
         self.print_log("i", "\n%s: CONFIG transition 003 Pasha" % (date_and_time()))
 
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (
-            os.environ["USER"],
+            self.fUser,
             subprocess.Popen("date +%a_%b_%d_%H:%M:%S.%N",
                              executable="/bin/bash",
                              shell=True,
                              stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
+                             stderr=subprocess.STDOUT,
                              encoding="utf8",
                          ).stdout.readlines()[0].strip(),
         )
@@ -4077,10 +4102,7 @@ class FarmManager(Component):
         except:
             return self.state(name)  # OK if we haven't yet created the list of Procinfo structures
         else:
-            tmpfile = "/tmp/artdaq_process_info_%s_partition_%s" % (
-                os.environ["USER"],
-                os.environ["TFM_PARTITION_NUMBER"],
-            )
+            tmpfile = "/tmp/artdaq_process_info_%s_partition_%s" % (self.fUser,self.partition_number)
             infostring = ""
             for procinfo in self.procinfos:
                 host = procinfo.host

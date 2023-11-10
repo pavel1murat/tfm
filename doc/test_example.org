@@ -22,7 +22,7 @@ export                 USER=murat                     # need in a docker contain
 # - use the partition number consistently in ARTDAQ_LOG_FHICL
 #------------------------------------------------------------------------------
 export          TFM_PROCESS_MANAGEMENT_METHOD=direct
-export                       ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition_11_murat.fcl
+export                       ARTDAQ_LOG_FHICL=$TFM_TEST_DIR/tmp_fcl/messagefacility_partition_11_murat.fcl
 #------------------------------------------------------------------------------
 # source $TFM_DIR/source_me (which sources the user source_me, if that one is defined)
 #------------------------------------------------------------------------------

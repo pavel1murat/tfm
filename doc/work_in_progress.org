@@ -2,6 +2,26 @@
 * ------------------------------------------------------------------------------
 * WORK IN PROGRESS:
 * ------------------------------------------------------------------------------
+* <2023-11-09 Thu> this is what fhichl-cpp part does 
+#+begin_src
+['if [[ -z $( command -v fhicl-dump ) ]]; then 
+  export PRODUCTS="/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof"; 
+  . /home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/setup;upsname=$( which ups 2>/dev/null ); 
+  if [[ -n $upsname ]]; then 
+    unsetup() { . `$upsname unsetup "$@"` ; }; 
+    for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do 
+      test $pp = UPS && continue; 
+      prod=`echo $pp | tr "A-Z" "a-z"`; 
+      unsetup -j $prod; 
+    done; 
+    echo "After bash unsetup, products active (should be nothing but ups listed):"; 
+    ups active; 
+  else echo "ups does not appear to be set up; will not unsetup any products"; 
+fi > /dev/null 2>&1 ; 
+source /home/mu2etrk/test_stand/pasha_019/tfm_test/.setup_fhiclcpp; fi', 
+'if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi', 
+'fhicl-dump -l $dump_arg -c /home/mu2etrk/test_stand/pasha_019/MessageFacility.fcl']
+#+end_src
 * TODO move search for message viewer to construction
 * TODO move the "boot" actions to early initialization
 * TODO config stage includes reloading of the FCL files                      
