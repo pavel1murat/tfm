@@ -1,11 +1,12 @@
 #+startup:fold
 #
-* TFM : the Trigger Farm Manager 
-- started from artdaq_daqinterface/fc/control/DAQInterface.py
+* TFM : the Trigger Farm Manager                                             
+- forked from artdaq_daqinterface/fc/control/DAQInterface.py
 - goals : 
   - reduce number of transitions
   - get rid of symlinks in the logfile naming
   - make sure that the server can provide any diagnostics information needed for 
+  - split configurations from teh farm managr scripts themselves
     troubleshooting the farm performance
   - integrate with MIDAS as a frontend client
 * [[file:artdaq_daqinterface.org]]
@@ -36,7 +37,7 @@
   - stop
   - terminate
 * TFM transitions                                                            
-- defined in [[file:../bin/send_transition.sh]]              
+- defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
 - "translated" commands are different from the original ones by "ing" 
 - what is it? a linquistic exersize of defining gerunds ?
@@ -52,13 +53,27 @@
 | shutdown  | shutting           |               |
 | terminate | terminating        |               |
 |-----------+--------------------+---------------|
+
+** new logic: 
+1) TFM assumes that all config files , including FCLs are located in a directory 
+provided to it at a startup , so the rest transitions do not really need a configuration
+parameter
+2) startup executed old boot
+3) run number is specified at old config
+4) new start doesn't execute old config - config should be a separate step , 
+   as there are multiple subsystems, and at 'configured' all shoudl be ready to run
+5) stop is stop, after stop - either configure or shutdown
+6) at 'shutdown', the farm manager exits, requiring a new start
 * [[file:test_example.org][test example]]                                                               
 * [[file:environment_variables.org][environment variables]]                                                      
 * farm management methods                                                    
   management methods ("direct", "pmt", "external_run_control") are defined in 
    [[file:../rc/control/farm_manager.py::/process_management_methods/]]
-* XMLRPC commands                                                            
-  RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
+* xmlrpc                                                                     
+** https://xmlrpc-c.sourceforge.io/doc/xmlrpc.html
+** http://xmlrpc.com/
+** RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
+
 ** status                                                                    
 #+begin_src                                                                   
                 xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
@@ -124,6 +139,9 @@ Nil
   -- 10 sec - check of the setup script
   -- 19 sec - launch of the artdaq processes
   --  2 sec - associating log files
+
+  self.launch_attempt_files[p.host] : PMT log file (used in manage_processes_direct.py
+  
 
 * TFM scripts                                                                
 *** tfm_transition

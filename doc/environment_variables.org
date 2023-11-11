@@ -1,13 +1,15 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
 * TFM environment variables                                                  
+- *TFM_CONFIG_DIR*  
+  export TFM_CONFIG_DIR=/home/mu2etrk/test_stand/pasha_019/tfm_test/demo
+  all config files are here
+
 - *TFM_DISABLE_BOOKKEEPING*                                                  
   defined in [[file:../rc/control/farm_manager.py::/TFM_DISABLE_BOOKKEEPING/]]
 - *TFM_FHICL_DIRECTORY*                                                      
   the name of the directory containing the configurations you can pass 
   on the config transition. If set to "IGNORED", this means the database is used. 
-- *TFM_KNOWN_BOARDREADERS_LIST*                                              
-  the name of the file containing the list of possible boardreaders to select from for a run
 - *TFM_LOGDIR*                                                               
   the directory in which the file which logs TFM output to screen is located.
 - *TFM_LOGFILE*                                                              
@@ -28,11 +30,8 @@
 - *TFM_PROCESS_REQUIREMENTS_LIST*                                            
   an (optional) file users can edit to control which processes are 
   run-critical, assuming the process management method is in "direct" mode
-
   P.M. calling a file 'a list' doesn't make much sense
-- *TFM_SETTINGS*                                                             
-  The name of the file containing unlikely-to-be-changed-often parameters 
-  controlling TFM behavior (process timeouts, output directory for artdaq logfiles, etc.)
+- *TFM_SETTINGS* replaced by $TFM_CONFIG_DIR/settings                                                            
 - *TFM_SETUP_FHICLCPP*                                                       
   defined in [[file:../rc/control/farm_manager.py::/TFM_SETUP_FHICLCPP/]]
 - *TFM_STANDARD_SOURCE_FILE_SOURCED*                                         

@@ -185,7 +185,7 @@ class Component(ContextObject):
                 ),
             )
             return
-
+        # breakpoint()
         # set out transition state now.
         if requested != "enabling" and requested != "disabling":
             self.__state = requested

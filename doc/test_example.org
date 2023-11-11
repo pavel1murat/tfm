@@ -7,22 +7,21 @@ cd $MRB_TOP
 mkdir tfm_test
 export TFM_TEST_DIR=$MRB_TOP/tfm_test
 # cd tfm_test
-cp $TFM_DIR/examples/user_source_me                  $TFM_TEST_DIR/source_me
-cp $TFM_DIR/examples/settings_example                $TFM_TEST_DIR/settings
-cp $TFM_DIR/examples/known_boardreaders_list_example $TFM_TEST_DIR/known_boardreaders_list
-cp $TFM_DIR/examples/boot.txt                        $TFM_TEST_DIR/.
+cp $TFM_DIR/examples/user_source_me    $TFM_TEST_DIR/source_me
+cp $TFM_DIR/examples/settings_example  $TFM_TEST_DIR/settings
+cp $TFM_DIR/examples/boot.txt          $TFM_TEST_DIR/.
 #------------------------------------------------------------------------------
 # 1) edit daqinterface_settings
 # 2) edit boot.txt to define the setup script
 # 3) define environment variables
 #------------------------------------------------------------------------------
-export   TFM_USER_SOURCE_ME=$TFM_TEST_DIR/source_me
-export                 USER=murat                     # need in a docker container
+export TFM_USER_SOURCE_ME=$TFM_TEST_DIR/source_me
+export              USER=murat                     # need in a docker container
 #------------------------------------------------------------------------------
 # - use the partition number consistently in ARTDAQ_LOG_FHICL
 #------------------------------------------------------------------------------
-export          TFM_PROCESS_MANAGEMENT_METHOD=direct
-export                       ARTDAQ_LOG_FHICL=$TFM_TEST_DIR/tmp_fcl/messagefacility_partition_11_murat.fcl
+export TFM_PROCESS_MANAGEMENT_METHOD=direct
+export              ARTDAQ_LOG_FHICL=$TFM_TEST_DIR/tmp_fcl/messagefacility_partition_11_murat.fcl
 #------------------------------------------------------------------------------
 # source $TFM_DIR/source_me (which sources the user source_me, if that one is defined)
 #------------------------------------------------------------------------------
@@ -39,22 +38,15 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_start 8 &
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>[tfm_start:19] : $TFM_LOGFILE=/tmp/tfm_mu2etrk/partition_08.log $TFM_PORT=18000
 Sun Nov  5 11:10:45 CST 2023: FarmManager in partition 8 launched and now in "stopped" state, listening on port 18000
 #+end_src
-** 3) SET BOARDREADERS : tfm_set_components component01 component02          
-- define the board readers - but not their FCL's, i.e. plugins
-#+begin_src *command output*                                                 
-mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_set_components component01 component02
-/home/mu2etrk/test_stand/pasha_019/srcs/tfm/bin/tfm_set_components
-[tfm_set_components:7] parameters:component01 component02
-[tfm_set_components:103]: xmlrpc_arg=component01:array/(s/localhost,-1,1),component02:array/(s/localhost,-1,1)
-[tfm_set_components:106]: cmd:xmlrpc http://localhost:18000/RPC2 setdaqcomps struct/{component01:array/(s/localhost,-1,1),component02:array/(s/localhost,-1,1)}
-farm_manager:setdaqcomps called with component01 component02
-Result:
-
-Nil
-#+end_src
-  - components are from the list defined in the $TFM_KNOWN_BOARDREADERS_LIST
-  - no real response by status.sh
 ** 4) BOOT             : tfm_transition boot $PWD/tfm_test/boot.txt          
+*** new example
+#+begin_src
+$TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port=$TFM_PORT --config-dir=$PWD/tfm_test/demo
+
+
+
+#+end_src
+*** old example
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition boot $PWD/tfm_test/boot.txt 
 [send_transition.sh:7] : parameters:boot /home/mu2etrk/test_stand/pasha_019/tfm_test/boot.txt

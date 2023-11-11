@@ -8,12 +8,7 @@ if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
     exit 1
 fi
 
-if [[ ! -e $TFM_SETTINGS ]]; then
-    echo "Unable to find settings file \"$TFM_SETTINGS\"; exiting..." >&2
-    exit 1
-fi
-
-recorddir=$( sed -r -n 's/^\s*record[_ ]directory\s*:\s*(\S+).*/\1/p' $TFM_SETTINGS )
+recorddir=$( sed -r -n 's/^\s*record[_ ]directory\s*:\s*(\S+).*/\1/p' $TFM_CONFIG_DIR/settings )
 recorddir=$( echo $( eval echo $recorddir ) )  # Expand environ variables in string     
 
 function file_locations() {
@@ -31,9 +26,6 @@ function file_locations() {
     
     echo $file_locations
 }
-
-
-
 
 
 

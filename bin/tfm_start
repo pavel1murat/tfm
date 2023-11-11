@@ -14,6 +14,11 @@ source $TFM_DIR/bin/tfm_utils.sh
 # -The "stdbuf -oL" is there so that DAQInterface output makes it into the logfile in realtime
 # -The "<&-" is there to avoid hangs if users type in the terminal DAQInterface is running in (see Issue #21804)
 #------------------------------------------------------------------------------
+config_name="demo"
+if [ -n $1 ] ; config_name=$1 ; fi
+
+config_dir=$TFM_CONFIG_DIR/config_name
+
 export    TFM_PORT=`tfm_port $TFM_PARTITION_NUMBER`
 export TFM_LOGFILE=$TFM_LOGDIR/tfm_partition_`printf %02i $TFM_PARTITION_NUMBER`.log
 
@@ -24,8 +29,19 @@ echo [$script:$LINENO] : \$TFM_LOGFILE=$TFM_LOGFILE \$TFM_PORT=$TFM_PORT
 if [[ -z $( ps aux | grep "$TFM_TTY.*tail -n0 -f $logfile" | grep -v grep ) ]]; then
     tail -n0 -f $logfile &
 fi
-
-nohup stdbuf -oL $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port $TFM_PORT <&- >> $logfile 2>&1
+#------------------------------------------------------------------------------
+# when starting a configuration farm, provide the configuration
+# 'config_dir' contains all configuration and FCL files
+# - settings
+# - boot.txt (or .json or .py)
+# - FCL files for all executables
+# 
+# the output is controled by env vars
+#------------------------------------------------------------------------------
+nohup stdbuf -oL $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER \
+                                                     --rpc-port $TFM_PORT \
+                                                     --config-dir=$config_dir
+                                                     <&- >> $logfile 2>&1
 
 pid=$( ps aux | grep "$TFM_TTY.*tail -n0 -f $logfile" | grep -v grep | awk '{print $2}' )
 

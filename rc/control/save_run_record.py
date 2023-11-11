@@ -14,7 +14,6 @@ from rc.control.utilities import get_commit_info_filename
 from rc.control.utilities import get_build_info
 from rc.control.utilities import expand_environment_variable_in_string
 
-
 def save_run_record_base(self):
 
     # Save the FHiCL documents which were used to initialize the
@@ -40,21 +39,22 @@ def save_run_record_base(self):
 
         outf.write(procinfo.fhicl_used)
         outf.close()
+#------------------------------------------------------------------------------
+# For good measure, let's also save the TFM configuration file
+# JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
+####
 
-    # For good measure, let's also save the TFM configuration file
-    # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
-
-    config_saved_name = "boot.txt"
+    boot_fn           = self.boot_filename()
+    config_saved_name = os.path.basename(boot_fn);
 
     with open("%s/%s" % (outdir, config_saved_name), "w") as outf:
-        with open(self.boot_filename) as inf:
+        with open(boot_fn) as inf:
             for line in inf.readlines():
                 outf.write(expand_environment_variable_in_string(line))
 
-    if not os.path.exists("%s/%s" % (outdir, config_saved_name)):
-        self.alert_and_recover(
-            "Problem creating file %s/%s" % (outdir, config_saved_name)
-        )
+    out_fn = "%s/%s" % (outdir, config_saved_name)
+    if not os.path.exists(out_fn):
+        self.alert_and_recover("Problem creating file "+out_fn)
 
     # As well as the DAQ setup script
 
@@ -67,33 +67,17 @@ def save_run_record_base(self):
     if not os.path.exists(outdir + "/setup.txt"):
         self.alert_and_recover("Problem creating file %s/setup.txt" % (outdir))
 
-    assert os.path.exists(os.environ["TFM_SETTINGS"])
+    settings_fn = self.settings_filename();
+    assert os.path.exists(settings_fn)
 
     Popen(
-        "cp -p " + os.environ["TFM_SETTINGS"] + " " + outdir + "/settings.txt",
+        "cp -p " + settings_fn + " " + outdir + "/settings.txt",
         shell=True,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     ).wait()
 
     if not os.path.exists(outdir + "/settings.txt"):
         self.alert_and_recover("Problem creating file " + outdir + "/settings.txt")
-
-    assert os.path.exists(os.environ["TFM_KNOWN_BOARDREADERS_LIST"])
-
-    Popen(
-        "cp -p "
-        + os.environ["TFM_KNOWN_BOARDREADERS_LIST"]
-        + " "
-        + outdir
-        + "/known_boardreaders_list.txt",
-        shell=True,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    ).wait()
-
-    if not os.path.exists(outdir + "/known_boardreaders_list.txt"):
-        self.alert_and_recover(
-            "Problem creating file " + outdir + "/known_boardreaders_list.txt"
-        )
 
     ranksfilename = "%s/ranks.txt" % (outdir)
 
@@ -145,7 +129,7 @@ def save_run_record_base(self):
         outf.write("Component #%d: %s\n" % (i_comp, component))
 
     outf.write(
-        "DAQInterface directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd())
+        "TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd())
     )
     outf.write(
         "DAQInterface logfile: %s:%s\n"
@@ -156,7 +140,7 @@ def save_run_record_base(self):
     )
 
     # Now save the commit hashes / versions of the packages listed in
-    # $TFM_SETTINGS, along with the commit hash for
+    # self.settings_filename() = $TFM_SETTINGS, along with the commit hash for
     # DAQInterface(if using DAQInterface from the repo) or version (if
     # using DAQInterface as a ups product)
 
@@ -167,7 +151,9 @@ def save_run_record_base(self):
         "\n# Two possible sets of fields provided below for code info, depending on if a git repo was available: "
     )
     outf.write(
-        "\n# <git commit hash> <LoCs added on top of commit> <LoCs removed on top of commit> <git commit comment> <git commit time> <git branch> <BuildInfo build time (if available)> <BuildInfo version (if available)>"
+        ("\n# <git commit hash> <LoCs added on top of commit> <LoCs removed on top of commit> "
+         "<git commit comment> <git commit time> <git branch> <BuildInfo build time (if available)> "
+         "<BuildInfo version (if available)>")
     )
     outf.write(
         "\n# <package version> <BuildInfo build time (if available)> <BuildInfo version (if available)>\n\n"
@@ -184,8 +170,7 @@ def save_run_record_base(self):
     
     try:
         commit_info_fullpathname = "%s/%s" % (
-            os.path.dirname(self.daq_setup_script),
-            get_commit_info_filename("tfm_start"),
+            os.path.dirname(self.daq_setup_script),get_commit_info_filename("tfm_start")
         )
         if os.path.exists(commit_info_fullpathname):
             with open(commit_info_fullpathname) as commitfile:
@@ -282,7 +267,8 @@ def save_run_record_base(self):
         self.print_log(
             "w",
             make_paragraph(
-                'Attempt to copy temporary run record "%s" into "%s" didn\'t work; keep in mind that %s will be clobbered next time you run on this partition'
+                ('Attempt to copy temporary run record "%s" into "%s" didn\'t work; '
+                 'keep in mind that %s will be clobbered next time you run on this partition')
                 % (
                     self.tmp_run_record,
                     self.semipermanent_run_record,
@@ -294,7 +280,8 @@ def save_run_record_base(self):
     self.print_log(
         "d",
         make_paragraph(
-            "Saved run record in %s, will copy over to yet-to-be-created directory %s/<value of run number> on the start transition"
+            ("Saved run record in %s, will copy over to yet-to-be-created "
+             "directory %s/<value of run number> on the start transition")
             % (outdir, self.record_directory)
         ),
         2,

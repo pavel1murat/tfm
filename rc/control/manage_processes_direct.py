@@ -193,23 +193,14 @@ def launch_procs_on_host(
 
 def launch_procs_base(self):
 
-    messagefacility_fhicl_filename = obtain_messagefacility_fhicl(
-        self.have_artdaq_mfextensions()
-    )
-
+    messagefacility_fhicl_filename = obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
     self.create_setup_fhiclcpp_if_needed()
 
     cmds = []
-    cmds.append(
-        "if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-        % (";".join(get_setup_commands(self.productsdir, self.spackdir)), os.environ["TFM_SETUP_FHICLCPP"])
-    )
-    cmds.append(
-        "if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi"
-    )
-    cmds.append(
-        "fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename())
-    )
+    cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
+                % (";".join(get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
+    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi")
+    cmds.append("fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename()))
 
     proc = Popen(
         "; ".join(cmds),
@@ -220,7 +211,7 @@ def launch_procs_base(self):
         encoding="utf-8",
     )
     out, err = proc.communicate()
-    status = proc.returncode
+    status   = proc.returncode
 
     if status != 0:
         self.print_log(
@@ -250,7 +241,9 @@ def launch_procs_base(self):
              "one or more syntax errors (Or there was a problem running fhicl-dump)")
             % (get_messagefacility_template_filename())
         )
-
+#------------------------------------------------------------------------------
+# copy message facility FCL to the remote host
+#------------------------------------------------------------------------------
     for host in set([procinfo.host for procinfo in self.procinfos]):
         if not host_is_local(host):
             cmd = "scp -p %s %s:%s" % (messagefacility_fhicl_filename,
@@ -276,20 +269,14 @@ def launch_procs_base(self):
 
     for p in self.procinfos:
 
-        if p.host == "localhost":
-            p.host = get_short_hostname()
+        if p.host == "localhost": p.host = get_short_hostname()
 
         if not p.host in launch_commands_to_run_on_host:
-            #------------------------------------------------------------------------------
-            # this is where the name of the PMT log file is formed 
-            #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# form the name of the PMT log file, assume know the run number
+#------------------------------------------------------------------------------
             self.launch_attempt_files[p.host] = self.launch_attempt_fn_format() % (
-                self.log_directory,
-                p.host,
-                os.environ["USER"],
-                int(os.environ["TFM_PARTITION_NUMBER"]),
-                date_and_time_filename(),
-            )
+                self.log_directory,p.host,self.fUser,self.partition_number,date_and_time_filename())
 
             launch_commands_to_run_on_host[p.host]            = []
             launch_commands_to_run_on_host_background[p.host] = []
@@ -308,21 +295,14 @@ def launch_procs_base(self):
 # Assume if this works, eventbuilder, etc. are also there
 ############
             launch_commands_to_run_on_host[p.host].append(
-                "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1" % (
-                    os.environ["TFM_DIR"],
-                    os.environ["TFM_PARTITION_NUMBER"],
-                    self.launch_attempt_files[p.host],
-                )
+                "%s/bin/mopup_shmem.sh %s --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition_number,self.launch_attempt_files[p.host])
             )
             # launch_commands_to_run_on_host[ p.host ].append("setup valgrind v3_13_0")
             # launch_commands_to_run_on_host[ p.host ].append("export LD_PRELOAD=libasan.so")
             # launch_commands_to_run_on_host[ p.host ].append("export ASAN_OPTIONS=alloc_dealloc_mismatch=0")
 
             for command in launch_commands_to_run_on_host[p.host]:
-                res = re.search(
-                    r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),
-                    command,
-                )
+                res = re.search(r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),command)
                 if not res:
                     launch_commands_on_host_to_show_user[p.host].append(command)
                 else:
@@ -331,14 +311,12 @@ def launch_procs_base(self):
         prepend = p.prepend.strip('"')
         base_launch_cmd = (
             '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %s"'
-            % (
-                prepend,
+            % ( prepend,
                 bootfile_name_to_execname(p.name),
                 p.port,
                 p.rank,
                 p.label,
-                os.environ["TFM_PARTITION_NUMBER"],
-            )
+                self.partition_number)
         )
         if p.allowed_processors is not None:
             base_launch_cmd = "taskset --cpu-list %s %s" % (

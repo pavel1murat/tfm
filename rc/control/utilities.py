@@ -403,15 +403,13 @@ def date_and_time_more_precision():
 
 
 def date_and_time_filename():
-    return (
-        Popen(
-            'date +%Y%m%d%H%M%S',
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
+    return (Popen('date +%Y%m%d%H%M%S',
+                  shell=True,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT, encoding="UTF-8"
+              )
+            .stdout.readlines()[0]
+            .strip()
     )
 
 
@@ -847,9 +845,7 @@ def fhiclize_document(filename):
 
 def get_messagefacility_template_filename():
     if "TFM_MESSAGEFACILITY_FHICL" in os.environ.keys():
-        messagefacility_fhicl_filename = os.environ[
-            "TFM_MESSAGEFACILITY_FHICL"
-        ]
+        messagefacility_fhicl_filename = os.environ["TFM_MESSAGEFACILITY_FHICL"]
     else:
         messagefacility_fhicl_filename = os.getcwd() + "/MessageFacility.fcl"
 
@@ -1055,17 +1051,17 @@ def main():
         print(record_directory_info(sys.argv[2]))
         sys.exit(0)
 
-    paragraphed_string_test = False
-    msgviewer_check_test = False
+    paragraphed_string_test       = False
+    msgviewer_check_test          = False
     execute_command_in_xterm_test = False
-    reformat_fhicl_document_test = False
-    bash_unsetup_test = False
-    get_commit_info_test = False
-    get_build_info_test = False
-    table_range_test = False
-    get_private_networks_test = False
-    enclosing_table_name_test = True
-    enclosing_table_range_test = True
+    reformat_fhicl_document_test  = False
+    bash_unsetup_test             = False
+    get_commit_info_test          = False
+    get_build_info_test           = False
+    table_range_test              = False
+    get_private_networks_test     = False
+    enclosing_table_name_test     = True
+    enclosing_table_range_test    = True
 
     if paragraphed_string_test:
         sample_string = "Set this string to whatever string you want to pass to make_paragraph() for testing purposes"

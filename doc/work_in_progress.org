@@ -2,7 +2,28 @@
 * ------------------------------------------------------------------------------
 * WORK IN PROGRESS:
 * ------------------------------------------------------------------------------
-* <2023-11-09 Thu> this is what fhichl-cpp part does 
+* commands executed on a remote host
+['set +C', 
+  'echo > /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/pmt/launch_attempt_mu2edaq09_mu2etrk_partition_11_20231110154104', 
+  'export PRODUCTS="/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof"; 
+  . /home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/setup >> /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/pmt/launch_attempt_mu2edaq09_mu2etrk_partition_11_20231110154104 2>&1 ', 
+  'upsname=$( which ups 2>/dev/null ); 
+  if [[ -n $upsname ]]; then 
+    unsetup() { . `$upsname unsetup "$@"` ; }; 
+    for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do 
+      test $pp = UPS && continue; 
+      prod=`echo $pp | tr "A-Z" "a-z"`; 
+      unsetup -j $prod; 
+    done; 
+    echo "After bash unsetup, products active (should be nothing but ups listed):"; 
+    ups active; 
+  else 
+    echo "ups does not appear to be set up; will not unsetup any products"; 
+  fi > /dev/null 2>&1 ', 
+  'source /home/mu2etrk/test_stand/pasha_019/setup_ots.sh for_running >> /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/pmt/launch_attempt_mu2edaq09_mu2etrk_partition_11_20231110154104 2>&1 ', 'export ARTDAQ_LOG_ROOT=/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs', 'export ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition11_mu2etrk.fcl', 'which boardreader >> /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/pmt/launch_attempt_mu2edaq09_mu2etrk_partition_11_20231110154104 2>&1 ', 
+  '/home/mu2etrk/test_stand/pasha_019/srcs/tfm/bin/mopup_shmem.sh 11 --force >> /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/pmt/launch_attempt_mu2edaq09_mu2etrk_partition_11_20231110154104 2>&1']
+
+* <2023-11-09 Thu> this is what fhichl-cpp part does                         
 #+begin_src
 ['if [[ -z $( command -v fhicl-dump ) ]]; then 
   export PRODUCTS="/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof"; 

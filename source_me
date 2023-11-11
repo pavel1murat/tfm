@@ -136,22 +136,6 @@ fi
 #------------------------------------------------------------------------------
 if [ -z $TFM_PARTITION_NUMBER          ]; then export TFM_PARTITION_NUMBER=0 ; fi
 if [ -z $TFM_PROCESS_MANAGEMENT_METHOD ]; then export TFM_PROCESS_MANAGEMENT_METHOD="direct" ; fi
-if [ -z $TFM_KNOWN_BOARDREADERS_LIST   ]; then cat<<EOF
-ERROR: the environment variable TFM_KNOWN_BOARDREADERS_LIST
-hasn't been defined in $TFM_USER_SOURCE_ME. Please read the
-DAQInterface Manual at
-https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
-to learn how to properly set up the DAQInterface environment.
-EOF
-
-    cleanup
-    return 1
-
-elif [[ ! -e $TFM_KNOWN_BOARDREADERS_LIST ]]; then
-    echo "ERROR: the TFM_KNOWN_BOARDREADERS_LIST environment variable doesn't point to a file which exists"
-    cleanup
-    return 1
-fi
 
 if [[ -z $TFM_FHICL_DIRECTORY ]]; then
     export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
