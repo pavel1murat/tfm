@@ -3,9 +3,9 @@ import datetime
 import os.path
 import os
 import random
-from contextlib import contextmanager
-from rc.io.rpc import rpc_server
-from rc.threading import threadable
+from contextlib       import contextmanager
+from rc.io.rpc        import rpc_server
+from rc.threading     import threadable
 from rc.util.contexts import ContextObject
 
 
@@ -16,23 +16,22 @@ class Component(ContextObject):
 
     __MAXPORT = 65535
 
-    def __init__(
-        self,
-        logpath      = None,
-        name         = "toycomponent",
-        rpc_host     = "localhost",
-        control_host ="localhost",
-        synchronous  = False,
-        rpc_port     = 6659,
-        skip_init    = False,
-    ):
+    def __init__(self,
+                 name         = "toycomponent",
+                 rpc_host     = "localhost",
+                 control_host ="localhost",
+                 synchronous  = False,
+                 rpc_port     = 6659,
+                 skip_init    = False):
+
         if rpc_port > Component.__MAXPORT:
             raise ValueError("Maximum allowed port is %s" % Component.__MAXPORT)
-        if name == "daq":
-            raise ValueError("Name 'daq' is not allowed for individual " "components")
-        self.name = name
-        self.synchronous = synchronous
 
+        if name == "daq":
+            raise ValueError("Name 'daq' is not allowed for individual components")
+
+        self.name        = name
+        self.synchronous = synchronous
         self.__state     = "stopped"
         self.__rpc_host  = rpc_host
         self.__rpc_port  = rpc_port
@@ -41,19 +40,18 @@ class Component(ContextObject):
         self.contexts = [
             (
                 "rpc_server",
-                rpc_server(
-                    port=self.__rpc_port,
-                    funcs={
-                        "state"              : self.state,
-                        "artdaq_process_info": self.artdaq_process_info,
-                        "state_change"       : self.state_change,
-                        "setdaqcomps"        : self.setdaqcomps,
-                        "listdaqcomps"       : self.listdaqcomps,
-                        "listconfigs"        : self.listconfigs,
-                        "trace_get"          : self.trace_get,
-                        "trace_set"          : self.trace_set,
-                    },
-                ),
+                rpc_server(port=self.__rpc_port,
+                           funcs={
+                               "state"              : self.state,
+                               "artdaq_process_info": self.artdaq_process_info,
+                               "state_change"       : self.state_change,
+                               "setdaqcomps"        : self.setdaqcomps,
+                               "listdaqcomps"       : self.listdaqcomps,
+                               "listconfigs"        : self.listconfigs,
+                               "trace_get"          : self.trace_get,
+                               "trace_set"          : self.trace_set,
+                           },
+                       ),
             ),
             ("runner", threadable(func=self.runner)),
         ]

@@ -415,6 +415,7 @@ def date_and_time_filename():
 
 def construct_checked_command(cmds):
 
+    # breakpoint()
     checked_cmds = []
 
     for cmd in cmds:
@@ -423,8 +424,11 @@ def construct_checked_command(cmds):
 
         if not re.search(r"\s*&\s*$", cmd) and not bash_unsetup_command in cmd:
             check_cmd = (
-                'if [[ "$?" != "0" ]]; then echo %s: Nonzero return value from the following command: "%s" >> /tmp/daqinterface_checked_command_failures_%s.log; exit 1; fi '
-                % (date_and_time(), cmd, os.environ["USER"])
+                ('if [[ "$?" != "0" ]]; then '
+                 'echo %s: Nonzero return value from the following command: "%s" '
+                '>> /tmp/daqinterface_checked_command_failures_%s.log; '
+                 'exit 1;'
+                 ' fi ') % (date_and_time(), cmd, os.environ["USER"])
             )
             checked_cmds.append(check_cmd)
 
@@ -432,15 +436,15 @@ def construct_checked_command(cmds):
 
     return total_cmd
 
-
+#------------------------------------------------------------------------------
+# P.Murat: this one was a disaster, as in the only place it is called for, one 
+#          associates the reformatted fcl's to  procinfos
+#------------------------------------------------------------------------------
 def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
 
     if not os.path.exists(setup_fhiclcpp):
         raise Exception(
-            make_paragraph(
-                "Expected fhiclcpp setup script %s doesn't appear to exist"
-                % (setup_fhiclcpp)
-            )
+            make_paragraph("Expected fhiclcpp setup script %s doesn't appear to exist" % setup_fhiclcpp)
         )
 
     cmd = "grep -c ^processor /proc/cpuinfo"
@@ -470,70 +474,59 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
         .strip()
     )
 
-    for procinfo in procinfos:
-        with open(
-            "%s/%s.fcl" % (reformat_indir, procinfo.label), "w"
-        ) as preformat_fhicl_file:
-            preformat_fhicl_file.write(procinfo.fhicl_used)
+    for p in procinfos:
+        fn = "%s/%s.fcl" % (reformat_indir, p.label)
+        with open(fn, "w") as preformat_fhicl_file:
+            preformat_fhicl_file.write(p.fhicl_used)
 
     cmds = []
-    cmds.append(
-        "if [[ -z $( command -v fhicl-dump ) ]]; then source %s; fi"
-        % (setup_fhiclcpp)
-    )
-    cmds.append(
-        "if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi"
-    )
-    cmds.append("cd %s" % (reformat_indir))
+    cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then source %s; fi" % setup_fhiclcpp)
+    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0; else dump_arg=none; fi")
+    cmds.append("cd %s" % reformat_indir)
 
     xargs_cmd = (
         "find ./ -name \*.fcl -print | xargs -I {} -n 1 -P %s fhicl-dump -l $dump_arg -c {} -o %s/{}"
         % (nprocessors, reformat_outdir)
     )
-
-    cmds.append("echo About to execute '%s'" % (xargs_cmd))
+#------------------------------------------------------------------------------
+# 'reformatted' means expanded by fhicl-dump
+#------------------------------------------------------------------------------
+    cmds.append("echo About to execute '%s'" % xargs_cmd)
     cmds.append(xargs_cmd)
+    
+    # breakpoint()
+    proc = Popen("\n".join(cmds), shell=True, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, 
+                 encoding="UTF-8")
+    proc.wait()
+#------------------------------------------------------------------------------
+# to check the return code need to wait...
+####
+    if proc.returncode != 0:
 
-    out = Popen(
-        "\n".join(cmds), shell=True, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, encoding="UTF-8"
-    )
-
-    out_comm = out.communicate()
-
-    out_stdout = out_comm[0]
-    out_stderr = out_comm[1]
-    status = out.returncode
-
-    if status != 0:
-
-        if out_stdout is not None:
-            print(out_stdout)
-
-        if out_stderr is not None:
-            print(out_stderr)
+        if proc.stdout : print(proc.stdout)
+        if proc.stderr : print(proc.stderr)
 
         raise Exception(
-            "There was a problem reformatting the FHiCL documents found in %s; this is very likely due to illegal FHiCL syntax somewhere. See above for more info."
-            % (reformat_indir)
+            ("There was a problem reformatting the FHiCL documents found in %s;"
+             " this is very likely due to illegal FHiCL syntax somewhere."
+             " See above for more info.") % reformat_indir
         )
 
-    reformatted_fhicl_strings = []
-    for label in [procinfo.label for procinfo in procinfos]:
-        with open("%s/%s.fcl" % (reformat_outdir, label)) as reformatted_fhicl_file:
-            reformatted_fhicl_strings.append(reformatted_fhicl_file.read())
+    for p in procinfos:
+        fn = "%s/%s.fcl" % (reformat_outdir, p.label)
+        with open(fn) as reformatted_fhicl_file:
+            p.fhicl_used = reformatted_fhicl_file.read()
 
     shutil.rmtree(reformat_indir)
     shutil.rmtree(reformat_outdir)
 
-    return reformatted_fhicl_strings
+    return # end of reformat_fhicl_documents, P.Murat: don't need to return anything
 
-
+#------------------------------------------------------------------------------
 # JCF, 12/2/14
 
-# Given the directory name of a git repository, this will return
-# the most recent hash commit in the repo
-
-
+# Given the directory name of a git repository, this will return the most recent hash commit in the repo
+#------------------------------------------------------------------------------
 def get_commit_hash(gitrepo):
 
     if not os.path.exists(gitrepo):
@@ -851,7 +844,10 @@ def get_messagefacility_template_filename():
 
     return messagefacility_fhicl_filename
 
-
+#------------------------------------------------------------------------------
+# P.Murat: not only this function returns the filename, it also writes out the file 
+# itself. This is how the MessageFacility log filenames are formed
+#------------------------------------------------------------------------------
 def obtain_messagefacility_fhicl(have_artdaq_mfextensions):
 
     messagefacility_fhicl_filename = get_messagefacility_template_filename()

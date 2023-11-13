@@ -11,7 +11,6 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 import argparse
 from   datetime import datetime, timezone
 import glob
-
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
@@ -40,6 +39,7 @@ from rc.control.save_run_record import save_run_record_base
 from rc.control.save_run_record import save_metadata_value_base
 
 disable_bookkeeping = os.environ.get("TFM_DISABLE_BOOKKEEPING");
+
 if (disable_bookkeeping and (disable_bookkeeping != "false")):
     from rc.control.all_functions_noop import bookkeeping_for_fhicl_documents_artdaq_v3_base
 else:
@@ -70,10 +70,9 @@ try:
     # that artdaq_mfextensions is as well
 
     messagefacility_fhicl_filename = obtain_messagefacility_fhicl(True)
-    if (
-        not "ARTDAQ_LOG_FHICL" in os.environ
+    if (not "ARTDAQ_LOG_FHICL" in os.environ):
         #or os.environ["ARTDAQ_LOG_FHICL"] != messagefacility_fhicl_filename
-    ):
+
         raise Exception(make_paragraph(
             ("Although the swig_artdaq python module is available, "
              "it needs the environment variable ARTDAQ_LOG_FHICL to point to %s"
@@ -89,37 +88,37 @@ try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import perform_periodic_action_base
 except:
-    from rc.control.all_functions_noop import perform_periodic_action_base
+    from rc.control.all_functions_noop         import perform_periodic_action_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import start_datataking_base
 except:
-    from rc.control.all_functions_noop import start_datataking_base
+    from rc.control.all_functions_noop         import start_datataking_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import stop_datataking_base
 except:
-    from rc.control.all_functions_noop import stop_datataking_base
+    from rc.control.all_functions_noop         import stop_datataking_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import do_enable_base
 except:
-    from rc.control.all_functions_noop import do_enable_base
+    from rc.control.all_functions_noop         import do_enable_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import do_disable_base
 except:
-    from rc.control.all_functions_noop import do_disable_base
+    from rc.control.all_functions_noop         import do_disable_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import check_config_base
 except:
-    from rc.control.all_functions_noop import check_config_base
+    from rc.control.all_functions_noop         import check_config_base
 
 process_management_methods = ["direct", "external_run_control"]
 
@@ -156,9 +155,7 @@ if (management_method == "direct"):
     from rc.control.manage_processes_direct import launch_procs_base
     from rc.control.manage_processes_direct import kill_procs_base
     from rc.control.manage_processes_direct import check_proc_heartbeats_base
-    from rc.control.manage_processes_direct import (
-        softlink_process_manager_logfiles_base,
-    )
+#    from rc.control.manage_processes_direct import (softlink_process_manager_logfiles_base,)
     from rc.control.manage_processes_direct import find_process_manager_variable_base
     from rc.control.manage_processes_direct import (
         set_process_manager_default_variables_base,
@@ -175,7 +172,7 @@ elif (management_method == "external_run_control"):
     from rc.control.all_functions_noop import launch_procs_base
     from rc.control.all_functions_noop import kill_procs_base
     from rc.control.all_functions_noop import check_proc_heartbeats_base
-    from rc.control.all_functions_noop import softlink_process_manager_logfiles_base
+#    from rc.control.all_functions_noop import softlink_process_manager_logfiles_base
     from rc.control.all_functions_noop import set_process_manager_default_variables_base
     from rc.control.all_functions_noop import reset_process_manager_variables_base
     from rc.control.all_functions_noop import get_process_manager_log_filenames_base
@@ -409,20 +406,18 @@ class FarmManager(Component):
             if self.use_messagefacility and self.messageviewer_sender is not None:
                 if severity == "e":
                     self.messageviewer_sender.write_error(
-                        "FarmManager partition %s" % (self.partition_number),printstr
+                        "FarmManager partition %d" % self.partition,printstr
                     )
                 elif severity == "w":
                     self.messageviewer_sender.write_warning(
-                        "FarmManager partition %s" % (self.partition_number),printstr
+                        "FarmManager partition %d" % self.partition,printstr
                     )
                 elif severity == "i":
                     self.messageviewer_sender.write_info(
-                        "FarmManager partition %s" % (self.partition_number),printstr
-                    )
+                        "FarmManager partition %d" % self.partition,printstr)
                 elif severity == "d":
                     self.messageviewer_sender.write_debug(
-                        "FarmManager partition %s" % (self.partition_number),printstr
-                    )
+                        "FarmManager partition %d" % self.partition,printstr)
 
             else:
                 with self.printlock:
@@ -504,13 +499,17 @@ class FarmManager(Component):
     def metadata_filename(self):
         return "%s/metadata.txt" % (self.run_record_directory());
 
-    def launch_attempt_fn_format(self):
-        return "%s/pmt/launch_attempt_%s_%s_partition_%02i_%s"
+#------------------------------------------------------------------------------
+# format (and location) of the PMT logfile - 
+# includes directory, run_number, host, user, partition (in integer), and a timestamp
+####
+    def pmt_log_filename_format(self):
+        return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
 
     def boardreader_port_number(self,rank):
         base_port           = int(os.environ["ARTDAQ_BASE_PORT"]);
         ports_per_partition = int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
-        port                = base_port+100 + self.partition_number*ports_per_partition+rank
+        port                = base_port+100 + self.partition*ports_per_partition+rank
         return port
 
     def settings_filename(self):
@@ -642,18 +641,16 @@ class FarmManager(Component):
     def __init__(self,
                  name             = "toycomponent",
                  config_dir       = None          ,
-                 logpath          = None          ,
                  rpc_host         = "localhost"   ,
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
                  rpc_port         = 6659          ,
-                 partition_number = 999           ):
+                 partition        = 999           ):
 
         # Initialize Component, the base class of FarmManager
 
         Component.__init__(self,
                            name         = name,
-                           logpath      = logpath,
                            rpc_host     = rpc_host,
                            control_host = control_host,
                            synchronous  = synchronous,
@@ -664,7 +661,7 @@ class FarmManager(Component):
 
         self.fUser            = os.environ.get("USER");
         self.config_dir       = config_dir
-        self.partition_number = partition_number
+        self.partition        = partition                # assume integer
         self.transfer         = "Autodetect"
         self.rpc_port         = rpc_port
 
@@ -796,8 +793,8 @@ class FarmManager(Component):
                     % (self.record_directory)))
             sys.exit(1)
 
-        self.print_log("i",'%s: FarmManager in partition %s launched and now in "%s" state, listening on port %d'
-            % (date_and_time(),self.partition_number,self.state(self.name),self.rpc_port)
+        self.print_log("i",'%s: FarmManager in partition %d launched and now in "%s" state, listening on port %d'
+            % (date_and_time(),self.partition,self.state(self.name),self.rpc_port)
         )
 
     def __del__(self):
@@ -821,7 +818,7 @@ class FarmManager(Component):
     launch_procs                          = launch_procs_base
     kill_procs                            = kill_procs_base
     check_proc_heartbeats                 = check_proc_heartbeats_base
-    softlink_process_manager_logfiles     = softlink_process_manager_logfiles_base
+#    softlink_process_manager_logfiles     = softlink_process_manager_logfiles_base
     find_process_manager_variable         = find_process_manager_variable_base
     set_process_manager_default_variables = set_process_manager_default_variables_base
     reset_process_manager_variables       = reset_process_manager_variables_base
@@ -897,7 +894,7 @@ class FarmManager(Component):
                 self.exception = True
                 return
 
-            fn = "/tmp/trace_get_%s_%s_partition%s.txt" % (p.label,self.fUser,self.partition_number);
+            fn = "/tmp/trace_get_%s_%s_partition%d.txt" % (p.label,self.fUser,self.partition);
 
             with open(fn,"w",) as trace_get_output: 
                 trace_get_output.write("\ntrace(s) below are as they appeared at %s:\n\n" % (date_and_time()))
@@ -916,7 +913,7 @@ class FarmManager(Component):
 ########
         output = ""
         for p in self.procinfos:
-            fn = "/tmp/trace_get_%s_%s_partition%s.txt" % (p.label,self.fUser,self.partition_number)
+            fn = "/tmp/trace_get_%s_%s_partition%d.txt" % (p.label,self.fUser,self.partition)
             with open(fn) as inf:
                 output += "\n\n%s:\n" % (p.label)
                 output += inf.read()
@@ -970,7 +967,6 @@ class FarmManager(Component):
 # 
 ####
     def alert_and_recover(self, extrainfo=None):
-        breakpoint()
         self.do_recover()
 
         alertmsg = ""
@@ -1420,17 +1416,14 @@ class FarmManager(Component):
     def launch_msgviewer(self):
         cmds            = []
         port_to_replace = 30000
-        msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (
-            self.partition_number,
-            os.environ["USER"],
-        )
+        msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (self.partition,self.fUser)
         cmds += get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append("which msgviewer")
         cmds.append("cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl))
         cmds.append('res=$( grep -l "port: %d" %s )' % (port_to_replace, msgviewer_fhicl))
         cmds.append("if [[ -n $res ]]; then true ; else false ; fi")
-        cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition_number * 1000, msgviewer_fhicl))
+        cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition * 1000, msgviewer_fhicl))
         cmds.append("msgviewer -c %s >/dev/null 2>&1 &"       % (msgviewer_fhicl))
 
         msgviewercmd = construct_checked_command(cmds)
@@ -1724,12 +1717,11 @@ class FarmManager(Component):
                 )
 
     def determine_logfilename(self, procinfo):
-        loglists = [
-            self.boardreader_log_filenames,
-            self.eventbuilder_log_filenames,
-            self.datalogger_log_filenames,
-            self.dispatcher_log_filenames,
-            self.routingmanager_log_filenames,
+        loglists = [ self.boardreader_log_filenames,
+                     self.eventbuilder_log_filenames,
+                     self.datalogger_log_filenames,
+                     self.dispatcher_log_filenames,
+                     self.routingmanager_log_filenames,
         ]
         all_logfilenames = [
             logfilename for loglist in loglists for logfilename in loglist
@@ -1807,10 +1799,11 @@ class FarmManager(Component):
                         % (ss, dest, dest, ss))
                     )
 
-    #------------------------------------------------------------------------------
-    # log names - this place is important: this is where they start addign timestamps etc 
-    # just because couldn't figure out how to properly use the run number
-    #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# log names - this place is important
+# at this point the log files are already created and the farm manager 
+# just reads the last ones created... Where the log file names are defined ?
+#------------------------------------------------------------------------------
     def get_artdaq_log_filenames(self):
 
         self.boardreader_log_filenames    = []
@@ -1823,15 +1816,18 @@ class FarmManager(Component):
 
             if host != "localhost": full_hostname = host
             else                  : full_hostname = os.environ["HOSTNAME"]
-
-            procinfos_for_host = [ procinfo for procinfo in self.procinfos if procinfo.host == host ]
+#------------------------------------------------------------------------------
+# processes to be running on 'host'
+############
+            procinfos_for_host = [ p for p in self.procinfos if p.host == host ]
             cmds      = []
             proctypes = []
 
             cmds.append('short_hostname=$(hostname -s)')
             for i, p in enumerate(procinfos_for_host):
 
-                output_logdir = "%s/%s-$short_hostname-%s" % (self.log_directory,p.label,p.port,)
+                output_logdir = "%s/%s-$short_hostname-%s" % (self.log_directory,p.label,p.port)
+
                 cmds.append("filename_%s=$( ls -tr1 %s/%s-$short_hostname-%s*.log | tail -1 )"
                     % (i, output_logdir, p.label, p.port))
                 # pdb.set_trace()
@@ -1859,9 +1855,7 @@ class FarmManager(Component):
 
             while True:
                 num_logfile_checks += 1
-                proc = subprocess.Popen(cmd,
-                                        executable="/bin/bash",
-                                        shell=True,
+                proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         encoding="utf-8",
@@ -1898,9 +1892,10 @@ class FarmManager(Component):
                         )
                     else:
                         sleep(2)  # Give the logfiles a bit of time to appear before the next check
-            #------------------------------------------------------------------------------
-            # presence of oddly named processes should be checked well before this point
-            #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# presence of oddly named processes should be checked well before this point
+############
+            # breakpoint()
             for i_p in range(len(proclines)):
                 fn = "%s:%s"%(full_hostname,proclines[i_p].strip().split()[-1])
 
@@ -1913,80 +1908,80 @@ class FarmManager(Component):
                     assert False, "Unknown process type found in procinfos list"
 
         self.print_log("d", "\n", 2)
-        for procinfo in self.procinfos:
-            self.print_log("d","%-20s %s"%(procinfo.label+":",self.determine_logfilename(procinfo)),2)
+        for p in self.procinfos:
+            self.print_log("d","%-20s %s"%(p.label+":",self.determine_logfilename(p)),2)
 
         self.print_log("d", "\n", 2)
 
-    #------------------------------------------------------------------------------
-    # this is function which we will get rid of
-    #------------------------------------------------------------------------------
-    def softlink_logfiles(self):
-
-        self.softlink_process_manager_logfiles()
-
-        softlink_commands_to_run_on_host = {}
-        links_printed_to_output = {}
-
-        for loglist in [
-            self.boardreader_log_filenames,
-            self.eventbuilder_log_filenames,
-            self.datalogger_log_filenames,
-            self.dispatcher_log_filenames,
-            self.routingmanager_log_filenames,
-        ]:
-
-            for fulllogname in loglist:
-                host    = fulllogname.split(":")[0]
-                logname = "".join(fulllogname.split(":")[1:])
-                label   = fulllogname.split("/")[-1].split("-")[0]
-
-                proctype = ""
-
-                for procinfo in self.procinfos:
-                    if label == procinfo.label:
-                        proctype = procinfo.name
-
-                if   "BoardReader"    in proctype : subdir = "boardreader"
-                elif "EventBuilder"   in proctype : subdir = "eventbuilder"
-                elif "DataLogger"     in proctype : subdir = "datalogger"
-                elif "Dispatcher"     in proctype : subdir = "dispatcher"
-                elif "RoutingManager" in proctype : subdir = "routingmanager"
-                else:
-                    assert (False),'Unknown process type "%s" found when soflinking logfiles' % (proctype)
-
-                if host not in softlink_commands_to_run_on_host:
-                    assert host not in links_printed_to_output
-                    softlink_commands_to_run_on_host[host] = []
-                    links_printed_to_output[host] = []
-
-                softlink         = "%s/%s/run%d-%s.log" % (self.log_directory,subdir,self.run_number,label)
-                link_logfile_cmd = "ln -s %s %s" % (logname, softlink)
-                softlink_commands_to_run_on_host[host].append(link_logfile_cmd)
-                links_printed_to_output[host].append("%-20s %s:%s" % (label + ":", host, softlink))
-
-        for host in softlink_commands_to_run_on_host:
-            link_logfile_cmd = "; ".join(softlink_commands_to_run_on_host[host])
-
-            if not host_is_local(host):
-                link_logfile_cmd = "ssh %s '%s'" % (host, link_logfile_cmd)
-
-            proc = subprocess.Popen(link_logfile_cmd,
-                                    executable="/bin/bash",
-                                    shell=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                )
-            status = proc.wait()
-
-            if status == 0:
-                self.print_log("d", "\n".join(links_printed_to_output[host]), 2)
-            else:
-                self.print_log(
-                    "w",
-                    "WARNING: failure in performing user-friendly softlinks to logfiles on host %s:\n%s"
-                    % (host, proc.stdout.readlines()),
-                )
+## #------------------------------------------------------------------------------
+## # this is function which we will get rid of
+## ####
+##     def softlink_logfiles(self):
+## 
+## #        self.softlink_process_manager_logfiles()
+## 
+##         softlink_commands_to_run_on_host = {}
+##         links_printed_to_output = {}
+## 
+##         for loglist in [
+##             self.boardreader_log_filenames,
+##             self.eventbuilder_log_filenames,
+##             self.datalogger_log_filenames,
+##             self.dispatcher_log_filenames,
+##             self.routingmanager_log_filenames,
+##         ]:
+## 
+##             for fulllogname in loglist:
+##                 host    = fulllogname.split(":")[0]
+##                 logname = "".join(fulllogname.split(":")[1:])
+##                 label   = fulllogname.split("/")[-1].split("-")[0]
+## 
+##                 proctype = ""
+## 
+##                 for procinfo in self.procinfos:
+##                     if label == procinfo.label:
+##                         proctype = procinfo.name
+## 
+##                 if   "BoardReader"    in proctype : subdir = "boardreader"
+##                 elif "EventBuilder"   in proctype : subdir = "eventbuilder"
+##                 elif "DataLogger"     in proctype : subdir = "datalogger"
+##                 elif "Dispatcher"     in proctype : subdir = "dispatcher"
+##                 elif "RoutingManager" in proctype : subdir = "routingmanager"
+##                 else:
+##                     assert (False),'Unknown process type "%s" found when soflinking logfiles' % (proctype)
+## 
+##                 if host not in softlink_commands_to_run_on_host:
+##                     assert host not in links_printed_to_output
+##                     softlink_commands_to_run_on_host[host] = []
+##                     links_printed_to_output         [host] = []
+## 
+##                 softlink         = "%s/%s/run%d-%s.log" % (self.log_directory,subdir,self.run_number,label)
+##                 link_logfile_cmd = "ln -s %s %s" % (logname, softlink)
+##                 softlink_commands_to_run_on_host[host].append(link_logfile_cmd)
+##                 links_printed_to_output[host].append("%-20s %s:%s" % (label + ":", host, softlink))
+## 
+##         for host in softlink_commands_to_run_on_host:
+##             link_logfile_cmd = "; ".join(softlink_commands_to_run_on_host[host])
+## 
+##             if not host_is_local(host):
+##                 link_logfile_cmd = "ssh %s '%s'" % (host, link_logfile_cmd)
+## 
+##             proc = subprocess.Popen(link_logfile_cmd,
+##                                     executable="/bin/bash",
+##                                     shell=True,
+##                                     stdout=subprocess.PIPE,
+##                                     stderr=subprocess.STDOUT,
+##                                 )
+##             status = proc.wait()
+## 
+##             if status == 0:
+##                 self.print_log("d", "\n".join(links_printed_to_output[host]), 2)
+##             else:
+##                 self.print_log(
+##                     "w",
+##                     "WARNING: failure in performing user-friendly softlinks to logfiles on host %s:\n%s"
+##                     % (host, proc.stdout.readlines()),
+##                 )
 
     def fill_package_versions(self, packages):
 
@@ -2514,7 +2509,7 @@ class FarmManager(Component):
 
     def add_ranks_from_ranksfile(self):
 
-        ranksfile = "/tmp/ranks%s.txt" % self.partition_number
+        ranksfile = "/tmp/ranks%d.txt" % self.partition
 
         if not os.path.exists(ranksfile):
             raise Exception(
@@ -2683,6 +2678,7 @@ class FarmManager(Component):
     def do_fhiclcpp_stuff(self):
 
         self.create_setup_fhiclcpp_if_needed()
+        # breakpoint()
         obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
 
         self.print_log("i", "\n%s: BOOT transition 008 Pasha: after messagefacility_fhicl\n" % (date_and_time()))
@@ -2858,10 +2854,11 @@ class FarmManager(Component):
 
         endtime = time()
         self.print_log("i", "get_lognames done (%.1f seconds)." % (endtime - starttime))
-        return 0;
+        return 0;  # end of get_lognames
 
 #------------------------------------------------------------------------------
 # P.Murat: make_logfile_dirs is a well-defined action - make it a separate function
+#          pmt is the only one left ..
 ####
     def make_logfile_dirs(self):
         logdir_commands_to_run_on_host = []
@@ -2870,11 +2867,11 @@ class FarmManager(Component):
 
         for subdir in [
             "pmt",
-            "boardreader",
-            "eventbuilder",
-            "dispatcher",
-            "datalogger",
-            "routingmanager",
+##            "boardreader",
+##            "eventbuilder",
+##            "dispatcher",
+##            "datalogger",
+##            "routingmanager",
         ]:
             logdir_commands_to_run_on_host.append(
                 "mkdir -p -m %s %s/%s" % (permissions, self.log_directory, subdir)
@@ -2936,7 +2933,6 @@ class FarmManager(Component):
 
         starttime = time()
         self.print_log("i", "\nObtaining FHiCL documents...", 1, False)
-        breakpoint()
 
         try:
             tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
@@ -3067,7 +3063,7 @@ class FarmManager(Component):
             except:
                 raise
 
-            self.boot_filename = "/tmp/boot_%s_partition%s.txt" % (self.fUser,self.partition_number)
+            self.boot_filename = "/tmp/boot_%s_partition%d.txt" % (self.fUser,self.partition)
 
             if os.path.exists(self.boot_filename):
                 os.unlink(self.boot_filename)
@@ -3222,8 +3218,7 @@ class FarmManager(Component):
         return
 
 #------------------------------------------------------------------------------
-# CONFIG transition : 1) assume the run number is known
-#                     2) don't use this assumption at this point, wait ...
+# CONFIG transition : 1) at this point the run number is known, don't need to pass
 ####
     def do_config(self, subconfigs_for_run=[], run_number=None):
         # pdb.set_trace()
@@ -3266,11 +3261,13 @@ class FarmManager(Component):
             self.create_setup_fhiclcpp_if_needed()
         except:
             raise
+#------------------------------------------------------------------------------
+# P.Murat: TODO
+# is this an assumption that reformatted FCL's and processes make two parallel lists,
+# so one could use the same common index to iterate ?
+########
 
-        reformatted_fcls = reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
-
-        for i, reformatted_fcl in enumerate(reformatted_fcls):
-            self.procinfos[i].fhicl_used = reformatted_fcl
+        reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
         self.print_log("i", "done (%.1f seconds)." % (time() - starttime))
 
@@ -3297,10 +3294,12 @@ class FarmManager(Component):
 
         self.print_log("i", "\n%s Launching the artdaq processes" % date_and_time())
         self.called_launch_procs = True
-        self.launch_procs_time   = (time())  # Will be used when checking logfile's timestamps
+        self.launch_procs_time   = time()  # Will be used when checking logfile's timestamps
 
         try:
-            # breakpoint()
+#------------------------------------------------------------------------------
+# this is where the processes are launched - 
+############
             launch_procs_actions = self.launch_procs()
 
             assert type(launch_procs_actions) is dict, make_paragraph(
@@ -3316,7 +3315,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 ############
-
         rc = self.check_launch_results();
         if (rc != 0): return;
 
@@ -3327,7 +3325,7 @@ class FarmManager(Component):
 
         self.print_log("i", "\n%s: CONFIG transition 013 Pasha : before self.manage_processes\n" % (date_and_time()))
 #------------------------------------------------------------------------------
-#
+# define names of all logfiles 
 ############
         rc = self.get_lognames();
         if (rc != 0): return;
@@ -3339,7 +3337,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submittion
 ########
-        self.tmp_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,self.partition_number)
+        self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition)
 
         self.print_log("i", "\n%s: CONFIG transition 013 Pasha" % (date_and_time()))
 
@@ -3390,7 +3388,6 @@ class FarmManager(Component):
             self.readjust_process_priorities(self.boardreader_priorities_on_config)
 
             try:
-                # breakpoint() # the last one
                 self.do_command("Init")
             except Exception:
                 self.print_log("d", traceback.format_exc(), 2)
@@ -3447,7 +3444,6 @@ class FarmManager(Component):
 ####
     def do_start_running(self):
 
-#        breakpoint();
         self.print_log("i","\n%s: START transition underway for run %d" % 
                        (date_and_time(), self.run_number))
 
@@ -3514,20 +3510,20 @@ class FarmManager(Component):
             return
 
         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition_number)):
+           os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition):
 
             os.chmod(rr_dir, 0o755)
-            copyfile(
-                "/tmp/info_to_archive_partition%d.txt" % (self.partition_number),
-                "%s/rc_info_start.txt" % (rr_dir),
+            copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition,
+                     "%s/rc_info_start.txt" % (rr_dir)
             )
             os.chmod(rr_dir, 0o555)
 
             if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
                 self.alert_and_recover(
                     make_paragraph(
-                        "Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt; does original file exist?"
-                        % (self.partition_number, rr_dir)
+                        ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt;"
+                         " does original file exist?")
+                        % (self.partition, rr_dir)
                     )
                 )
 #------------------------------------------------------------------------------
@@ -3536,7 +3532,7 @@ class FarmManager(Component):
         self.print_log("i", "\n%s: START transition underway 002 Pasha : before execute_trace_script\n" % (date_and_time()))
         self.execute_trace_script("start")
 
-        self.print_log("i", "\n%s: START transition underway 003 Pasha : after execute_trace_script self.manage_processes=%i\n" 
+        self.print_log("i", "\n%s: START transition underway 003 Pasha : self.manage_processes=%i\n" 
                        % (date_and_time(),self.manage_processes))
         if self.manage_processes:
 
@@ -3565,13 +3561,13 @@ class FarmManager(Component):
 # run processes have started softlinks to the logfiles of this run
 # this should go away
 ########
-        if self.manage_processes:
-            starttime = time()
-            self.print_log("i","\nAttempting to provide run-numbered softlinks to the logfiles...",1,False)
-            self.print_log("d", "", 2)
-            self.softlink_logfiles()
-            endtime = time()
-            self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
+##        if self.manage_processes:
+##            starttime = time()
+##            self.print_log("i","\nAttempting to provide run-numbered softlinks to the logfiles...",1,False)
+##            self.print_log("d", "", 2)
+##            self.softlink_logfiles()
+##            endtime = time()
+##            self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
 
         self.print_log("i", "\nRun info can be found locally at %s\n" % (self.run_record_directory()))
 
@@ -3603,12 +3599,12 @@ class FarmManager(Component):
         self.stop_datataking()
 
         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition_number)):
+           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition)):
             run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
             os.chmod(run_record_directory, 0o755)
 
             copyfile(
-                "/tmp/info_to_archive_partition%d.txt" % (self.partition_number),
+                "/tmp/info_to_archive_partition%d.txt" % self.partition,
                 "%s/rc_info_stop.txt" % (run_record_directory),
             )
             os.chmod(run_record_directory, 0o555)
@@ -3616,7 +3612,7 @@ class FarmManager(Component):
             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
                 self.alert_and_recover(make_paragraph(
                     ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
-                     "does original file exist?") % (self.partition_number, run_record_directory))
+                     "does original file exist?") % (self.partition, run_record_directory))
                 )
 
         if self.manage_processes:
@@ -3985,7 +3981,7 @@ class FarmManager(Component):
         except:
             return self.state(name)  # OK if we haven't yet created the list of Procinfo structures
         else:
-            tmpfile = "/tmp/artdaq_process_info_%s_partition_%s" % (self.fUser,self.partition_number)
+            tmpfile = "/tmp/artdaq_process_info_%s_partition_%d" % (self.fUser,self.partition)
             infostring = ""
             for procinfo in self.procinfos:
                 host = procinfo.host
@@ -4103,11 +4099,11 @@ def get_args():  # no-coverage
 
     parser.add_argument("-n", "--name", type=str, dest="name", default="daqint", help="Component name")
 
-    pn = 888;
+    pn = None;
     x = os.environ.get("TFM_PARTITION_NUMBER");
     if (x) : pn = int(x);
     
-    parser.add_argument("-p","--partition-number",type=int,dest="partition_number",default=pn,
+    parser.add_argument("-p","--partition",type=int,dest="partition",default=pn,
                         help="Partition number")
 
     parser.add_argument("-r", "--rpc-port",type=int, dest="rpc_port", default=5570,help="RPC port")
@@ -4206,9 +4202,7 @@ def main():  # no-coverage
     default_sighup_handler  = signal.signal(signal.SIGHUP , handle_kill_signal)
     default_sigint_handler  = signal.signal(signal.SIGINT , handle_kill_signal)
 
-    log_path = os.path.join(os.environ["HOME"], ".lbnedaqint.log");
-
-    with FarmManager(logpath=log_path, **vars(args)) as daqinterface_instance:
+    with FarmManager(**vars(args)) as daqinterface_instance:
         while True:
             sleep(100)
 

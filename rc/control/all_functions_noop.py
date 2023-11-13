@@ -50,8 +50,8 @@ def reset_process_manager_variables_base(self):
     pass
 def set_process_manager_default_variables_base(self):
     pass
-def softlink_process_manager_logfiles_base(self):
-    pass
+#def softlink_process_manager_logfiles_base(self):
+#    pass
 def start_datataking_base(self):
     pass
 def stop_datataking_base(self):

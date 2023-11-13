@@ -154,8 +154,10 @@ def put_config_info_base(self):
             'Error in %s: unable to find script directory "%s"; should be in the base directory of the package'
             % (put_config_info_base.__name__, scriptdir)
         )
-
-    runnum = str(self.run_number)
+#------------------------------------------------------------------------------
+# convert self.run_number to string
+####
+    runnum    = str(self.run_number)
     runrecord = self.record_directory + "/" + runnum
 
     tmpdir = "/tmp/" + Popen(
@@ -290,23 +292,15 @@ def put_config_info_base(self):
                 elif "components" in line:
                     runhistory_file.write("\n" + line)
 
-        if os.environ[
-            "TFM_PROCESS_MANAGEMENT_METHOD"
-        ] == "external_run_control" and os.path.exists(
-            "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-        ):
-            runhistory_file.write(
-                fhiclize_document(
-                    "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-                )
-            )
+        if ((os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
+            fn = "/tmp/info_to_archive_partition%d.txt" % self.partition;
+
+            if (os.path.exists(fn)): runhistory_file.write(fhiclize_document(fn))
 
     basedir = os.getcwd()
     os.chdir(tmpdir)
 
-    subconfigs_for_run = [
-        subconfig.replace("/", "_") for subconfig in self.subconfigs_for_run
-    ]
+    subconfigs_for_run = [s.replace("/", "_") for s in self.subconfigs_for_run]
     result = archiveRunConfiguration("_".join(subconfigs_for_run), runnum)
 
     if not result:
@@ -348,10 +342,7 @@ def put_config_info_on_stop_base(self):
 
     with open("%s/%s/RunHistory2.fcl" % (tmpdir, runnum), "w") as runhistory_file:
 
-        metadata_filename = "%s/%s/metadata.txt" % (
-            self.record_directory,
-            str(self.run_number),
-        )
+        metadata_filename = "%s/%s/metadata.txt" % (self.record_directory,str(self.run_number))
 
         if os.path.exists(metadata_filename):
             found_start_time = False
@@ -393,25 +384,17 @@ def put_config_info_on_stop_base(self):
                 % (metadata_filename),
             )
 
-        if os.environ[
-            "TFM_PROCESS_MANAGEMENT_METHOD"
-        ] == "external_run_control" and os.path.exists(
-            "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-        ):
-            runhistory_file.write(
-                fhiclize_document(
-                    "/tmp/info_to_archive_partition%d.txt" % (self.partition_number)
-                )
-            )
+        if ((os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control") and 
+            (os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition)    ):
+
+            runhistory_file.write(fhiclize_document("/tmp/info_to_archive_partition%d.txt" % self.partition))
 
     copyfile(
         "%s/schema.fcl" % (os.environ["ARTDAQ_DATABASE_CONFDIR"]),
         "%s/schema.fcl" % (tmpdir),
     )
 
-    subconfigs_for_run = [
-        subconfig.replace("/", "_") for subconfig in self.subconfigs_for_run
-    ]
+    subconfigs_for_run = [s.replace("/", "_") for s in self.subconfigs_for_run]
     result = updateArchivedRunConfiguration("_".join(subconfigs_for_run), runnum)
 
     if not result:

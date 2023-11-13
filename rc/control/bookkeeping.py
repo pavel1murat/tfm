@@ -711,50 +711,32 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                             procinfo.fhicl_used,
                         ) or re.search(
                             r"\n\s*generated_fragments_per_event\s*:\s*0",
-                            procinfo.fhicl_used,
+                           procinfo.fhicl_used,
                         ):
                             nonsending_boardreaders.append(procinfo.label)
 
-    for i_proc in range(len(self.procinfos)):
-        if (
-            "DataLogger" in self.procinfos[i_proc].name
-            or "Dispatcher" in self.procinfos[i_proc].name
-        ):
-            self.procinfos[i_proc].fhicl_used = re.sub(
-                "expected_fragments_per_event\s*:\s*[0-9]+",
-                "expected_fragments_per_event: 1",
-                self.procinfos[i_proc].fhicl_used,
-            )
+    for p in self.procinfos:
+        if ("DataLogger" in p.name) or ("Dispatcher" in p.name) :
+            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
+                                  "expected_fragments_per_event: 1",p.fhicl_used)
         else:
-            self.procinfos[i_proc].fhicl_used = re.sub(
-                "expected_fragments_per_event\s*:\s*[0-9]+",
-                "expected_fragments_per_event: %d"
-                % (expected_fragments_per_event[self.procinfos[i_proc].subsystem]),
-                self.procinfos[i_proc].fhicl_used,
-            )
+            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
+                                  "expected_fragments_per_event: %d"
+                                  % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
+
         if self.request_address is None:
-            request_address = "227.128.%d.%d" % (
-                self.partition_number,
-                128 + int(self.procinfos[i_proc].subsystem),
-            )
+            request_address = "227.128.%d.%d" % (self.partition,128 + int(p.subsystem))
         else:
             request_address = self.request_address
 
-        self.procinfos[i_proc].fhicl_used = re.sub(
-            "host_map\s*:\s*\[.*?\]", host_map_string, self.procinfos[i_proc].fhicl_used
-        )
+        p.fhicl_used = re.sub("host_map\s*:\s*\[.*?\]", host_map_string,p.fhicl_used)
 
-        self.procinfos[i_proc].fhicl_used = re.sub(
-            'request_address\s*:\s*["0-9\.]+',
-            'request_address: "%s"' % (request_address.strip('"')),
-            self.procinfos[i_proc].fhicl_used,
-        )
+        p.fhicl_used = re.sub('request_address\s*:\s*["0-9\.]+',
+                              'request_address: "%s"' % (request_address.strip('"')),
+                              p.fhicl_used)
 
-        self.procinfos[i_proc].fhicl_used = re.sub(
-            "partition_number\s*:\s*[0-9]+",
-            "partition_number: %d" % (self.partition_number),
-            self.procinfos[i_proc].fhicl_used,
-        )
+        p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+",
+                              "partition_number: %d" % self.partition,p.fhicl_used)
 
     # JCF, Apr-17-2019
 
@@ -845,10 +827,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     (subsystem_id, router_process_for_subsystem.target)
                 ] = (
                     int(os.environ["ARTDAQ_BASE_PORT"])
-                    + 10
-                    + int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
-                    * self.partition_number
-                    + int(router_id)
+                    + 10 + int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])*self.partition + int(router_id)
                 )
                 router_id += 1
 

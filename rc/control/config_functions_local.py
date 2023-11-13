@@ -265,16 +265,10 @@ def get_boot_info_base(self, boot_filename):
                 if memberDict["port"] == "not set":
                     memberDict["port"] = str(
                         int(os.environ["ARTDAQ_BASE_PORT"])
-                        + 100
-                        + self.partition_number
-                        * int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
-                        + rank
-                    )
+                        + 100 + self.partition*int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])+rank)
 
                 if memberDict["allowed_processors"] == "not set":
-                    memberDict[
-                        "allowed_processors"
-                    ] = None  # Where None actually means "allow all processors"
+                    memberDict["allowed_processors"] = None       # None = "allow all processors"
 
                 if memberDict["prepend"] == "not set": memberDict["prepend"] = ""
 
