@@ -35,19 +35,18 @@ def get_config_info_base(self):
 
     ffp = []
 
-    if (
-        os.path.exists("%s/common_code" % get_config_parentdir())
-        and "common_code" not in self.subconfigs_for_run
-    ):
-        self.subconfigs_for_run.append(
-            "common_code"
-        )  # For backwards-compatibility with earlier versions of this function
+    if (os.path.exists("%s/common_code" % get_config_parentdir()) and 
+        ("common_code" not in self.subconfigs_for_run)    ):
+
+        self.subconfigs_for_run.append("common_code")  # For backwards-compatibility with earlier versions of this function
 
     for subconfig in self.subconfigs_for_run:
         subconfig_dir = "%s/%s" % (get_config_parentdir(), subconfig)
 
         if os.path.exists(subconfig_dir):
             tmp_subconfig_dir = "%s/%s" % (tmpdir, subconfig)
+            if os.path.exists(tmp_subconfig_dir): 
+                shutil.rmtree(tmp_subconfig_dir)
             shutil.copytree(subconfig_dir, tmp_subconfig_dir)
             assert os.path.exists(tmp_subconfig_dir)
 

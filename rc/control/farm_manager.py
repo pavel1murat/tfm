@@ -4202,9 +4202,18 @@ def main():  # no-coverage
     default_sighup_handler  = signal.signal(signal.SIGHUP , handle_kill_signal)
     default_sigint_handler  = signal.signal(signal.SIGINT , handle_kill_signal)
 
+#------------------------------------------------------------------------------
+# 'boot' once and go into  a daemon mode listening to commands
+#------------------------------------------------------------------------------ 
     with FarmManager(**vars(args)) as daqinterface_instance:
+
+        daqinterface_instance.__do_boot = False
+        daqinterface_instance.do_boot()
+       
         while True:
             sleep(100)
 
+    return
+#------------------------------------------------------------------------------
 if __name__ == "__main__":
     main()

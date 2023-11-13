@@ -22,8 +22,22 @@
 | -r, --rpc-port         | RPC port                        | 5570      |
 | -H, --rpc-host         | This hostname/IP addr           | localhost |
 | -c, --control-host     | Control host                    | localhost |
+| -d, --config-dir       | config directory                | None      |
+|                        |                                 |           |
 |------------------------+---------------------------------+-----------|
+- config-dir contains all configuration files, has to be defined on the 
+  command line
+  last config-dir path component (subdirectory) is the configuration name
 - knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
+- at startup goes directly into a 'booted' state
+- 'config' step defines new run number and configures the farm for that
+- start 
+- stop actually stops the procecesses, so new 'configure' is needed
+- however, the TFM is in 'ready' state, so cant run 'congig' transition
+- shutdown transitions the farm from 'ready' to 'booted' state
+- not clear, what it actually is doing
+- but after 'shutdown' can do next 'config'
+- need to figure the difference between the 'terminate' and 'shutdown'
 - states  : Ready, Running, Paused, Stopped
 - commands: Init , Start, Pause, Resume, Stop, Shutdown
 - transition commands sent by [[file:../bin/send_transition.sh]]
