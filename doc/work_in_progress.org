@@ -3,7 +3,7 @@
 * WORK IN PROGRESS:
 * ------------------------------------------------------------------------------
 * running interactively    
-export TFM_PORT=21000; python $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_TEST_DIR/demo
+export TFM_PORT=21000; python $TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_CONFIG_DIR/demo
 
 * debugging  
 python -m pdb farm_manager.py -p 11 --rpc-port=21000 --config-dir=/home/mu2etrk/test_stand/pasha_019/tfm_test/demo

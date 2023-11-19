@@ -54,7 +54,7 @@ for partition in "$@"; do
 	      exit 1
     fi
 
-    cmd="ps aux | grep -E \"python.*tfm.py.*--partition-number\s+$partition\" | grep -v grep | awk '{print \$2}'"
+    cmd="ps aux | grep -E \"python.*farm_manager.py.*--partition-number\s+$partition\" | grep -v grep | awk '{print \$2}'"
     tfm_pid=$( eval $cmd )
     
     if [[ -n $tfm_pid ]]; then
@@ -67,7 +67,7 @@ If the script appears to hang here, there's an issue communicating with Tfm; hit
 and then re-run this script with the "--force" option added at the end.
 EOF
 
-	          export TFM_PARTITION_NUMBER=$partition
+	          export ARTDAQ_PARTITION_NUMBER=$partition
 	          state_true="0"
 	          check_for_state "stopped" state_true >&2 > /dev/null
 

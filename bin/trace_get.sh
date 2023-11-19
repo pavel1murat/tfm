@@ -19,6 +19,6 @@ if [[ "$retval" != "0" ]]; then
     exit $retval
 fi
 
-echo "Results of trace_get.sh call can be found in /tmp/trace_get_<process label>_<tfm_user>_partition${TFM_PARTITION_NUMBER}.txt"
+echo "Results of trace_get.sh call can be found in /tmp/trace_get_<process label>_<tfm_user>_partition${ARTDAQ_PARTITION_NUMBER}.txt"
 
 exit 0

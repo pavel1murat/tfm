@@ -90,7 +90,7 @@ mkdir -p $TFM_LOGDIR
 #------------------------------------------------------------------------------
 # assume 100 partitions is enough
 #------------------------------------------------------------------------------
-export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $TFM_PARTITION_NUMBER`.log
+export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $ARTDAQ_PARTITION_NUMBER`.log
 cat<<EOF
 
 * The TFM environment setup successful. To launch TFM: tfm_start.sh &

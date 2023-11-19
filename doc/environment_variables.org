@@ -14,14 +14,14 @@
   the directory in which the file which logs TFM output to screen is located.
 - *TFM_LOGFILE*                                                              
   the name of the file which logs TFM output to screen. 
-  Default: /tmp/tfm_${USER}/tfm_partition\$TFM_PARTITION_NUMBER}.log 
+  Default: /tmp/tfm_${USER}/tfm_partition\$ARTDAQ_PARTITION_NUMBER}.log 
 
   Notice that since the variable name itself includes a reference to the
   partition variable, you can't directly use it (e.g., "less $TFM_LOGFILE" 
   wouldn't do what you'd think it would do)
 - *TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR*                                  
   defined in [[file:../rc/control/farm_manager.py::/TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR/]]
-- *TFM_PARTITION_NUMBER*                                                     
+- *ARTDAQ_PARTITION_NUMBER*                                                     
   The partition TFM (and ARTDAQ) will run on. Defaults to 0.
   I guess, both should be the same
 - *TFM_PROCESS_MANAGEMENT_METHOD*                                            
@@ -49,7 +49,6 @@
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>env | grep TFM
 TFM_KNOWN_BOARDREADERS_LIST=/home/mu2etrk/test_stand/pasha_019/tfm_test/known_boardreaders_list
 TFM_PROCESS_MANAGEMENT_METHOD=direct
-TFM_PARTITION_NUMBER=8
 TFM_STANDARD_SOURCEFILE_SOURCED=true
 TFM_USER_SOURCEFILE_ERRNO=0
 TFM_VERSION=v0_0_1

@@ -617,12 +617,12 @@ def get_pids_and_labels_on_host(host, procinfos):
     greptoken = (
         "[0-9]:[0-9][0-9]\s\+.*\(%s\).*application_name.*partition_number:\s*%s"
         % ("\|".join(set([bootfile_name_to_execname(p.name) for p in procinfos])),
-            os.environ["TFM_PARTITION_NUMBER"])
+            os.environ["ARTDAQ_PARTITION_NUMBER"])
     )
     sshgreptoken = (
         "[0-9]:[0-9][0-9]\s\+ssh.*\(%s\).*application_name.*partition_number:\s*%s"
         % ("\|".join(set([bootfile_name_to_execname(p.name) for p in procinfos])),
-            os.environ["TFM_PARTITION_NUMBER"])
+            os.environ["ARTDAQ_PARTITION_NUMBER"])
     )
 
     # greptoken =
@@ -630,7 +630,7 @@ def get_pids_and_labels_on_host(host, procinfos):
     #% \
     #            ("\|".join(set([bootfile_name_to_execname(procinfo.name) for
     #            procinfo in procinfos])), \
-    # os.environ["TFM_PARTITION_NUMBER"])
+    # os.environ["ARTDAQ_PARTITION_NUMBER"])
 
     grepped_lines = []
     pids = get_pids(greptoken, host, grepped_lines)

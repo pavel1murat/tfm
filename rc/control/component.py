@@ -45,8 +45,6 @@ class Component(ContextObject):
                                "state"              : self.state,
                                "artdaq_process_info": self.artdaq_process_info,
                                "state_change"       : self.state_change,
-                               "setdaqcomps"        : self.setdaqcomps,
-                               "listdaqcomps"       : self.listdaqcomps,
                                "listconfigs"        : self.listconfigs,
                                "trace_get"          : self.trace_get,
                                "trace_set"          : self.trace_set,
@@ -55,11 +53,34 @@ class Component(ContextObject):
             ),
             ("runner", threadable(func=self.runner)),
         ]
-
+#------------------------------------------------------------------------------
+# transition "booting" leads to "booted' state
+# states we need: 
+# 1. "booted" or "idle" : the state the system gets upon startup
+# 2. "configured"       : all processes are started, run number known, ready to start running
+#                         needed, as different hardware susbsystems take different time to get ready 
+#                         for running, so configuration is performed in parallel
+# 3. "running"          : taking data
+# thus, the needed transitions are :
+# 1. "configure"        : "idle" --> "configured"
+# 2. "start"            : "configured" --> "running"
+# 3. "stop"             : "running" --> "idle"
+# 4. "recover"          : from anywhere trouble to "idle"
+#
+# but do the cleanup step by step
+#-------
+        self.transition = { 
+            "boot"        : {"state": "booting"    , "from": "stopped", "to": "booted" },
+            "configure"   : {"state": "configuring", "from": "booted" , "to": "ready"  },
+            "start"       : {"state": "starting"   , "from": "ready"  , "to": "running"},
+            "stop"        : {"state": "stopping"   , "from": "running", "to": "booted"},
+            "recover"     : {"state": "recovering" , "from": ""       , "to": "booted"},
+        }
+        
         self.dict_state_to = {
             "booting"    : "booted",
             "shutting"   : "booted",
-            "stopping"   : "ready",
+            "stopping"   : "booted",
             "configuring": "ready",
             "starting"   : "running",
             "pausing"    : "paused",
@@ -68,9 +89,12 @@ class Component(ContextObject):
             "recovering" : "stopped",
         }
 
+#------------------------------------------------------------------------------
+# transition "booting" allowed only from "stopped" state
+#------------------------------------------------------------------------------
         self.dict_state_from = {
             "booting"    : "stopped",
-            "shutting"   : "ready",
+            "shutting"   : "booted",
             "stopping"   : "running",
             "configuring": "booted",
             "starting"   : "ready",
@@ -78,7 +102,9 @@ class Component(ContextObject):
             "resuming"   : "paused",
             "terminating": "ready|booted",
         }
-
+#------------------------------------------------------------------------------
+# this is just nuts! 
+#------------------------------------------------------------------------------
         self.dict_correct_grammar = {
             "booting"    : "boot",
             "shutting"   : "shutdown",
@@ -91,16 +117,14 @@ class Component(ContextObject):
         }
 
     def state(self, name):
-        if name != self.name: return "unknown"
+        # if name != self.name: return "unknown"
         return self.__state
 
     def artdaq_process_info(self, name):
         raise NotImplementedError()
 
-    def complete_state_change(self, name, requested):
-        if name != self.name: return
-        newstate = self.dict_state_to.get(requested, requested)
-        trep     = datetime.datetime.utcnow()
+    def complete_state_change(self, requested):
+        newstate     = self.dict_state_to.get(requested, requested)
         self.__state = newstate
 
     # JCF, Dec-15-2016
@@ -113,17 +137,10 @@ class Component(ContextObject):
     # machine
 
     def revert_state_change(self, name, requested):
-        if name != self.name: return
-
+        # if name != self.name: return
         oldstate = self.dict_state_from.get(requested, requested)
-        trep     = datetime.datetime.utcnow()
+        # trep     = datetime.datetime.utcnow()
         self.__state = oldstate
-
-    def setdaqcomps(self, daqcomps):
-        assert False, "This version of the function should not be called"
-
-    def listdaqcomps(self):
-        assert False, "This version of the function should not be called"
 
     def listconfigs(self):
         assert False, "This version of the function should not be called"
@@ -149,12 +166,11 @@ class Component(ContextObject):
         self.do_trace_set_boolean = True
 
     def state_change(self, name, requested, state_args):
-        if name != self.name: return
-        trep = datetime.datetime.utcnow()
+        # if name != self.name: return
+        # trep = datetime.datetime.utcnow()
 
-        if (
-            requested in self.dict_state_from.keys()
-            and self.__state not in self.dict_state_from[requested]
+        if (requested in self.dict_state_from.keys() and 
+            self.__state not in self.dict_state_from[requested]
         ):
 
             self.print_log(
@@ -185,21 +201,24 @@ class Component(ContextObject):
             return
         # breakpoint()
         # set out transition state now.
-        if requested != "enabling" and requested != "disabling":
-            self.__state = requested
+
+        self.__state = requested
 
         if requested == "starting":
             self.run_params = state_args
             self.start_running()
         if requested == "stopping":
+#------------------------------------------------------------------------------
+# stopping involves sending shutdown signal if any to the processes, no separate 
+# shutdown transition
+#------------------------------------------------------------------------------
             self.stop_running()
+            self.shutdown()
         if requested == "pausing":
             self.pause_running()
         if requested == "booting":
             self.run_params = state_args
             self.boot()
-        if requested == "shutting":
-            self.shutdown()
         if requested == "configuring":
             self.run_params = state_args
             self.config()
@@ -207,10 +226,6 @@ class Component(ContextObject):
             self.resume_running()
         if requested == "terminating":
             self.terminate()
-        if requested == "enabling":
-            self.enable()
-        if requested == "disabling":
-            self.disable()
         if requested == "recovering":
             self.recover()
 
@@ -230,13 +245,13 @@ class Component(ContextObject):
             self.__dummy_val += random.random() * 100 - 50
 
     def boot(self):
-        self.complete_state_change(self.name, "booting")
+        self.complete_state_change("booting")
 
     def shutdown(self):
-        self.complete_state_change(self.name, "shutting")
+        self.complete_state_change("shutting")
 
     def config(self):
-        self.complete_state_change(self.name, "configuring")
+        self.complete_state_change("configuring")
 
     def start_running(self):
         """
@@ -245,7 +260,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "starting")
+        self.complete_state_change("starting")
 
     def stop_running(self):
         """
@@ -254,7 +269,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "stopping")
+        self.complete_state_change("stopping")
 
     def pause_running(self):
         """
@@ -263,7 +278,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "pausing")
+        self.complete_state_change("pausing")
 
     def resume_running(self):
         """
@@ -272,7 +287,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "resuming")
+        self.complete_state_change("resuming")
 
     def terminate(self):
         """
@@ -281,7 +296,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "terminating")
+        self.complete_state_change("terminating")
 
     def recover(self):
         """
@@ -293,13 +308,7 @@ class Component(ContextObject):
 
         Be sure to report when your transition is complete.
         """
-        self.complete_state_change(self.name, "recovering")
-
-    def enable(self):
-        pass
-
-    def disable(self):
-        pass
+        self.complete_state_change("recovering")
 
 
 def get_args():  # no-coverage

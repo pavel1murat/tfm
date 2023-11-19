@@ -13,6 +13,6 @@ if [[ "$TFM_FHICL_DIRECTORY" == "IGNORED" ]]; then
 fi
 
 export TFM_USER_SOURCE_ME_ERRNO=0
-export     TFM_PARTITION_NUMBER=8
+export  ARTDAQ_PARTITION_NUMBER=8
 
 return 0

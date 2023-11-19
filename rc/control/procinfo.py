@@ -68,11 +68,17 @@ class Procinfo(object):
         # changing the commensurate string in check_proc_transition!
 
         self.lastreturned = "FarmManager: ARTDAQ PROCESS NOT YET CALLED"
-        self.socketstring = "http://" + self.host + ":" + self.port + "/RPC2"
+        self.socketstring = "http://" + self.rpc_server() + "/RPC2"
         self.state        = "nonexistent"
 
+#------------------------------------------------------------------------------
+# returns host:port
+#------------------------------------------------------------------------------
+    def rpc_server(self):
+        return self.host+':'+self.port;
+
     def print(self):
-        print("procinfo: name:%-20s"%self.name+" label:%-20s"%self.label+" port:"+self.port);
+        print("procinfo: name:%-20s"%self.name+" label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
 
     def update_fhicl(self, fhicl):
         self.fhicl      = fhicl

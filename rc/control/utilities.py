@@ -886,7 +886,7 @@ udp : { type : "UDP" threshold : "DEBUG"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN
 
     processed_messagefacility_fhicl_filename = (
         "/tmp/messagefacility_partition%s_%s.fcl"
-        % (os.environ["TFM_PARTITION_NUMBER"], os.environ["USER"])
+        % (os.environ["ARTDAQ_PARTITION_NUMBER"], os.environ["USER"])
     )
 
     with open(messagefacility_fhicl_filename) as inf_mf:
@@ -902,7 +902,7 @@ udp : { type : "UDP" threshold : "DEBUG"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN
                             "port: %d"
                             % (
                                 10005
-                                + int(os.environ["TFM_PARTITION_NUMBER"])
+                                + int(os.environ["ARTDAQ_PARTITION_NUMBER"])
                                 * 1000
                             ),
                             line,

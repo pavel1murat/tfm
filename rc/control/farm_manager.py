@@ -1930,141 +1930,136 @@ class FarmManager(Component):
                 % (os.environ["TFM_TRACE_SCRIPT"])
             )
 
-    # JCF, Nov-8-2015
+#------------------------------------------------------------------------------
+# "process_command" is the function which will send a transition to a single artdaq process, 
+# and be run on its own thread so that transitions to different processes can be sent simultaneously
+# WHY ??? - pass it the index of the procinfo struct we want, rather than the actual procinfo struct
+# 'p' here is a Procinfo         
+#---
+    def process_command(self, p, command):
 
-    # The core functionality for "do_command" is that it will launch a
-    # separate thread for each transition issued to an individual
-    # artdaq process; for init, start, and resume it will send the
-    # command simultaneously to the aggregators, wait for the threads
-    # to join, and then do the same thing for the eventbuilders and
-    # then the boardreaders. For stop and pause, it will do this in
-    # reverse order of upstream/downstream.
+        if self.exception:
+            self.print_log("d","self.exception set to true at some point, won't send %s command to %s" 
+                           % (command, p.label),2)
+            return
 
-    # Note that since "initialize", "start" and "stop" all require
-    # additional actions besides simply sending transitions to
-    # processes and waiting for their response, "do_command" is not
-    # meant to be a replacement for "do_initialize",
-    # "do_start_running" and "do_stop_running" the way it IS meant to
-    # be a replacement for "do_pause_running", etc., but rather, is
-    # meant to be called in the body of those functions. Thus, for
-    # those transitions, some functionality (e.g., announding the
-    # transition is underway at the beginning of the function, and
-    # calling "complete_state_change" at the end) is not applied.
+        timeout_dict = {
+            "BoardReader"   : self.boardreader_timeout,
+            "EventBuilder"  : self.eventbuilder_timeout,
+            "DataLogger"    : self.datalogger_timeout,
+            "Dispatcher"    : self.dispatcher_timeout,
+            "RoutingManager": self.routingmanager_timeout,
+        }
+        timeout = timeout_dict[p.name]
 
+        p.state = self.verbing_to_states[command]
+
+        self.print_log("d","%s: Sending transition to %s" % (date_and_time_more_precision(), p.label),3)
+
+        try:
+            if command == "Init":
+                p.lastreturned = p.server.daq.init(p.fhicl_used, timeout)
+            elif command == "Start":
+                p.lastreturned = p.server.daq.start(self.run_number, timeout)
+
+                # JCF, Jan-8-2019
+                # Ensure FarmManager is backwards-compatible with artdaq
+                # code which predates Issue #23824
+
+                if ("The start message requires the run number as an argument" in p.lastreturned):
+                    p.lastreturned = p.server.daq.start(str(self.run_number))
+
+            elif command == "Pause":
+                p.lastreturned = p.server.daq.pause(timeout)
+            elif command == "Resume":
+                p.lastreturned = p.server.daq.resume(timeout)
+            elif command == "Stop":
+                p.lastreturned = p.server.daq.stop(timeout)
+            elif command == "Shutdown":
+                p.lastreturned = p.server.daq.shutdown(timeout)
+            else:
+                assert False, "Unknown command"
+
+            if "with ParameterSet" in p.lastreturned:
+                p.lastreturned = p.lastreturned[0:200]+" // REMAINDER TRUNCATED BY TFM, SEE"
+                +self.tmp_run_record+" FOR FULL FHiCL DOCUMENT"
+
+            if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
+                p.state = self.target_states[command]
+
+        except Exception:
+            self.exception = True
+
+            if "timeout: timed out" in traceback.format_exc():
+                output_message = (
+                    ("\n%s: Timeout sending %s transition to artdaq process %s at %s:%s; "
+                     "try checking logfile %s for details\n")
+                    % (
+                        date_and_time(),
+                        command,
+                        p.label,
+                        p.host,
+                        p.port,
+                        self.determine_logfilename(p),
+                    )
+                )
+            elif "[Errno 111] Connection refused" in traceback.format_exc():
+                output_message = (
+                    ("\n%s: artdaq process %s at %s:%s appears to have died (or at least refused "
+                     "the connection) when sent the %s transition; try checking logfile %s for details")
+                    % (
+                        date_and_time(),
+                        p.label,
+                        p.host,
+                        p.port,
+                        command,
+                        self.determine_logfilename(p),
+                    )
+                )
+            else:
+                self.print_log("e", traceback.format_exc())
+
+                output_message = (
+                    ("Exception caught sending %s transition to artdaq process %s at %s:%s; "
+                     "try checking logfile %s for details\n")
+                    % (
+                        command,
+                        p.label,
+                        p.host,
+                        p.port,
+                        self.determine_logfilename(p),
+                    )
+                )
+
+            self.print_log("e", make_paragraph(output_message))
+
+        return  # From process_command
+#------------------------------------------------------------------------------
+# JCF, Nov-8-2015
+
+# The core functionality for "do_command" is that it will launch a
+# separate thread for each transition issued to an individual
+# artdaq process; for init, start, and resume it will send the
+# command simultaneously to the aggregators, wait for the threads
+# to join, and then do the same thing for the eventbuilders and
+# then the boardreaders. For stop and pause, it will do this in
+# reverse order of upstream/downstream.
+
+# Note that since "initialize", "start" and "stop" all require
+# additional actions besides simply sending transitions to
+# processes and waiting for their response, "do_command" is not
+# meant to be a replacement for "do_initialize",
+# "do_start_running" and "do_stop_running" the way it IS meant to
+# be a replacement for "do_pause_running", etc., but rather, is
+# meant to be called in the body of those functions. Thus, for
+# those transitions, some functionality (e.g., announding the
+# transition is underway at the beginning of the function, and
+# calling "complete_state_change" at the end) is not applied.
+#---
     def do_command(self, command):
 
         if command != "Start" and command != "Init" and command != "Stop":
             self.print_log("i", "\n%s: %s transition underway" % (date_and_time(), command.upper()))
-
-        # "process_command" is the function which will send a
-        # transition to a single artdaq process, and be run on its own
-        # thread so that transitions to different processes can be
-        # sent simultaneously
-
-        # Note that since Python is "pass-by-object-reference" (see
-        # http://robertheaton.com/2014/02/09/pythons-pass-by-object-reference-as-explained-by-philip-k-dick/
-        # for more), I pass it the index of the procinfo struct we
-        # want, rather than the actual procinfo struct
-
-# 'p' here is a Procinfo         
-
-        def process_command(self, p, command):
-
-            if self.exception:
-                self.print_log("d","self.exception set to true at some point, won't send %s command to %s" 
-                               % (command, p.label),2)
-                return
-
-            timeout_dict = {
-                "BoardReader"   : self.boardreader_timeout,
-                "EventBuilder"  : self.eventbuilder_timeout,
-                "DataLogger"    : self.datalogger_timeout,
-                "Dispatcher"    : self.dispatcher_timeout,
-                "RoutingManager": self.routingmanager_timeout,
-            }
-            timeout = timeout_dict[p.name]
-
-            p.state = self.verbing_to_states[command]
-
-            self.print_log("d","%s: Sending transition to %s" % (date_and_time_more_precision(), p.label),3)
-
-            try:
-                if command == "Init":
-                    p.lastreturned = p.server.daq.init(p.fhicl_used, timeout)
-                elif command == "Start":
-                    p.lastreturned = p.server.daq.start(self.run_number, timeout)
-
-                    # JCF, Jan-8-2019
-                    # Ensure FarmManager is backwards-compatible with artdaq
-                    # code which predates Issue #23824
-
-                    if ("The start message requires the run number as an argument" in p.lastreturned):
-                        p.lastreturned = p.server.daq.start(str(self.run_number))
-
-                elif command == "Pause":
-                    p.lastreturned = p.server.daq.pause(timeout)
-                elif command == "Resume":
-                    p.lastreturned = p.server.daq.resume(timeout)
-                elif command == "Stop":
-                    p.lastreturned = p.server.daq.stop(timeout)
-                elif command == "Shutdown":
-                    p.lastreturned = p.server.daq.shutdown(timeout)
-                else:
-                    assert False, "Unknown command"
-
-                if "with ParameterSet" in p.lastreturned:
-                    p.lastreturned = p.lastreturned[0:200]+" // REMAINDER TRUNCATED BY TFM, SEE"
-                    +self.tmp_run_record+" FOR FULL FHiCL DOCUMENT"
-
-                if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
-                    p.state = self.target_states[command]
-
-            except Exception:
-                self.exception = True
-
-                if "timeout: timed out" in traceback.format_exc():
-                    output_message = (
-                        "\n%s: Timeout sending %s transition to artdaq process %s at %s:%s; try checking logfile %s for details\n"
-                        % (
-                            date_and_time(),
-                            command,
-                            p.label,
-                            p.host,
-                            p.port,
-                            self.determine_logfilename(p),
-                        )
-                    )
-                elif "[Errno 111] Connection refused" in traceback.format_exc():
-                    output_message = (
-                        ("\n%s: artdaq process %s at %s:%s appears to have died (or at least refused "
-                         "the connection) when sent the %s transition; try checking logfile %s for details")
-                        % (
-                            date_and_time(),
-                            p.label,
-                            p.host,
-                            p.port,
-                            command,
-                            self.determine_logfilename(p),
-                        )
-                    )
-                else:
-                    self.print_log("e", traceback.format_exc())
-
-                    output_message = (
-                        ("Exception caught sending %s transition to artdaq process %s at %s:%s; "
-                         "try checking logfile %s for details\n")
-                        % (
-                            command,
-                            p.label,
-                            p.host,
-                            p.port,
-                            self.determine_logfilename(p),
-                        )
-                    )
-
-                self.print_log("e", make_paragraph(output_message))
-
-            return  # From process_command
 #------------------------------------------------------------------------------
 # JCF, Nov-8-2015
 
@@ -2127,7 +2122,7 @@ class FarmManager(Component):
                     for p in self.procinfos:
                         if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
                             t = RaisingThread(
-                                target=process_command, args=(self, p, command)
+                                target=self.process_command, args=(p, command)
                             )
                             proc_threads   [p.label] = t
                             proc_starttimes[p.label] = time()
@@ -2199,7 +2194,7 @@ class FarmManager(Component):
             elif command == "Shutdown": verbing  =  "shutting"  # P.M. : found a bug here 
             else                      : assert False
 
-            self.complete_state_change(self.name, verbing)
+            self.complete_state_change(verbing)
             self.print_log("i", "\n%s: %s transition complete" % (date_and_time(), command.upper()))
 
     def revert_failed_transition(self, failed_action):
@@ -2925,7 +2920,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 #  former end of DO_BOOT
 ########
-        self.complete_state_change(self.name, "booting")
+        self.complete_state_change("booting")
         self.print_log("i", "%s: BOOT transition complete" % (date_and_time()))
 
         return
@@ -3134,7 +3129,7 @@ class FarmManager(Component):
             endtime = time()
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
-        self.complete_state_change(self.name, "configuring")
+        self.complete_state_change("configuring")
 
         self.print_log("i", "\n%s: CONFIG transition 016 Pasha" % (date_and_time()))
 
@@ -3285,7 +3280,7 @@ class FarmManager(Component):
 
         self.print_log("i", "\nRun info can be found locally at %s\n" % (self.run_record_directory()))
 
-        self.complete_state_change(self.name, "starting")
+        self.complete_state_change("starting")
         self.print_log("i","\n%s: START transition complete for run %d" % (date_and_time(), self.run_number))
         return
 
@@ -3345,12 +3340,12 @@ class FarmManager(Component):
 
         self.execute_trace_script("stop")
 
-        self.complete_state_change(self.name, "stopping")
+        self.complete_state_change("stopping")
         self.print_log("i","\n%s: STOP transition complete for run %d"%(date_and_time(),self.run_number))
 
-    #------------------------------------------------------------------------------
-    #  TERMINATE transition - whag does it really do ?
-    #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#  TERMINATE transition - whag does it really do ?
+#---
     def do_terminate(self):
 
         self.print_log("i", "\n%s: TERMINATE transition underway\n" % (date_and_time()))
@@ -3427,7 +3422,7 @@ class FarmManager(Component):
                 self.alert_and_recover("An exception was thrown " "within kill_procs()")
                 return
 
-        self.complete_state_change(self.name, "terminating")
+        self.complete_state_change("terminating")
 
         self.print_log("i", "\n%s: TERMINATE transition complete" % (date_and_time()))
 
@@ -3453,7 +3448,7 @@ class FarmManager(Component):
             self.print_log("i","Skipping cleanup of artdaq processes, this recover step is effectively a no-op")
 
             self.in_recovery = False
-            self.complete_state_change(self.name, "recovering")
+            self.complete_state_change("recovering")
             self.print_log("i","\n%s: RECOVER transition complete %s"%(date_and_time(),run_number_string))
             return
 
@@ -3510,8 +3505,8 @@ class FarmManager(Component):
                 ):
                     self.print_log(
                         "d",
-                        "Successful %s sent to %s at %s:%s"
-                        % (command, procinfo.label, procinfo.host, procinfo.port),
+                        "Successful %s sent to %s at %s"
+                        % (command, procinfo.label, procinfo.rpc_server()),
                         2,
                     )
                     procinfo.state = self.target_states[command]
@@ -3520,8 +3515,8 @@ class FarmManager(Component):
                         make_paragraph(
                             "Attempted %s sent to artdaq process %s "
                             % (command, procinfo.label)
-                            + "at %s:%s during recovery procedure"
-                            % (procinfo.host, procinfo.port)
+                            + "at %s during recovery procedure"
+                            % (procinfo.rpc_server())
                             + ' returned "%s"' % (procinfo.lastreturned)
                         )
                     )
@@ -3530,8 +3525,9 @@ class FarmManager(Component):
                 procinfo.lastreturned = procinfo.server.daq.status()
             except Exception:
                 msg = (
-                    "Unable to determine state of artdaq process %s at %s:%s; will not be able to complete its stop-and-shutdown"
-                    % (procinfo.label, procinfo.host, procinfo.port)
+                    ("Unable to determine state of artdaq process %s at %s; "
+                     "will not be able to complete its stop-and-shutdown")
+                    % (procinfo.label, procinfo.rpc_server())
                 )
                 if (self.state(self.name) != "stopped" and 
                     self.state(self.name) != "booting" and 
@@ -3667,7 +3663,7 @@ class FarmManager(Component):
         self.do_trace_get_boolean = False
         self.do_trace_set_boolean = False
 
-        self.complete_state_change(self.name, "recovering")
+        self.complete_state_change("recovering")
 
         self.print_log("i","\n%s: RECOVER transition complete%s"%(date_and_time(),run_number_string))
 
@@ -3725,10 +3721,6 @@ class FarmManager(Component):
                 self.__do_boot = False
                 self.do_boot()
 
-            elif self.__do_shutdown:
-                self.__do_shutdown = False
-                self.do_command("Shutdown")
-
             elif self.__do_config:
                 self.__do_config = False
                 self.do_config()
@@ -3742,8 +3734,12 @@ class FarmManager(Component):
                 self.do_start_running()
 
             elif self.__do_stop_running:
+#------------------------------------------------------------------------------
+# stop now does shutdown as well, from stopped state do configure
+#------------------------------------------------------------------------------
                 self.__do_stop_running = False
                 self.do_stop_running()
+                self.do_command("Shutdown")
 
             elif self.__do_terminate:
                 self.__do_terminate = False
@@ -3800,7 +3796,7 @@ def get_args():  # no-coverage
     parser.add_argument("-n", "--name", type=str, dest="name", default="daqint", help="Component name")
 
     pn = None;
-    x = os.environ.get("TFM_PARTITION_NUMBER");
+    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
     if (x) : pn = int(x);
     
     parser.add_argument("-p","--partition",type=int,dest="partition",default=pn,
@@ -3855,17 +3851,17 @@ def main():  # no-coverage
         os.environ["HOSTNAME"] = socket.gethostname();
 #------------------------------------------------------------------------------
 # parse command line
-####
+#---
     args = get_args()
 
 #------------------------------------------------------------------------------
-# KILL signal handler
-####
+# KILL signal handler - Ctrl-C, for example
+#---
     def handle_kill_signal(signum, stack):
         daqinterface_instance.print_log(
             "e",
             "%s: FarmManager on partition %s caught kill signal %d"
-            % (date_and_time(), partition_number, signum),
+            % (date_and_time(), daqinterface_instance.partition, signum),
         )
         daqinterface_instance.recover()
 

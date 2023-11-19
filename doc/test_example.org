@@ -44,9 +44,10 @@ $TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$TFM_CON
 * 4) BOOT             : tfm_transition boot $PWD/tfm_test/boot.txt          
 *** new example
 #+begin_src
-$TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port=$TFM_PORT --config-dir=$PWD/tfm_test/demo
+$TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port=$TFM_PORT --config-dir=$PWD/tfm_test/demo
 
-export TFM_PORT=21000; python $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_TEST_DIR
+export TFM_PORT=21000; 
+python $TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME
 
 #+end_src
 *** old example
