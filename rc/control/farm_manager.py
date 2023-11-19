@@ -31,8 +31,15 @@ from   threading  import RLock
 from   time       import sleep, time
 import traceback
 #------------------------------------------------------------------------------
+# for debugging printouts
+#------------------------------------------------------------------------------
+from inspect      import currentframe, getframeinfo
+#------------------------------------------------------------------------------
 # home brew
 #------------------------------------------------------------------------------
+from rc.control                 import subsystem
+from rc.control.procinfo        import Procinfo
+
 from rc.io.timeoutclient        import TimeoutServerProxy
 from rc.control.component       import Component
 from rc.control.save_run_record import save_run_record_base
@@ -82,7 +89,7 @@ except ImportError:
     pass  # Users shouldn't need to worry if their installations don't yet have python_artdaq available
 
 from rc.control.config_functions_local import get_boot_info_base
-from rc.control.config_functions_local import listdaqcomps_base
+# from rc.control.config_functions_local import listdaqcomps_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
@@ -155,15 +162,12 @@ if (management_method == "direct"):
     from rc.control.manage_processes_direct import launch_procs_base
     from rc.control.manage_processes_direct import kill_procs_base
     from rc.control.manage_processes_direct import check_proc_heartbeats_base
-#    from rc.control.manage_processes_direct import (softlink_process_manager_logfiles_base,)
     from rc.control.manage_processes_direct import find_process_manager_variable_base
-    from rc.control.manage_processes_direct import (
-        set_process_manager_default_variables_base,
-    )
+    from rc.control.manage_processes_direct import set_process_manager_default_variables_base
+
     from rc.control.manage_processes_direct import reset_process_manager_variables_base
-    from rc.control.manage_processes_direct import (
-        get_process_manager_log_filenames_base,
-    )
+    from rc.control.manage_processes_direct import get_process_manager_log_filenames_base
+
     from rc.control.manage_processes_direct import process_manager_cleanup_base
     from rc.control.manage_processes_direct import get_pid_for_process_base
     from rc.control.manage_processes_direct import process_launch_diagnostics_base
@@ -172,7 +176,6 @@ elif (management_method == "external_run_control"):
     from rc.control.all_functions_noop import launch_procs_base
     from rc.control.all_functions_noop import kill_procs_base
     from rc.control.all_functions_noop import check_proc_heartbeats_base
-#    from rc.control.all_functions_noop import softlink_process_manager_logfiles_base
     from rc.control.all_functions_noop import set_process_manager_default_variables_base
     from rc.control.all_functions_noop import reset_process_manager_variables_base
     from rc.control.all_functions_noop import get_process_manager_log_filenames_base
@@ -212,185 +215,6 @@ class FarmManager(Component):
     configuration database, and artdaq processes
 
     """
-    # "Procinfo" is a simple structure containing the info about a given artdaq process 
-
-    # However, it also contains a less-than function which allows it
-    # to be sorted s.t. processes you'd want shutdown first appear
-    # before processes you'd want shutdown last (in order:
-    # boardreader, eventbuilder, datalogger, dispatcher, routingmanager)
-
-    # JCF, Nov-17-2015
-
-    # I add the "fhicl_file_path" variable, which is a sequence of
-    # paths which are searched in order to cut-and-paste #include'd files 
-    # (see also the description of the FarmManager class's
-    # fhicl_file_path variable, whose sole purpose is to be passed to Procinfo's functions)
-
-    # JCF, Apr-26-2018
-
-    # The "label" variable is used to pick out specific FHiCL files
-    # for EventBuilders, DataLoggers, Dispatchers and RoutingManagers;
-    # a given process's label is set in the boot file, alongside its
-    # host and port
-
-    class Procinfo(object):
-        def __init__(
-            self,
-            name,
-            rank,
-            host,
-            port,
-            label              = None,
-            subsystem          = "1",
-            allowed_processors = None,
-            target             = None,
-            prepend            = "",
-            fhicl              = None,
-            fhicl_file_path    = [],
-        ):
-            self.name               = name
-            self.rank               = rank
-            self.port               = port
-            self.host               = host
-            self.label              = label
-            self.subsystem          = subsystem
-            self.allowed_processors = allowed_processors
-            self.target             = target
-            self.prepend            = prepend
-            self.fhicl              = fhicl  # Name of the input FHiCL document
-            self.ffp                = fhicl_file_path
-            self.priority           = 999
-
-            # FHiCL code actually sent to the process
-
-            # JCF, 11/11/14 -- note that "fhicl_used" will be modified
-            # during the initalization function, as bookkeeping, etc.,
-            # is performed on FHiCL parameters
-
-            if self.fhicl is not None:
-                self.fhicl_used = ""
-                self.recursive_include(self.fhicl)
-            else:
-                self.fhicl_used = None
-
-            # JCF, Jan-14-2016
-
-            # Do NOT change the "lastreturned" string below without
-            # changing the commensurate string in check_proc_transition!
-
-            self.lastreturned = "FarmManager: ARTDAQ PROCESS NOT YET CALLED"
-            self.socketstring = "http://" + self.host + ":" + self.port + "/RPC2"
-            self.state        = "nonexistent"
-
-        def update_fhicl(self, fhicl):
-            self.fhicl      = fhicl
-            self.fhicl_used = ""
-            self.recursive_include(self.fhicl)
-
-        def __lt__(self, other):
-            if self.name != other.name:
-
-                processes_upstream_to_downstream = [
-                    "BoardReader",
-                    "EventBuilder",
-                    "DataLogger",
-                    "Dispatcher",
-                    "RoutingManager",
-                ]
-
-                if processes_upstream_to_downstream.index(
-                    self.name
-                ) < processes_upstream_to_downstream.index(other.name):
-                    return True
-                else:
-                    return False
-            else:
-                if int(self.port) < int(other.port):
-                    return True
-                return False
-
-        def recursive_include(self, filename):
-
-            if self.fhicl is not None:
-                for line in open(filename).readlines():
-
-                    if "#include" not in line:
-                        self.fhicl_used += line
-                    else:
-                        res = re.search(r"^\s*#.*#include", line)
-
-                        if res:
-                            self.fhicl_used += line
-                            continue
-
-                        res = re.search(r"^\s*#include\s+\"(\S+)\"", line)
-
-                        if not res:
-                            raise Exception(
-                                make_paragraph(
-                                    "Error in Procinfo::recursive_include: "
-                                    'unable to parse line "%s" in %s' % (line, filename)
-                                )
-                            )
-
-                        included_file = res.group(1)
-
-                        if included_file[0] == "/":
-                            if not os.path.exists(included_file):
-                                raise Exception(
-                                    make_paragraph(
-                                        "Error in "
-                                        "Procinfo::recursive_include: "
-                                        "unable to find file %s included in %s"
-                                        % (included_file, filename)
-                                    )
-                                )
-                            else:
-                                self.recursive_include(included_file)
-                        else:
-                            found_file = False
-
-                            for dirname in self.ffp:
-                                if (
-                                    os.path.exists(dirname + "/" + included_file)
-                                    and not found_file
-                                ):
-                                    self.recursive_include(
-                                        dirname + "/" + included_file
-                                    )
-                                    found_file = True
-
-                            if not found_file:
-
-                                ffp_string = ":".join(self.ffp)
-
-                                raise Exception(
-                                    make_paragraph(
-                                        "Error in Procinfo::recursive_include: "
-                                        "unable to find file %s in list of "
-                                        "the following fhicl_file_paths: %s"
-                                        % (included_file, ffp_string)
-                                    )
-                                )
-
-#------------------------------------------------------------------------------
-# "Subsystem" is a structure containing all the info about a given artdaq subsystem.
-####
-    class Subsystem(object):
-        def __init__(self,sources=[],destination=None,fragmentMode=True,):
-            self.sources      = sources
-            self.destination  = destination
-            self.fragmentMode = fragmentMode
-
-        def __lt__(self, other):
-            if self.id != other.id:
-
-                if self.destination == other.id:
-                    return True
-                else:
-                    return False
-            else:
-                return False  # equal
 
     def print_log(self, severity, printstr, debuglevel=-999, newline=True):
         printstr = str(printstr)
@@ -735,13 +559,6 @@ class FarmManager(Component):
 
         self.productsdir                         = None
         self.spackdir                            = None
-#------------------------------------------------------------------------------
-# currently, self.daq_comp_list is an associative array of boardreaders,
-# each described as a plain array of 6 words
-# 
-# label, host, port, subsystem, allowed_processors, prepend
-########
-        self.daq_comp_list        = {}
 
         # Here, states refers to individual artdaq process states, not the FarmManager state
         self.target_states = {
@@ -806,7 +623,7 @@ class FarmManager(Component):
     put_config_info                       = put_config_info_base
     put_config_info_on_stop               = put_config_info_on_stop_base
     get_boot_info                         = get_boot_info_base
-    listdaqcomps                          = listdaqcomps_base
+    #    listdaqcomps                          = listdaqcomps_base
     listconfigs                           = listconfigs_base
     save_run_record                       = save_run_record_base
     save_metadata_value                   = save_metadata_value_base
@@ -1769,19 +1586,16 @@ class FarmManager(Component):
         if not os.path.exists(self.daq_setup_script):
             raise Exception(self.daq_setup_script + " script not found")
 
-        num_requested_routingmanagers = len(
-            [
-                procinfo.name
-                for procinfo in self.procinfos
-                if procinfo.name == "RoutingManager"
-            ]
-        )
+        num_requested_routingmanagers = len([p.name for p in self.procinfos if p.name == "RoutingManager" ])
+
         if num_requested_routingmanagers > len(self.subsystems):
             raise Exception(make_paragraph(
                 ("%d RoutingManager processes defined in the boot file provided; "
                  "you can't have more than the number of subsystems (%d)")
                 % (num_requested_routingmanagers, len(self.subsystems)))
             )
+
+        for p in self.procinfos: p.print()
 
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
             raise Exception(make_paragraph(
@@ -1913,76 +1727,8 @@ class FarmManager(Component):
 
         self.print_log("d", "\n", 2)
 
-## #------------------------------------------------------------------------------
-## # this is function which we will get rid of
-## ####
-##     def softlink_logfiles(self):
-## 
-## #        self.softlink_process_manager_logfiles()
-## 
-##         softlink_commands_to_run_on_host = {}
-##         links_printed_to_output = {}
-## 
-##         for loglist in [
-##             self.boardreader_log_filenames,
-##             self.eventbuilder_log_filenames,
-##             self.datalogger_log_filenames,
-##             self.dispatcher_log_filenames,
-##             self.routingmanager_log_filenames,
-##         ]:
-## 
-##             for fulllogname in loglist:
-##                 host    = fulllogname.split(":")[0]
-##                 logname = "".join(fulllogname.split(":")[1:])
-##                 label   = fulllogname.split("/")[-1].split("-")[0]
-## 
-##                 proctype = ""
-## 
-##                 for procinfo in self.procinfos:
-##                     if label == procinfo.label:
-##                         proctype = procinfo.name
-## 
-##                 if   "BoardReader"    in proctype : subdir = "boardreader"
-##                 elif "EventBuilder"   in proctype : subdir = "eventbuilder"
-##                 elif "DataLogger"     in proctype : subdir = "datalogger"
-##                 elif "Dispatcher"     in proctype : subdir = "dispatcher"
-##                 elif "RoutingManager" in proctype : subdir = "routingmanager"
-##                 else:
-##                     assert (False),'Unknown process type "%s" found when soflinking logfiles' % (proctype)
-## 
-##                 if host not in softlink_commands_to_run_on_host:
-##                     assert host not in links_printed_to_output
-##                     softlink_commands_to_run_on_host[host] = []
-##                     links_printed_to_output         [host] = []
-## 
-##                 softlink         = "%s/%s/run%d-%s.log" % (self.log_directory,subdir,self.run_number,label)
-##                 link_logfile_cmd = "ln -s %s %s" % (logname, softlink)
-##                 softlink_commands_to_run_on_host[host].append(link_logfile_cmd)
-##                 links_printed_to_output[host].append("%-20s %s:%s" % (label + ":", host, softlink))
-## 
-##         for host in softlink_commands_to_run_on_host:
-##             link_logfile_cmd = "; ".join(softlink_commands_to_run_on_host[host])
-## 
-##             if not host_is_local(host):
-##                 link_logfile_cmd = "ssh %s '%s'" % (host, link_logfile_cmd)
-## 
-##             proc = subprocess.Popen(link_logfile_cmd,
-##                                     executable="/bin/bash",
-##                                     shell=True,
-##                                     stdout=subprocess.PIPE,
-##                                     stderr=subprocess.STDOUT,
-##                                 )
-##             status = proc.wait()
-## 
-##             if status == 0:
-##                 self.print_log("d", "\n".join(links_printed_to_output[host]), 2)
-##             else:
-##                 self.print_log(
-##                     "w",
-##                     "WARNING: failure in performing user-friendly softlinks to logfiles on host %s:\n%s"
-##                     % (host, proc.stdout.readlines()),
-##                 )
-
+#------------------------------------------------------------------------------
+####
     def fill_package_versions(self, packages):
 
         cmd             = ""
@@ -2985,11 +2731,9 @@ class FarmManager(Component):
 
             if not found_fhicl:
                 self.print_log("e",make_paragraph(
-                    ('Unable to find a FHiCL document for %s in configuration "%s"; '
-                     'either remove the request for %s in the setdaqcomps.sh command (boardreader) '
-                     'or boot file (other artdaq process types) and redo the transitions'
-                     ' or choose a new configuration')
-                    % (p.label," ".join(self.subconfigs_for_run),p.label)))
+                    'Unable to find a FHiCL document for %s in configuration "%s"; '
+                    % (p.label," ".join(self.subconfigs_for_run),p.label))
+                )
                 self.revert_failed_transition("looking for all needed FHiCL documents")
                 return
 
@@ -3088,38 +2832,7 @@ class FarmManager(Component):
         except Exception:
             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
             return
-#------------------------------------------------------------------------------
-# P.Murat: at this point, it makes sence to check whether there are any boardreaders
-#          present... But the config_check better be a separate function
-#-------
-        if (not hasattr(self, "daq_comp_list") or not self.daq_comp_list or self.daq_comp_list == {}):
-            revert_failed_boot('ERROR: no BoardReaders defined!')
-            return
-#------------------------------------------------------------------------------
-# for each boardreader, create a Procinfo thing
-# at this point, a boardreader is guaranteed to have all parameters defined
-# -- need to do just once
-########
-        for br_rank, compname in enumerate(self.daq_comp_list):
-            (br_host,br_port,br_subsystem,br_ap,br_prepend) = self.daq_comp_list[compname]
-#------------------------------------------------------------------------------
-# Make certain the formula below for calculating the port number matches 
-# the formula used to calculate the ports for the other artdaq processes 
-# when the boot file is read in
-############
-            if br_port == "-1": br_port = str(self.boardreader_port_number(br_rank))
 
-            self.procinfos.append(self.Procinfo(name               = "BoardReader",
-                                                rank               = br_rank,
-                                                host               = br_host,
-                                                port               = br_port,
-                                                label              = compname,
-                                                subsystem          = br_subsystem,
-                                                allowed_processors = br_ap,
-                                                target             = "EventBuilder",
-                                                prepend            = br_prepend,
-                                            )
-            )
 #------------------------------------------------------------------------------
 # See the Procinfo.__lt__ function for details on sorting
 ########
@@ -3151,11 +2864,11 @@ class FarmManager(Component):
                     self.print_log("d","%-20s at %s:%s, part of subsystem %s, has rank %d" 
                                    % (p.label,p.host,p.port,p.subsystem,p.rank),2)
 #------------------------------------------------------------------------------
-# -- P.Murat: this also need to be done just once
+# -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 ########
-        self.print_log("i", "\n%s: BOOT transition 001 Pasha: start msg viewer" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition 001 Pasha: start msg viewer" % (date_and_time()))
         self.start_message_viewer()
-        self.print_log("i", "\n%s: BOOT transition 002 Pasha: done with msg viewer" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition 002 Pasha: done with msg viewer" % (date_and_time()))
 #------------------------------------------------------------------------------
 # here we come if not self.manage_processes - is the sequence important ?
 ########
@@ -3191,7 +2904,7 @@ class FarmManager(Component):
 
             self.validate_setup_script(random_host)
 
-            self.print_log("i", "\n%s: BOOT transition 003 Pasha: done checking setup script" % (date_and_time()))
+            self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (date_and_time()))
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
@@ -3213,7 +2926,7 @@ class FarmManager(Component):
 #  former end of DO_BOOT
 ########
         self.complete_state_change(self.name, "booting")
-        self.print_log("i", "\n%s: BOOT transition complete" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition complete" % (date_and_time()))
 
         return
 
@@ -3223,7 +2936,7 @@ class FarmManager(Component):
     def do_config(self, subconfigs_for_run=[], run_number=None):
         # pdb.set_trace()
 
-        self.print_log("i", "\n%s: CONFIG transition underway" % (date_and_time()))
+        self.print_log("i", "%s: CONFIG transition underway" % (date_and_time()))
         os.chdir(self.base_dir)
 #------------------------------------------------------------------------------
 # check subconfigs for this run - what they are? 
@@ -3266,7 +2979,7 @@ class FarmManager(Component):
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
 ########
-
+        # breakpoint()
         reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
         self.print_log("i", "done (%.1f seconds)." % (time() - starttime))
@@ -3300,6 +3013,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # this is where the processes are launched - 
 ############
+            # breakpoint()
             launch_procs_actions = self.launch_procs()
 
             assert type(launch_procs_actions) is dict, make_paragraph(
@@ -3819,14 +3533,10 @@ class FarmManager(Component):
                     "Unable to determine state of artdaq process %s at %s:%s; will not be able to complete its stop-and-shutdown"
                     % (procinfo.label, procinfo.host, procinfo.port)
                 )
-                if (
-                    self.state(self.name) != "stopped"
-                    and self.state(self.name) != "booting"
-                    and self.state(self.name) != "terminating"
-                ):
-                    self.print_log("e", make_paragraph(msg))
-                else:
-                    self.print_log("d", make_paragraph(msg), 2)
+                if (self.state(self.name) != "stopped" and 
+                    self.state(self.name) != "booting" and 
+                    self.state(self.name) != "terminating"): self.print_log("e", make_paragraph(msg))
+                else                                       : self.print_log("d", make_paragraph(msg), 2)
 
                 return
             else:
@@ -3839,15 +3549,10 @@ class FarmManager(Component):
                 except Exception:
                     if "ProtocolError" not in traceback.format_exc():
                         self.print_log("e", traceback.format_exc())
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            "Exception caught during stop transition sent to artdaq process %s "
-                            % (procinfo.label)
-                            + "at %s:%s during recovery procedure;"
-                            % (procinfo.host, procinfo.port)
-                            + " it's possible the process no longer existed\n"
-                        ),
+                    self.print_log("e", make_paragraph(
+                        "Exception caught during stop transition sent to artdaq process %s " % (procinfo.label)
+                        + "at %s:%s during recovery procedure; " % (procinfo.host, procinfo.port)
+                        + "it's possible the process no longer existed\n"),
                     )
 
                     return
@@ -3871,15 +3576,10 @@ class FarmManager(Component):
                 except Exception:
                     if "ProtocolError" not in traceback.format_exc():
                         self.print_log("e", traceback.format_exc())
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            "Exception caught during shutdown transition sent to artdaq process %s "
-                            % (procinfo.label)
-                            + "at %s:%s during recovery procedure;"
-                            % (procinfo.host, procinfo.port)
-                            + " it's possible the process no longer existed\n"
-                        ),
+                    self.print_log("e",make_paragraph(
+                        "Exception caught during shutdown transition sent to artdaq process %s " % (procinfo.label)
+                        + "at %s:%s during recovery procedure;" % (procinfo.host, procinfo.port)
+                        + " it's possible the process no longer existed\n")
                     )
                     return
             return

@@ -21,8 +21,8 @@ BEGIN {
 	next
     }
 
-    firstpart="not set"
-    secondpart="not set"
+    firstpart="none"
+    secondpart="none"
 
     match($0, ":");
 
@@ -53,14 +53,14 @@ BEGIN {
 		    continue
 		}
 
-		if (procinfo_vars[ procinfo_var ] != "not set") {
+		if (procinfo_vars[ procinfo_var ] != "none") {
 		    printf("\n%s %s: %s", procinfo_vars["name"], procinfo_var, procinfo_vars[ procinfo_var ] )
 		}
 	    } 
 
 	    print "\n"
 	    for (procinfo_var in procinfo_vars) {
-		procinfo_vars[ procinfo_var ] = "not set"
+		procinfo_vars[ procinfo_var ] = "none"
 		
 	    }
 	} else {    # Expect this line to contain a process variable (host, label, etc.)
@@ -86,14 +86,14 @@ BEGIN {
 	} else if ( $0 ~ /^\s*\},?\s*$/ ) {   # "}" or "}," means process info ready
 	    for (subsysteminfo_var in subsysteminfo_vars) {
 
-		if (subsysteminfo_vars[ subsysteminfo_var ] != "not set") {
+		if (subsysteminfo_vars[ subsysteminfo_var ] != "none") {
 		    printf("\nSubsystem %s: %s", subsysteminfo_var, subsysteminfo_vars[ subsysteminfo_var ] )
 		}
 	    } 
 
 	    print "\n"
 	    for (subsysteminfo_var in subsysteminfo_vars) {
-		subsysteminfo_vars[ subsysteminfo_var ] = "not set"
+		subsysteminfo_vars[ subsysteminfo_var ] = "none"
 		
 	    }
 	} else {    # Expect this line to contain a process variable (host, label, etc.)

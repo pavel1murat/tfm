@@ -1,0 +1,130 @@
+###########################################################
+#
+# artdaq monitor fcl configuration file produced by otsdaq.
+# 	Creation time:                  	Tue Oct  3 21:00:58 2023 CDT
+# 	Original filename:              	/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations/monitor-trackerDQMSupervisor.fcl
+#	otsdaq-ARTDAQ monitor UID:	trackerDQMSupervisor
+#
+###########################################################
+
+
+#include "Offline/fcl/minimalMessageService.fcl"
+#include "Offline/fcl/standardProducers.fcl"
+#include "Offline/fcl/standardServices.fcl"
+# #include "Offline/Trigger/fcl/prolog_trigger.fcl"# 
+services: {
+	ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
+	waiting_time: 1
+	resume_after_timeout: true
+	}
+
+	ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e}
+
+	# message	# :	# @local::default_message
+	GeometryService	:	{inputFile: "Offline/Mu2eG4/geom/geom_common.txt" bFieldFile : "Offline/Mu2eG4/geom/bfgeom_v01.txt" simulatedDetector : {tool_type: "Mu2e"}}
+	ConditionsService	:	{ conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
+	GlobalConstantsService	:	{inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
+	DbService	:	@local::DbEmpty
+	ProditionsService	:	@local::Proditions
+	TFileService	:	{ fileName: "trackerDQM.root" }
+}
+
+outputs: {
+}
+
+physics: {
+	analyzers: {
+		trackerdqm: {
+			module_type: TrackerDQM
+			port			:			6000
+			moduleTag			:			TrackerDQM
+			histType			:			["panels"]
+			address			:			"mu2edaq09.fnal.gov"
+			diagLevel			:			0
+			freqDQM			:			100
+			FitType			:			5
+		}
+
+	}
+
+	producers: {
+		# @table::Trigger.producers		# 
+		# makeSD: {
+			# module_type: StrawAndCaloDigisFromFragments
+			# parseCAL			# :			# 0
+			# parseTRK			# :			# 1
+			# trkTag			# :			# "daq:trk"
+			# caloTag			# :			# ""
+			# diagLevel			# :			# 0
+			# useTrkADC			# :			# 1
+		# }
+
+	}
+
+	out	:	[trackerdqm]
+	# AAAMakeDigi	# :	# [ makeSD ]
+}
+
+source: {
+	module_type: TransferInput
+}
+
+process_name: TrackerDQM
+services.message: { destinations:{console:{filename_delimit:"/src" format_string:"|%L:%N:%f [%u]\t%m" threshold:"DEBUG" type:"OTS"} file:"" otsConsole:{filename_delimit:"/src" host:"127.0.0.1" port:33065 threshold:"DEBUG" type:"UDP"}}}
+services.message.destinations.file: {type: "GenFile" threshold: "INFO" seperator: "-" pattern: "trackerDQMSupervisor-%?H%t-%p.log" timestamp_pattern: "%Y%m%d%H%M%S" directory: "/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/Logs/trackerDQMSupervisor" append : false }
+source.dispatcherHost: "mu2edaq09"
+source.dispatcherPort: 10500
+source.commanderPluginType: xmlrpc
+TransferPluginConfig: {
+	transferPluginType: TCPSocket
+	host_map: [{ rank: 200 host: "mu2edaq09"}, { rank: 100 host: "mu2edaq09.fnal.gov"}]
+	max_fragment_size_words: 1048576
+	source_rank: 200
+	destination_rank: 100
+	unique_label: trackerDQMSupervisor_to_dispatcher0
+}
+source.transfer_plugin: @local::TransferPluginConfig 
+source.dispatcher_config: {
+	path: [dispatcherTransferOutput]
+	filter_paths: [
+	]
+	unique_label: trackerDQMSupervisor
+	services: {
+		ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
+		waiting_time: 30
+		resume_after_timeout: false
+		}
+
+		ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e}
+
+	}
+
+	outputs: {
+		dispatcherTransferOutput: {
+			module_type: TransferOutput
+			transfer_plugin: @local::TransferPluginConfig 
+		}
+
+	}
+
+	physics: {
+		filters: {
+			prescaler: {
+				module_type: Prescaler
+				prescaleFactor				:				100
+				prescaleOffset				:				0
+			}
+
+		}
+
+		dispatcher_path		:		[ prescaler ]
+		out		:		[dispatcherTransferOutput]
+	}
+
+	source: {
+		module_type: ArtdaqInput
+	}
+
+	process_name: DispatcherArtJob
+}
+

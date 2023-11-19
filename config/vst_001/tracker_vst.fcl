@@ -1,0 +1,49 @@
+# -*- mode:tcl -*-
+# Produced from 'fhicl-dump' using:
+#   Input  : ./tracker_vst.fcl
+#   Policy : cet::filepath_maker
+#   Path   : "FHICL_FILE_PATH"
+
+daq: {
+    fragment_receiver: {
+        generator                     : "TrackerVST"
+        readoutMode                   : 0
+        board_id                      : 0
+        dtcId                         : -1
+        activeLinks                   : [ 0 ]
+        debugLevel                    : 1
+        readData                      : 0            # testing , DCS-only
+        fragment_ids                  : [ 0, 11 ]
+        generated_fragments_per_event : 2
+        fragment_type                 : "Mu2e"
+
+        heartbeatInterval             : 1400
+        heartbeatsAfter               : 16
+        max_fragment_size_bytes       : 0x100000
+
+        sendEmpties                   : false
+        rawOutputFile                 : "./TrackerVST.bin"
+        rawOutputEnable               : false
+        loadSimFile                   : false
+        simFileName                   : "undefined"
+
+        routing_table_config: {
+            use_routing_manager: false
+        }
+
+        destinations: { 
+            d1: { 
+                transferPluginType     : TCPSocket 
+                destination_rank       : 1 
+                max_fragment_size_words: 160522570 
+                host_map: [
+                           {rank: 0 host: "mu2edaq09"}, 
+                           {rank: 1 host: "mu2edaq09"}, 
+                           {rank: 2 host: "mu2edaq09"}, 
+                           {rank: 3 host: "mu2edaq09"}
+                          ] 
+            }
+        }
+    }
+    metrics: {}
+}

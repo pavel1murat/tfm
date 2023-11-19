@@ -1,0 +1,32 @@
+#!/usr/bin/bash 
+#------------------------------------------------------------------------------
+# config_dir includes a list of subdirectories, 
+# each subdirectory stores all configuration files for a given configuration
+# test_dir also has Logs, Output, etc
+#
+# 1. directory where configurations are described, has to exist
+#------------------------------------------------------------------------------
+export                  TFM_SETTINGS=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings
+#------------------------------------------------------------------------------
+# directory where all output goes
+#------------------------------------------------------------------------------
+export                  TFM_TEST_DIR=$MRB_TOP/tfm_test
+
+if [ ! -d $TFM_TEST_DIR ] ; then mkdir -p $TFM_TEST_DIR ; fi
+
+export            TFM_LOGDIR=$TFM_TEST_DIR/Logs/tfm
+#------------------------------------------------------------------------------
+# this is the directory where FCL files of all components reside 
+# I don't think it is needed, but keep it around...
+#------------------------------------------------------------------------------
+export   TFM_FHICL_DIRECTORY=$TFM_CONFIG_DIR
+#------------------------------------------------------------------------------
+# configurations also could come from the database
+#------------------------------------------------------------------------------
+if [[ "$TFM_FHICL_DIRECTORY" == "IGNORED" ]]; then
+    echo "Put code here which sets up the database environment"
+fi
+
+export     ARTDAQ_PARTITION_NUMBER=11
+export  ARTDAQ_PORTS_PER_PARTITION=1000
+export            ARTDAQ_BASE_PORT=10000

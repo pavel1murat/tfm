@@ -1,0 +1,17 @@
+DAQ setup script: /home/mu2etrk/test_stand/pasha_018/setup_ots.sh
+debug level: 5
+
+Subsystem id: 2
+Subsystem fragmentMode: False
+#------------------------------------------------------------------------------
+#              label         host    port subsystem       allowed     prepend
+#                                                        processors
+#----------------------------------------------------------------------------
+BoardReader  tracker_vst  localhost  -1      2              -1         none
+
+EventBuilder builder0     localhost  -1      2            "0-63"       none
+
+DataLogger   logger0      localhost  -1      2            "0-63"       none
+
+Dispatcher   dispatcher0  localhost  10500   2            "0-99"       none
+

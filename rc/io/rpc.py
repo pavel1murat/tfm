@@ -15,6 +15,8 @@ class StoppableRPCServer(SimpleXMLRPCServer):
     allow_reuse_address = True
 
     def __init__(self, address, timeout=0.1):
+        # print("rpc.py:  address = ",address)
+        # breakpoint()
         SimpleXMLRPCServer.__init__(self,
                                     address,
                                     requestHandler=SimpleXMLRPCRequestHandler,
@@ -22,7 +24,7 @@ class StoppableRPCServer(SimpleXMLRPCServer):
                                     allow_none=True)
         self.__is_shut_down = threading.Event()
         self.__is_shut_down.clear()
-        self.timeout = timeout
+        self.timeout   = timeout
         self.__stopped = False
 
     def serve_forever(self):

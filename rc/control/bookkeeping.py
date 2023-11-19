@@ -127,23 +127,25 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 else:
                     raise Exception(
                         make_paragraph(
-                            'Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; this is needed since "advanced_memory_usage" is set to true in the settings file, %s'
+                            ('Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; '
+                             'this is needed since "advanced_memory_usage" is set to true in the settings file, %s')
                             % (procinfo.label, os.environ["TFM_SETTINGS"])
                         )
                     )
             else:
                 if len(res) > 0:
-                    raise Exception(
-                        make_paragraph(
-                            "max_fragment_size_bytes is found in the FHiCL document for %s; this parameter must not appear in FHiCL documents for non-BoardReader artdaq processes"
-                            % (procinfo.label)
-                        )
+                    raise Exception(make_paragraph(
+                        "max_fragment_size_bytes is found in the FHiCL document for " +procinfo.label
+                        + "; this parameter must not appear in FHiCL documents for non-BoardReader artdaq processes") 
                     )
 
             if "max_event_size_bytes" in procinfo.fhicl_used:
                 raise Exception(
                     make_paragraph(
-                        'max_event_size_bytes is found in the FHiCL document for %s; this parameter must not appear in FHiCL documents when "advanced_memory_usage" is set to true in the settings file %s. This is because TFM calculates and then adds this parameter during bookkeeping.'
+                        ('max_event_size_bytes is found in the FHiCL document for %s; '
+                         'this parameter must not appear in FHiCL documents when "advanced_memory_usage" '
+                         'is set to true in the settings file %s. This is because TFM calculates '
+                         'and then adds this parameter during bookkeeping.')
                         % (procinfo.label, os.environ["TFM_SETTINGS"])
                     )
                 )
@@ -154,11 +156,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # amount of space those fragments take up
 
     subsystem_fragment_space = {}
-    subsystem_fragment_ids = {}
+    subsystem_fragment_ids   = {}
 
     for ss in self.subsystems:
         subsystem_fragment_space[ss] = 0
-        subsystem_fragment_ids[ss] = []
+        subsystem_fragment_ids  [ss] = []
 
     for procinfo in self.procinfos:
         if "BoardReader" in procinfo.name:
@@ -792,7 +794,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             if router_process_identifier is None:
                 continue
 
-            if procinfo.target == "not set":
+            if (procinfo.target == None) :
                 procinfo.target = "EventBuilder"
 
             if (

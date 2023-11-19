@@ -28,16 +28,6 @@ function tfm_transition_() {
 #------------------------------------------------------------------------------
 #	          test $# -gt 1 || badargs=true 
 	          translated_cmd="configuring"
-            
-#	          xmlrpc_arg="config:array/("
-#	          shift
-#	          for subconfig in $@ ; do
-#	              if [[ "$subconfig" != "${@: -1}" ]] ; then   # "${@: -1}" is the last argument
-#		                xmlrpc_arg=$xmlrpc_arg"s/${subconfig},"
-#	              else
-#		                xmlrpc_arg=$xmlrpc_arg"s/${subconfig})"
-#	              fi
-#	          done
 #------------------------------------------------------------------------------
 # as a hack, add run number, 'recorddir' comes from $TFM_DIR/bin/diagnostic_tools.sh 
 #------------------------------------------------------------------------------
@@ -103,7 +93,8 @@ function tfm_transition_() {
         exit 20
     fi
     
-    full_cmd="xmlrpc http://localhost:$TFM_PORT/RPC2 state_change daqint "${translated_cmd}
+    port=`tfm_port $ARTDAQ_PARTITION_NUMBER`
+    full_cmd="xmlrpc http://localhost:$port/RPC2 state_change daqint "${translated_cmd}
 #------------------------------------------------------------------------------
 # allow arguments to be undefined
 #------------------------------------------------------------------------------

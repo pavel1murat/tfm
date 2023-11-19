@@ -1,0 +1,12 @@
+#!/bin/env bash
+#------------------------------------------------------------------------------
+# call: tfm_configure config_dir config_name
+# source_me expects $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/source_me to exist
+#------------------------------------------------------------------------------
+export  TFM_CONFIG_DIR=$1
+export TFM_CONFIG_NAME=$2
+
+echo TFM_CONFIG_DIR=$1
+echo TFM_CONFIG_NAME=$2
+
+source $TFM_DIR/source_me 

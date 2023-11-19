@@ -14,13 +14,26 @@ source $TFM_DIR/bin/tfm_utils.sh
 # -The "stdbuf -oL" is there so that DAQInterface output makes it into the logfile in realtime
 # -The "<&-" is there to avoid hangs if users type in the terminal DAQInterface is running in (see Issue #21804)
 #------------------------------------------------------------------------------
-config_name="demo"
-if [ -n $1 ] ; config_name=$1 ; fi
+if [ -n $1 ] ; then 
+    if [ -n $TFM_CONFIG_NAME ] ; then 
+        # configuration name has been defined 
+        if [ $TFM_CONFIG_NAME != $1 ] ; then
+            echo WARNING: redefining TFM_CONFIG_NAME from $TFM_CONFIG_NAME to $1
+            export TFM_CONFIG_NAME=$1
+        fi
+    fi
+fi
 
-config_dir=$TFM_CONFIG_DIR/config_name
+if [ -z $TFM_CONFIG_NAME ] ; then
+    echo ERROR: TFM_CONFIG_NAME undefined... BAIL OUT
+    return -1
+fi
 
-export    TFM_PORT=`tfm_port $TFM_PARTITION_NUMBER`
-export TFM_LOGFILE=$TFM_LOGDIR/tfm_partition_`printf %02i $TFM_PARTITION_NUMBER`.log
+config_name=$TFM_CONFIG_NAME
+ config_dir=$TFM_CONFIG_DIR/config_name
+
+export    TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`
+export TFM_LOGFILE=$TFM_LOGDIR/tfm_partition_`printf %02i $ARTDAQ_PARTITION_NUMBER`.log
 
 logfile=$TFM_LOGFILE
 touch $logfile 
@@ -38,7 +51,7 @@ fi
 # 
 # the output is controled by env vars
 #------------------------------------------------------------------------------
-nohup stdbuf -oL $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER \
+nohup stdbuf -oL $TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER \
                                                      --rpc-port $TFM_PORT \
                                                      --config-dir=$config_dir
                                                      <&- >> $logfile 2>&1

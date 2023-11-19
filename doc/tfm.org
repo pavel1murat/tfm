@@ -50,6 +50,14 @@
   - disable
   - stop
   - terminate
+* configuration                                                              
+- the farm configuration consists of the following files:
+** boot.txt : defines components the farm configuration
+** settings : defined additional farm configuration parameters               
+- to be merged with boot.txt
+** source_me: defined extra env vars for the configuration
+** .FCL files : one file per component                                       
+- component 'x' has its FCL file named 'x.fcl'
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
@@ -84,10 +92,13 @@ parameter
   management methods ("direct", "pmt", "external_run_control") are defined in 
    [[file:../rc/control/farm_manager.py::/process_management_methods/]]
 * xmlrpc                                                                     
+** checkout code
+svn checkout http://svn.code.sf.net/p/xmlrpc-c/code/stable xmlrpc-c
+
 ** https://xmlrpc-c.sourceforge.io/doc/xmlrpc.html
 ** http://xmlrpc.com/
 ** RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
-
+** code examples: https://xmlrpc-c.sourceforge.io/example-code.php
 ** status                                                                    
 #+begin_src                                                                   
                 xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
@@ -156,7 +167,10 @@ Nil
 
   self.launch_attempt_files[p.host] : PMT log file (used in manage_processes_direct.py
   
+- all art processes have their COUT redirected to the PMT log file
 
+- however, messages by message_facility go into individual log files, one per 
+art process
 * TFM scripts                                                                
 *** tfm_transition
 *** artdaq_process_info.sh                                                   

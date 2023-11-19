@@ -1,31 +1,32 @@
-
-import os
-import sys
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+import os, sys, re
 
 sys.path.append(os.environ["TFM_DIR"])
 
-import re
 import traceback
 import shutil
 import subprocess
-from   subprocess import Popen
+
+from rc.control.subsystem import Subsystem
+from rc.control.procinfo  import Procinfo
 
 from rc.control.utilities import expand_environment_variable_in_string
 from rc.control.utilities import make_paragraph
 
-
+#------------------------------------------------------------------------------
 def get_config_parentdir():
+    print("config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????")
     parentdir = os.environ["TFM_FHICL_DIRECTORY"]
-    assert os.path.exists(
-        parentdir
-    ), "Expected configuration directory %s doesn't appear to exist" % (parentdir)
+    assert os.path.exists(parentdir), "Expected configuration directory "+parentdir+" doesn't exist"
     return parentdir
 
-
+#------------------------------------------------------------------------------
 def get_config_info_base(self):
 
     uuidgen = (
-        Popen("uuidgen", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.Popen("uuidgen", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         .stdout.readlines()[0]
         .strip()
         .decode("utf-8")
@@ -74,284 +75,201 @@ def put_config_info_on_stop_base(self):
     pass
 
 #------------------------------------------------------------------------------
-# default input function
+# default input function - reads boot.txt file
 #------------------------------------------------------------------------------
 def get_boot_info_base(self, boot_filename):
 
     inf = open(boot_filename)
 
-    if not inf:
-        raise Exception(
-            self.make_paragraph("Exception in DAQInterface: unable to locate configuration file "+boot_filename)
-        )
+    if not inf: 
+        raise Exception("ERROR: TFM unable to locate configuration file "+boot_filename)
 
-    memberDict = {
-        "name"              : None,
-        "label"             : None,
-        "host"              : None,
-        "port"              : "not set",
-        "fhicl"             : None,
-        "subsystem"         : "not set",
-        "allowed_processors": "not set",
-        "target"            : "not set",
-        "prepend"           : "not set",
-    }
-    subsystemDict = {
-        "id"                : None,
-        "source"            : "not set",
-        "destination"       : "not set",
-        "fragmentMode"      : "not set",
-    }
+#     memberDict = {
+#         "name"              : None,
+#         "label"             : None,
+#         "host"              : None,
+#         "port"              : "not set",
+#         "fhicl"             : None,
+#         "subsystem"         : "not set",
+#         "allowed_processors": "not set",
+#         "target"            : "not set",
+#         "prepend"           : "not set",
+#     }
+#     subsystemDict = {
+#         "id"                : None,
+#         "source"            : "not set",
+#         "destination"       : "not set",
+#         "fragmentMode"      : "not set",
+#     }
 
     num_expected_processes = 0
     num_actual_processes   = 0
-
+#------------------------------------------------------------------------------
+# assume format : "key : parameters"
+####
     lines = inf.readlines()
     for i_line, line in enumerate(lines):
-        words = line.strip().split();
-        nwords = len(words)
-        #------------------------------------------------------------------------------
-        # skip comment but not empty lines: John uses empty lines for something
-        #------------------------------------------------------------------------------
-        if ((nwords > 0) and (words[0] == '#')):              continue
-
-        line = expand_environment_variable_in_string(line)
-
-        if self.find_process_manager_variable(line):        continue
-
-        res = re.search(r"^\s*DAQ setup script\s*:\s*(\S+)", line)
-        if res:
-            self.daq_setup_script = res.group(1)
-            self.daq_dir = os.path.dirname(self.daq_setup_script) + "/"
-            continue
-
-        res = re.search(r"^\s*request_address\s*:\s*(\S+)", line)
-        if res:
-            self.request_address = res.group(1)
-            continue
-
-        res = re.search(r"^\s*debug level\s*:\s*(\S+)", line)
-        if res:
-            self.debug_level = int(res.group(1))
-            continue
-
-        res = re.search(r"^\s*manage processes\s*:\s*[tT]rue", line)
-        if res:
-            self.manage_processes = True
-            continue
-
-        res = re.search(r"^\s*manage processes\s*:\s*[fF]alse", line)
-        if res:
-            self.manage_processes = False
-            continue
-
-        res = re.search(r"^\s*disable recovery\s*:\s*[tT]rue", line)
-        if res:
-            self.disable_recovery = True
-            continue
-
-        res = re.search(r"^\s*disable recovery\s*:\s*[fF]alse", line)
-        if res:
-            self.disable_recovery = False
-            continue
-
-        if "Subsystem" in line:
-
-            res = re.search(r"^\s*(\w+)\s+(\S+)\s*:\s*(\S+)", line)
-
-            if not res:
-                raise Exception(
-                    "Exception in DAQInterface: "
-                    "problem parsing " + boot_filename + ' at line "' + line + '"'
-                )
-
-            subsystem_key = res.group(2)
-
-            if subsystem_key != "source" or subsystemDict["source"] == "not set":
-                subsystemDict[subsystem_key] = res.group(3)
-            else:
-                subsystemDict[subsystem_key] += " %s" % (res.group(3))
-
-        if ("EventBuilder" in line) or ("DataLogger" in line) or ("Dispatcher" in line) or ("RoutingManager" in line):
-
-            res = re.search(r"^\s*(\w+)\s+(\S+)\s*:\s*(\"[^\"]*\"|\S+)", line)
-
-            if res:
-                memberDict["name"      ] = res.group(1)
-                memberDict[res.group(2)] = res.group(3)
-
-                if res.group(2) == "host": num_expected_processes += 1
-
-        if ((nwords > 0) and (words[0] == "BoardReader")):
+        l1 = line.split('#')[0].strip();
 #------------------------------------------------------------------------------
-# P.Murat: expect 7 words : 
-#          'BoardReader label host port subsystem allowed_processors prepend'
+# skip comment lines
+########
+        if (len(l1) == 0):                                  continue
+
+        words  = l1.split(':')
+        nwords = len(words)
+        assert (nwords == 2), "ERROR reading the boot.txt line:"+line
+#------------------------------------------------------------------------------
+# skip comments but not empty lines: John uses empty lines for something
+########
+        key = words[0].strip()
+
+        data = expand_environment_variable_in_string(words[1]).strip()
+        par  = data.split();
+        npar = len(par)
+#------------------------------------------------------------------------------
+# P.M. it looks that the outcome is always false
+########
+        if self.find_process_manager_variable(line):        continue
+#------------------------------------------------------------------------------
+# some global parameters
+########
+        elif (key == "daq_setup_script"):
+            self.daq_setup_script = data;
+            self.daq_dir          = os.path.dirname(data) + "/"
+
+        elif (key == "request_address"):
+            self.request_address = data
+
+        elif (key == "debug_level"):
+            self.debug_level = int(data)
+
+        elif (key == "manage_processes"):
+            if (data.upper() == "TRUE"): self.manage_processes = True
+            else                       : self.manage_processes = False
+
+        elif (key == "disable_recovery"):
+            if (data.upper() == "TRUE"): self.disable_recovery = True
+            else                       : self.disable_recovery = False
+        elif (key == "Subsystem"):
+            
+            s = Subsystem();
+
+            s.id           = par[0];                        # should always be defined
+
+            s.source       = None
+            if (par[1] != "none"): s.source      = par[1];
+
+            s.destination  = None;
+            if (par[2] != "none"): s.destination = par[2];
+
+            s.fragmentMode = par[3];                        # should always be defined
+
+            # breakpoint()
+            self.subsystems[s.id] = s
+
+        elif ((key == "EventBuilder"  ) or 
+              (key == "DataLogger"    ) or 
+              (key == "Dispatcher"    ) or 
+              (key == "RoutingManager")   ):
+
+            assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
+
+            num_actual_processes += 1
+            rank                  = num_actual_processes - 1
+
+            label                 = par[0]
+            host                  = par[1]
+            port                  = par[2]
+            if (par[2] == "-1"):
+                base_port           = int(os.environ["ARTDAQ_BASE_PORT"])
+                ports_per_partition = int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
+                port                = str(base_port+self.partition*ports_per_partition+100+rank)
+            
+            subsystem             = par[3]
+
+            ap                    = None            # None = "allow all processors"
+            if (par[4] != "-1"): ap = par[4]
+
+            prepend               = "";
+            if (par[5] != "none"): prepend = par[5]
+
+            target                = None
+            if (par[6] != "none"): target = par[6]
+#------------------------------------------------------------------------------
+# remember, boardreaders go first
+############
+            p = Procinfo(name               = key      ,
+                         label              = label    ,
+                         rank               = rank     ,
+                         host               = host     ,
+                         port               = port     , 
+                         subsystem          = subsystem,
+                         allowed_processors = ap       ,
+                         target             = target   ,
+                         prepend            = prepend
+            )
+            p.print();
+            self.procinfos.append(p)
+#------------------------------------------------------------------------------
+# P.Murat: 'BoardReader label host port subsystem allowed_processors prepend'
 #          if the value of 'allowed_processors' is undefined (-1), set it to None
 #          prepend is smth prepenced to the boardreader launch command, looks 
 #          like a debugging tool
 #          set it to '' 
-############
-            assert (nwords == 7), "ERROR reading the line:%s" % line
-            label = words[1];
-            if (words[5] == "-1"  ): words[5] = None
-            if (words[6] == "none"): words[6] = ''
+#          assume no prepend for others 
+#          assume boardreaders are defined first
+########
+        elif (key == "BoardReader"):
+            assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
+            
+            num_actual_processes   += 1
+            rank = num_actual_processes - 1
+            
+            label              = par[0]
+            host               = par[1];
+            port               = par[2];
+            if (port == "-1"): port = str(self.boardreader_port_number(rank));
 
-            self.daq_comp_list[label] = words[2:];
+            subsystem          = par[3];
 
-        # JCF, Mar-29-2019
+            ap                 = None
+            if (par[4] != "-1"  ): ap = par[4];
 
-        # In light of the experience at ProtoDUNE, it appears
-        # necessary to allow experiments the ability to overwrite
-        # FHiCL parameters at will in the boot file. A use case that
-        # came up was that a fragment generator had a parameter whose
-        # value needed to be a function of the partition, but the
-        # fragment generator had no direct knowledge of what partition
-        # it was on
+            prepend            = "";
+            if (par[5] != "none"): prepend = par[5];
+            
+            target             = par[6];
 
-        res = re.search(r"^\s*(\S+)\s*:\s*(\S+)", line)
-        if res:
-            self.bootfile_fhicl_overwrites[res.group(1)] = res.group(2)
-
-        # Taken from Eric: if a line is blank or a comment or we've reached the last line 
-        # in the boot file, check to see if we've got a complete set of info for an artdaq process
-        #
-        # P.M. : what a kindergarten! one should read the whole input file to the end 
-        #        and perform all needed checks after that
-
-        if (re.search(r"^\s*#", line) or re.search(r"^\s*$", line) or i_line == len(lines) - 1):
-            filled_subsystem_info = True
-
-            for key, value in subsystemDict.items():
-                if value is None: filled_subsystem_info = False
-
-            filled_process_info = True
-
-            for key, value in memberDict.items():
-                if value is None and not key == "fhicl": filled_process_info = False
-
-            if filled_subsystem_info:
-
-                sources = []
-                if subsystemDict["source"] != "not set":
-                    sources = [ source.strip() for source in subsystemDict["source"].split() ]
-
-                destination = None
-                if subsystemDict["destination"] != "not set": destination = subsystemDict["destination"]
-
-                fragmentMode = True
-                if re.search("[Ff]alse", subsystemDict["fragmentMode"]): fragmentMode = False
-
-                self.subsystems[subsystemDict["id"]] = self.Subsystem(
-                    sources, destination, fragmentMode
+            p = Procinfo(name               = key      ,
+                         rank               = rank     ,
+                         host               = host     ,
+                         port               = port     ,
+                         label              = label    ,
+                         subsystem          = subsystem,
+                         allowed_processors = ap       ,
+                         target             = target   ,
+                         prepend            = prepend
                 )
+            p.print()
+            self.procinfos.append(p);
+        else:
+#------------------------------------------------------------------------------
+# JCF, Mar-29-2019
 
-                subsystemDict["id"          ] = None
-                subsystemDict["source"      ] = "not set"
-                subsystemDict["destination" ] = "not set"
-                subsystemDict["fragmentMode"] = "not set"
-
-            # If it has been filled, then initialize a Procinfo
-            # object, append it to procinfos, and reset the
-            # dictionary values to null strings
-
-            if filled_process_info:
-
-                num_actual_processes += 1
-                rank = len(self.daq_comp_list) + num_actual_processes - 1
-
-                if memberDict["subsystem"] == "not set": memberDict["subsystem"] = "1"
-
-                if memberDict["port"] == "not set":
-                    memberDict["port"] = str(
-                        int(os.environ["ARTDAQ_BASE_PORT"])
-                        + 100 + self.partition*int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])+rank)
-
-                if memberDict["allowed_processors"] == "not set":
-                    memberDict["allowed_processors"] = None       # None = "allow all processors"
-
-                if memberDict["prepend"] == "not set": memberDict["prepend"] = ""
-
-                self.procinfos.append(
-                    self.Procinfo(
-                        name=memberDict["name"],
-                        rank=rank,
-                        host=memberDict["host"],
-                        port=memberDict["port"],
-                        label=memberDict["label"],
-                        subsystem=memberDict["subsystem"],
-                        allowed_processors=memberDict["allowed_processors"],
-                        target=memberDict["target"],
-                        prepend=memberDict["prepend"],
-                    )
-                )
-
-                for varname in memberDict.keys():
-                    if (
-                        varname     != "port"
-                        and varname != "subsystem"
-                        and varname != "allowed_processors"
-                        and varname != "target"
-                        and varname != "prepend"
-                    ):
-                        memberDict[varname] = None
-                    else:
-                        memberDict[varname] = "not set"
-
-    # If the user hasn't defined anything subsystem-related in the
-    # boot file, then that means we can think of all the artdaq
-    # processes as belonging to subsystem #1, where the subsystem
-    # doesn't have any source subsystems or any destination subsystems
-
-    if len(self.subsystems) == 0:
-        self.subsystems["1"] = self.Subsystem()
+# In light of the experience at ProtoDUNE, it appears necessary to allow experiments 
+# an ability to overwrite FHiCL parameters at will in the boot file. A use case that
+# came up was that a fragment generator had a parameter whose value needed to be a function 
+# of the partition, but the fragment generator had no direct knowledge of what partition it was on
+#------------------------------------------------------------------------------
+            self.bootfile_fhicl_overwrites[key] = data
+#------------------------------------------------------------------------------
+# end of the loop
+####
 
     self.set_process_manager_default_variables()
-
-    if num_expected_processes != num_actual_processes:
-        raise Exception(
-            make_paragraph(
-                ("An inconsistency exists in the boot file; a host was defined in the file"
-                 " for %d artdaq processes, but there's only a complete set of info in the file"
-                 " for %d processes. This may be the result of using a boot file designed"
-                 " for an artdaq version prior to the addition of a label requirement."
-                 " See https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_boot_file_reference for more")
-                % (num_expected_processes, num_actual_processes)
-            )
-        )
+    return
 
 #------------------------------------------------------------------------------
-# list daq components - will go away
-#------------------------------------------------------------------------------
-def listdaqcomps_base(self):
-
-    components_file = os.environ["TFM_KNOWN_BOARDREADERS_LIST"]
-
-    print("[config_functions_local.py] components_file:",components_file)
-    try:
-        inf = open(components_file)
-    except:
-        print(traceback.format_exc())
-        return
-
-    lines = inf.readlines()
-    count = len(lines)
-
-    for line in lines:
-        if re.search(r"^\s*#", line) or re.search(r"^\s*$", line):
-            count = count - 1
-
-    print
-    print("EMOE # of components found in listdaqcomps call: %d" % (count))
-
-    lines.sort()
-    for line in lines:
-        if re.search(r"^\s*#", line) or re.search(r"^\s*$", line): continue
-        component = line.split()[0].strip()
-        host      = line.split()[1].strip()
-
-        print("%s (runs on %s)" % (component, host))
-
-
 def listconfigs_base(self):
     subdirs = next(os.walk(get_config_parentdir()))[1]
     configs = [subdir for subdir in subdirs if subdir != "common_code"]

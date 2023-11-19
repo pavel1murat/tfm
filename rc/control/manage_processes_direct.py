@@ -219,6 +219,7 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("source %s for_running >> %s 2>&1 " % (
                 self.daq_setup_script, self.launch_attempt_files[p.host])
             )
+            launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % mf_fcl)
@@ -268,7 +269,7 @@ def launch_procs_base(self):
         launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
 
     print
-
+    # breakpoint()
     threads = []
     for host in launch_commands_to_run_on_host:
         t = RaisingThread(

@@ -1,11 +1,11 @@
 #
 * running the TFM test example                                               
-** 1) initialize the TFM environment                                         
+* 1) initialize the TFM environment                                         
 - standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
 #+begin_src *command output*                                                 
 cd $MRB_TOP
 mkdir tfm_test
-export TFM_TEST_DIR=$MRB_TOP/tfm_test
+export TFM_TEST_DIR=$MRB_TOP/tfm_test/demo
 # cd tfm_test
 cp $TFM_DIR/examples/user_source_me    $TFM_TEST_DIR/source_me
 cp $TFM_DIR/examples/settings_example  $TFM_TEST_DIR/settings
@@ -16,6 +16,7 @@ cp $TFM_DIR/examples/boot.txt          $TFM_TEST_DIR/.
 # 3) define environment variables
 #------------------------------------------------------------------------------
 export TFM_USER_SOURCE_ME=$TFM_TEST_DIR/source_me
+export       TFM_SETTINGS=$TFM_TEST_DIR/settings
 export              USER=murat                     # need in a docker container
 #------------------------------------------------------------------------------
 # - use the partition number consistently in ARTDAQ_LOG_FHICL
@@ -29,7 +30,7 @@ source $TFM_DIR/source_me
 #+end_src
 1.1) make sure that the tfm_test/settings file has everything needed defined
 1.2) edit tfm_test/boot.txt to define the DAQ setup script 
-** 2) START the TF manager                                                   
+* 2) START the TF manager                                                   
 - sourcing defines the env var TFM_PORT everywhere - smth to look at 
 - FarmManager logs its output to $TFM_LOGFILE
 #+begin_src                                                                  
@@ -38,12 +39,14 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_start 8 &
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>[tfm_start:19] : $TFM_LOGFILE=/tmp/tfm_mu2etrk/partition_08.log $TFM_PORT=18000
 Sun Nov  5 11:10:45 CST 2023: FarmManager in partition 8 launched and now in "stopped" state, listening on port 18000
 #+end_src
-** 4) BOOT             : tfm_transition boot $PWD/tfm_test/boot.txt          
+$TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$TFM_CONFIG_DIR
+
+* 4) BOOT             : tfm_transition boot $PWD/tfm_test/boot.txt          
 *** new example
 #+begin_src
 $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port=$TFM_PORT --config-dir=$PWD/tfm_test/demo
 
-
+export TFM_PORT=21000; python $TFM_DIR/rc/control/farm_manager.py -p $TFM_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_TEST_DIR
 
 #+end_src
 *** old example
@@ -89,7 +92,7 @@ datalogger -c id: 18104 commanderPluginType: xmlrpc rank: 4 application_name: Da
 dispatcher -c id: 18105 commanderPluginType: xmlrpc rank: 5 application_name: Dispatcher1 partition_number: 8
 #+end_src
 --------------------------------------------------------------------------------
-** 5) CONFIG           : tfm_transition config demo                          
+* 5) CONFIG           : tfm_transition config demo                          
 - demo is a subdirectory under $TFM_DIR/simple_test_config pointed to by $TFM_FHICL_DIRECTORY
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition config demo
@@ -129,7 +132,7 @@ String:
   DataLogger1 at mu2edaq09:18104 (subsystem 1, rank 4): Ready\n
   Dispatcher1 at mu2edaq09:18105 (subsystem 1, rank 5): Ready\n
 #+end_src ----------------------------------------------------------------------
-** 6) START            : tfm_transition start                                
+* 6) START            : tfm_transition start                                
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition start
 [tfm_transition:7] : parameters:start
@@ -164,7 +167,7 @@ String:
   DataLogger1 at mu2edaq09:18104 (subsystem 1, rank 4): Running\n
   Dispatcher1 at mu2edaq09:18105 (subsystem 1, rank 5): Running\n
 #+end_src 
-** 7) STOP             : tfm_transition stop                                 
+* 7) STOP             : tfm_transition stop                                 
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition stop
 [tfm_transition:7] : parameters:stop
@@ -194,7 +197,7 @@ String:
   Dispatcher1 at mu2edaq09:18105 (subsystem 1, rank 5): Ready\n
 #+end_src
 --------------------------------------------------------------------------------
-** 8) SHUTDOWN         : tfm_transition shutdown                             
+* 8) SHUTDOWN         : tfm_transition shutdown                             
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition shutdown
 [tfm_transition:7] : parameters:shutdown
@@ -246,7 +249,7 @@ Result:
 String: ''
 #+end_src
 --------------------------------------------------------------------------------
-** 9) TERMINATE        : tfm_transition terminate                            
+* 9) TERMINATE        : tfm_transition terminate                            
 #+begin_src *command output*                                                 
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition terminate
 [tfm_transition:7] : parameters:terminate

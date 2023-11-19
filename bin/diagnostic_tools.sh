@@ -8,7 +8,7 @@ if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
     exit 1
 fi
 
-recorddir=$( sed -r -n 's/^\s*record[_ ]directory\s*:\s*(\S+).*/\1/p' $TFM_CONFIG_DIR/settings )
+recorddir=$( sed -r -n 's/^\s*record[_ ]directory\s*:\s*(\S+).*/\1/p' $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings )
 recorddir=$( echo $( eval echo $recorddir ) )  # Expand environ variables in string     
 
 function file_locations() {

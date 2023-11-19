@@ -1,12 +1,5 @@
 #!/usr/bin/bash 
 #------------------------------------------------------------------------------
-# always require that to be sourced first
-#------------------------------------------------------------------------------
-if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
-    echo \$TFM_DIR/source_me not sourced. BAIL OUT
-    exit 1
-fi
-#------------------------------------------------------------------------------
 # call format: tfm_port $partition
 # uses env(ARTDAQ_BASE_PORT)  and env(ARTDAQ_PORTS_PER_PARTITION) set by source_me
 #------------------------------------------------------------------------------
@@ -30,9 +23,9 @@ function port_disclaimer_message() {
     if (( `tfm_n_instances` > 1 )); then
         cat <<EOF
 This command will be sent to a DAQInterface instance in partition
-$TFM_PARTITION_NUMBER listening on port TFM_PORT=$TFM_PORT if it exists
+$ARTDAQ_PARTITION_NUMBER listening on port TFM_PORT=$TFM_PORT if it exists
 To start TF manager on another partition, execute 
-"export TFM_PARTITION_NUMBER=<desired partition number>"
+"export ARTDAQ_PARTITION_NUMBER=<desired partition number>"
 EOF
         tfm_list_instances
     fi

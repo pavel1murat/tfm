@@ -3,20 +3,20 @@
 BEGIN {
 
     # Subsystem variables
-    id = "not set"
-    source = "not set"
-    destination = "not set"
+    id = "none"
+    source = "none"
+    destination = "none"
 
     subsystem_tokens["id"] = "now defined"
     subsystem_tokens["source"] = "now defined"
     subsystem_tokens["destination"] = "now defined"
 
     # Process variables
-    name = "not set"
-    label = "not set"
-    host = "not set"
-    port = "not set"
-    subsystem = "not set"
+    name = "none"
+    label = "none"
+    host = "none"
+    port = "none"
+    subsystem = "none"
 
     process_names["BoardReader"] = "now defined"
     process_names["EventBuilder"] = "now defined"
@@ -32,39 +32,39 @@ BEGIN {
 
 function chk_sys_subsys()
 {
-	if (label != "not set") {   # Shorthand for "we've got info for a process"
+	if (label != "none") {   # Shorthand for "we've got info for a process"
 	    procinfos[label] = sprintf("name: \"%s\"\nlabel: \"%s\"\nhost: \"%s\"", name, label, host)
-	    if (port != "not set") {
+	    if (port != "none") {
 		procinfos[label] = sprintf("%s\nport: %d", procinfos[label], port)
 	    }
 
-	    if (subsystem != "not set") {
+	    if (subsystem != "none") {
 		procinfos[label] = sprintf("%s\nsubsystem: \"%s\"", procinfos[label], subsystem)
 	    }
 
 	    procinfos[label] = sprintf("%s\n", procinfos[label])
 
-	    name = "not set"
-	    label = "not set"
-	    host = "not set"
-	    port = "not set"
-	    subsystem = "not set"
+	    name = "none"
+	    label = "none"
+	    host = "none"
+	    port = "none"
+	    subsystem = "none"
 
-	} else if (id != "not set" ) { # Shorthand for "we've got info for a subsystem"
+	} else if (id != "none" ) { # Shorthand for "we've got info for a subsystem"
 
 	    subsystems[id] = sprintf("id: \"%s\"", id)
-	    if (source != "not set") {
+	    if (source != "none") {
 		subsystems[id] = sprintf("%s\nsource: \"%s\"", subsystems[id], source)
 	    }
-	    if (destination != "not set") {
+	    if (destination != "none") {
 		subsystems[id] = sprintf("%s\ndestination: \"%s\"", subsystems[id], destination)
 	    }
 
 	    subsystems[id] = sprintf("%s", subsystems[id])
 
-	    id = "not set"
-	    source = "not set"
-	    destination = "not set"
+	    id = "none"
+	    source = "none"
+	    destination = "none"
 	}
 }
 

@@ -125,8 +125,8 @@ def save_run_record_base(self):
 
     outf.write("Config name: %s\n" % (" ".join(self.subconfigs_for_run)))
 
-    for i_comp, component in enumerate(sorted(self.daq_comp_list)):
-        outf.write("Component #%d: %s\n" % (i_comp, component))
+#    for i_comp, component in enumerate(sorted(self.daq_comp_list)):
+#        outf.write("Component #%d: %s\n" % (i_comp, component))
 
     outf.write(
         "TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd())
