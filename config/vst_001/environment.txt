@@ -1,9 +1,0 @@
-export DAQINTERFACE_FHICL_DIRECTORY=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations
-export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations/known_boardreaders_list
-export DAQINTERFACE_LOGFILE=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/Logs/DAQInteface/DAQInterface_partition8.log
-export DAQINTERFACE_MESSAGEFACILITY_FHICL=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/MessageFacilityConfigurations/ARTDAQInterfaceMessageFacilityGen.fcl
-export DAQINTERFACE_PARTITION_NUMBER=8
-export DAQINTERFACE_PROCESS_MANAGEMENT_METHOD=direct
-export DAQINTERFACE_SETTINGS=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations/daqinterface_settings
-export DAQINTERFACE_SETUP_FHICLCPP=/home/mu2etrk/test_stand/pasha_018/srcs/otsdaq_mu2e_config/Data_mu2e/ARTDAQConfigurations/.setup_fhiclcpp
-export DAQINTERFACE_USER_SOURCEFILE=IGNORED

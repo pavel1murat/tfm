@@ -360,19 +360,15 @@ class FarmManager(Component):
             try:
 
                 if self.have_artdaq_mfextensions() and is_msgviewer_running():
-                    self.print_log("i",
-                                   make_paragraph(
-                                       "An instance of messageviewer already appears to be running; "
-                                       +"messages will be sent to the existing messageviewer"
-                                   ),
+                    self.print_log("i",make_paragraph(
+                        "An instance of messageviewer already appears to be running; ",
+                        "messages will be sent to the existing messageviewer")
                     )
 
                 elif self.have_artdaq_mfextensions():
                     version, qualifiers = self.artdaq_mfextensions_info()
 
-                    self.print_log(
-                        "i",
-                        make_paragraph(
+                    self.print_log("i",make_paragraph(
                             "artdaq_mfextensions %s, %s, appears to be available; "
                             "if windowing is supported on your host you should see the "
                             "messageviewer window pop up momentarily"
@@ -383,12 +379,11 @@ class FarmManager(Component):
                     self.msgviewer_proc = self.launch_msgviewer()
 
                 else:
-                    self.print_log("i",
-                                   make_paragraph(
-                                       "artdaq_mfextensions does not appear to be available; "
-                                       "unable to launch the messageviewer window. This will not affect"
-                                    " actual datataking, it just means you'll need to look at the"
-                                       " logfiles to see artdaq output.")
+                    self.print_log("i",make_paragraph(
+                        "artdaq_mfextensions does not appear to be available; "
+                        "unable to launch the messageviewer window. This will not affect"
+                        " actual datataking, it just means you'll need to look at the"
+                        " logfiles to see artdaq output.")
                     )
 
             except Exception:
@@ -2784,12 +2779,10 @@ class FarmManager(Component):
         self.reset_variables()
         os.chdir(self.base_dir)
 
-
         boot_fn = self.boot_filename();
 
         if not os.path.exists(boot_fn):
             raise Exception('ERROR: boot file %s does not exist' % boot_fn)
-
 #------------------------------------------------------------------------------
 # P.Murat : it looks that a boot file name could have a .fcl extension... wow!
 #           we're not using that ....
@@ -2810,17 +2803,14 @@ class FarmManager(Component):
             assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (self.fUser))
 
             cmd    = "%s/bin/defhiclize_boot_file.sh %s > %s" % (os.environ["TFM_DIR"],boot_filename,self.boot_filename)
-            status = subprocess.Popen(cmd,
-                                      executable="/bin/bash",
-                                      shell=True,
+            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                       stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL,
-                                  ).wait()
+                                      stderr=subprocess.DEVNULL).wait()
             if status != 0:
                 raise Exception('Error: the command "%s" returned nonzero' % cmd)
 #------------------------------------------------------------------------------
 # P.Murat: here the boot.txt file is being read and parsed
-########
+#-------
         try:
             self.get_boot_info(self.boot_filename())
             self.check_boot_info()
@@ -2830,7 +2820,7 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 # See the Procinfo.__lt__ function for details on sorting
-########
+#-------
         self.procinfos.sort()
 
         for ss in sorted(self.subsystems):
@@ -2903,23 +2893,22 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
-############
+#-----------
             self.make_logfile_dirs();
 #------------------------------------------------------------------------------
 # done creating directories for logfiles,
 # deal with message facility. 
 # -- also OK to do just once
-############
-            # pdb.set_trace()
+#-----------
             self.print_log("i", "\n%s: BOOT transition 007 Pasha: before init_process_requirements\n" % (date_and_time()))
             self.init_process_requirements()
 #------------------------------------------------------------------------------
 # now do something with fhiclcpp - need to figure out what it is. OK to do just once
-############
+#-----------
             self.do_fhiclcpp_stuff();
 #------------------------------------------------------------------------------
 #  former end of DO_BOOT
-########
+#-------
         self.complete_state_change("booting")
         self.print_log("i", "%s: BOOT transition complete" % (date_and_time()))
 
@@ -3666,10 +3655,18 @@ class FarmManager(Component):
         self.complete_state_change("recovering")
 
         self.print_log("i","\n%s: RECOVER transition complete%s"%(date_and_time(),run_number_string))
-
+#------------------------------------------------------------------------------
+# after that, do_boot to get into the idle (booted) state
+#-------
+        self.__do_boot = False
+        self.do_boot()
+#------------------------------------------------------------------------------
+# marking the end of function
+#-------
+        return
 #------------------------------------------------------------------------------
 # tfm::artdaq_process_info
-#------------------------------------------------------------------------------
+#---
     def artdaq_process_info(self, name):
 
         try:

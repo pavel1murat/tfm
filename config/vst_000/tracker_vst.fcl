@@ -6,31 +6,32 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        generator              : TrackerVST       ## defines the shared lib to load
-        fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
+        generator              : TrackerVST     # daq generator plug-in type (defines the shared lib to load)
+        fragment_type          : Mu2e	 #generator data fragment type
         board_id               : 0
         loadSimFile            : false
         simFileName            : "none"
+        fragment_type          : Mu2e           # generator data fragment type
 
         rawOutputEnable        : false
         rawOutputFile          : "/tmp/TrackerVST.bin"
         sendEmpties            : false
 
-        dtcId                  : -1               ## P.Murat: the most painful way of dealing with FCL I know
-        activeLinks            : []               ## P.Murat: no active ROC links, if needed: [ 0 ]
+        dtcId                  : -1             # P.Murat: the most painful way of dealing with FCL I know
+        activeLinks            : [ ]          # P.Murat: add active ROC links [ 0 ]
         heartbeatInterval      : 2000
         heartbeatsAfter        : 16
 
-        readData               : 0                ## fake data fragment with one 4-byte word
-        resetROC               : 0                ## test only reading of the DTC registers, assume ROC off
+        resetRoc               : 0
+        readData               : 0
         readoutMode            : 0
         max_fragment_size_bytes: 0x100000
 
         saveDTCRegisters             : 1          ## 1
         generated_fragments_per_event: 2          ## 2
-        fragment_ids                 : [ 0, 11 ]  ## fake data + registers   
+        fragment_ids                 : [ 0, 11 ]      
 
-        nEventsDbg             :  10              ## don't need to dump more
+        nEventsDbg             :  10            # don't need to dump more
         debugLevel             : 1
 
         cfo_config             : {
@@ -51,21 +52,19 @@ daq: {
         routing_table_config: {
             use_routing_manager: false
         }
-#------------------------------------------------------------------------------
-# are the destinations really needed ?
-#------------------------------------------------------------------------------
+
         destinations: { 
-            d1: { 
-                transferPluginType     : TCPSocket 
-                destination_rank       : 1 
-                max_fragment_size_words: 160522570 
-                host_map: [
-                           {rank: 0 host: "mu2edaq09"}, 
-                           {rank: 1 host: "mu2edaq09"}, 
-                           {rank: 2 host: "mu2edaq09"}, 
-                           {rank: 3 host: "mu2edaq09"}
-                          ] 
-            }
+#            d1: { 
+#                transferPluginType     : TCPSocket 
+#                destination_rank       : 1 
+#                max_fragment_size_words: 160522570 
+#                host_map: [
+#                           {rank: 0 host: "mu2edaq09"}, 
+#                           {rank: 1 host: "mu2edaq09"}, 
+#                           {rank: 2 host: "mu2edaq09"}, 
+#                           {rank: 3 host: "mu2edaq09"}
+#                          ] 
+#            }
         }
     }
     metrics: {}

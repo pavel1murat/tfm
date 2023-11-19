@@ -6,7 +6,7 @@
 #
 # 1. directory where configurations are described, has to exist
 #------------------------------------------------------------------------------
-export               TFM_CONFIG_NAME=vst_001
+export               TFM_CONFIG_NAME=demo
 
 export                TFM_CONFIG_DIR=$MRB_TOP/tfm_test
 export                  TFM_SETTINGS=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings

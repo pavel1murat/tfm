@@ -63,20 +63,19 @@
 - commands are translated, and sent to the TF server are the translated commands. 
 - "translated" commands are different from the original ones by "ing" 
 - what is it? a linquistic exersize of defining gerunds ?
-|-----------+--------------------+---------------|
-| command   | translated command | XMLRPC string |
-|-----------+--------------------+---------------|
-| boot      | booting            |               |
-| config    | configuring        |               |
-| start     | starting           |               |
-| enable    | enabling           |               |
-| disable   | disabling          |               |
-| stop      | stopping           |               |
-| shutdown  | shutting           |               |
-| terminate | terminating        |               |
-|-----------+--------------------+---------------|
+|-----------+--------------------+---------------+----------------------------------|
+| command   | translated command | XMLRPC string | comment                          |
+|-----------+--------------------+---------------+----------------------------------|
+| boot      | booting            |               | obsolete, performed upon startup |
+| config    | configuring        |               |                                  |
+| start     | starting           |               |                                  |
+| enable    | enabling           |               | obsolete                         |
+| disable   | disabling          |               | obsolete                         |
+| stop      | stopping           |               |                                  |
+| shutdown  | shutting           |               | included into stop               |
+| terminate | terminating        |               | obsolete                         |
+|-----------+--------------------+---------------+----------------------------------|
 
-** new logic: 
 1) TFM assumes that all config files , including FCLs are located in a directory 
 provided to it at a startup , so the rest transitions do not really need a configuration
 parameter
@@ -86,7 +85,7 @@ parameter
    as there are multiple subsystems, and at 'configured' all shoudl be ready to run
 5) stop is stop, after stop - either configure or shutdown
 6) at 'shutdown', the farm manager exits, requiring a new start
-* [[file:test_example.org][test example]]                                                               
+* [[file:test_examples.org][test examples]]                                                               
 * [[file:environment_variables.org][environment variables]]                                                      
 * farm management methods                                                    
   management methods ("direct", "pmt", "external_run_control") are defined in 

@@ -1,0 +1,271 @@
+#
+* ------------------------------------------------------------------------------
+* TFM examples                                                               
+- Each example - a set of files in a subdirectory uner $TFM_DIR/config/$example
+- partition and ports used are defined by $TFM_DIR/config/$example/source_me, 
+usually partition=11
+* ------------------------------------------------------------------------------
+* tested examples                                                            
+** [[file:../config/demo]]                                                       
+- an ARTDAQ demo with 6 processess: two boardreaders, two event builders, dispatcher and logger
+- all on the same machine
+** [[file:../config/vst_000]]                                                    
+- Tracker VST : read the DTC registers
+- two processes, board_reader and event_builder, on the same machine
+- event builder is writing the output
+** [[file:../config/vst_001]]                                                    
+- TrackerVST : do the same but with four running processes: 
+- the board_reader, event_builder, logger and dispatcher.
+- one more step, and we will have an example with the data logger
+* running test example                                                       
+- the sequence of steps is as follows:
+** 1) initialize the TFM environment                                         
+- standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
+#+begin_src *command output*                                                 
+cd $MRB_TOP
+mkdir tfm_test
+export TFM_CONFIG_DIR=$MRB_TOP/tfm_test
+export TFM_CONFIG_NAME=demo
+cp -r $TFM_DIR/config/demo    ./tfm_test/.
+#------------------------------------------------------------------------------
+# 1) edit daqinterface_settings
+# 2) edit boot.txt to define the setup script
+# 3) define environment variables
+# - use the partition number consistently in ARTDAQ_LOG_FHICL
+#------------------------------------------------------------------------------
+export TFM_PROCESS_MANAGEMENT_METHOD=direct
+export              ARTDAQ_LOG_FHICL=$TFM_TEST_DIR/tmp_fcl/messagefacility_partition_11_murat.fcl
+tfm_configure $TFM_CONFIG_DIR demo
+# export              USER=murat                     # need in a docker container
+#+end_src
+1.1) make sure that the tfm_test/demo/settings file has everything needed defined
+1.2) edit tfm_test/demo/boot.txt to define the DAQ setup script 
+** 2) START the TF manager                                                   
+- sourcing defines the env var TFM_PORT everywhere - smth to look at 
+- FarmManager logs its output to $TFM_LOGFILE
+#+begin_src                                                                  
+$TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$TFM_CONFIG_DIR/demo
+#+end_src
+** 2.5) start the "run control shell", a different shell session             
+#+begin_src
+export TFM_CONFIG_DIR=$MRB_TOP/tfm_test
+export TFM_CONFIG_NAME=demo
+$TFM_DIR/bin/tfm_configure $TFM_CONFIG_DIR $TFM_CONFIG_NAME
+#+end_src
+** 5) CONFIG           : tfm_transition config                               
+- in an RC shell, do 
+- the run number will be picked by 
+#+begin_src *command output*                                                 
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition config
+Sun Nov 19 14:43:08 CST 2023: CONFIG transition underway
+Config name: vst_001 vst_001 vst_001 vst_001 vst_001
+
+Sun Nov 19 14:43:08 CST 2023: CONFIG transition run_number:14 001 Pasha
+
+Obtaining FHiCL documents...config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????
+done (0.0 seconds).
+
+Sun Nov 19 14:43:08 CST 2023: CONFIG transition 002 Pasha
+Reformatting the FHiCL documents...done (0.1 seconds).
+Bookkeeping the FHiCL documents...done (0.1 seconds).
+
+Sun Nov 19 14:43:08 CST 2023: CONFIG transition 010 Pasha: before launching artdaq processes
+
+
+Sun Nov 19 14:43:08 CST 2023 Launching the artdaq processes
+Executing commands to launch processes on mu2edaq09
+Before check for existing processes on mu2edaq09
+After check for existing processes on mu2edaq09
+
+artdaq process launch commands to execute on mu2edaq09 (output will be in mu2edaq09:/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/pmt/pmt_000014_mu2edaq09_mu2etrk_partition_11_20231119144308):
+set +C
+echo 
+export PRODUCTS="/cvmfs/mu2e.opensciencegrid.org/artexternals"; . /cvmfs/mu2e.opensciencegrid.org/artexternals/setup 
+upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi > /dev/null 2>&1 
+source /home/mu2etrk/test_stand/pasha_019/setup_ots.sh for_running 
+export FHICL_FILE_PATH=.:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/otsdaq_mu2e_tracker/slf7.x86_64.e28.s124.prof/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/otsdaq_mu2e_trigger/slf7.x86_64.e28.s124.prof/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/artdaq_demo/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/otsdaq_mu2e/slf7.x86_64.e28.s124.prof/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/Offline/fcl/Offline:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/artdaq_mu2e/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/otsdaq/fcl:/home/mu2etrk/test_stand/pasha_019/build_slf7.x86_64/artdaq_core_mu2e/fcl:/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/artdaq/v3_12_05/fcl:/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/artdaq_mfextensions/v1_08_05/fcl:/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/artdaq_epics_plugin/v1_05_04/fcl:/home/mu2etrk/test_stand/pasha_019/remoteProducts_mu2e_v2_06_11_e28_s124_prof/artdaq_utilities/v1_08_04/fcl:/home/mu2etrk/test_stand/pasha_019/srcs/otsdaq_mu2e_config/Data_mu2e:/home/mu2etrk/test_stand/pasha_019/srcs/Offline:/scratch/mu2e/mu2etrk_mu2e_pasha_019/TriggerConfigurations:/home/mu2etrk/test_stand/pasha_019/srcs/otsdaq_mu2e_config/Data_mu2e/OutputData:/mu2e/DataFiles
+export ARTDAQ_RUN_NUMBER=14
+export ARTDAQ_LOG_ROOT=/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001
+export ARTDAQ_LOG_FHICL=/tmp/messagefacility_partition11_mu2etrk.fcl
+which boardreader 
+/home/mu2etrk/test_stand/pasha_019/srcs/tfm/bin/mopup_shmem.sh 11 --force 
+taskset --cpu-list "0-63"  boardreader -c "id: 21100 commanderPluginType: xmlrpc rank: 0 application_name: tracker_vst partition_number: 11" &
+taskset --cpu-list "0-63"  eventbuilder -c "id: 21101 commanderPluginType: xmlrpc rank: 1 application_name: builder0 partition_number: 11" &
+taskset --cpu-list "0-63"  datalogger -c "id: 21102 commanderPluginType: xmlrpc rank: 2 application_name: logger0 partition_number: 11" &
+taskset --cpu-list "0-99"  dispatcher -c "id: 10500 commanderPluginType: xmlrpc rank: 3 application_name: dispatcher0 partition_number: 11" &
+
+...host mu2edaq09 done.
+
+Sun Nov 19 14:43:25 CST 2023: CONFIG transition 011 Pasha : done launching
+
+Checking that processes are up (check 1 of a max of 20 checks)...found 4 of 4 processes.
+All processes appear to be up
+
+Sun Nov 19 14:43:25 CST 2023: CONFIG transition 012 Pasha : before create_time_server_proxy
+
+create_time_server_proxy done (0.0 seconds).
+
+Sun Nov 19 14:43:25 CST 2023: CONFIG transition 013 Pasha : before self.manage_processes
+
+
+Sun Nov 19 14:43:25 CST 2023 Determining logfiles associated with the artdaq processes...
+
+tracker_vst:         mu2edaq09:/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/tracker_vst-mu2edaq09-21100/tracker_vst-mu2edaq09-21100-000014-20231119144325-1238.log
+builder0:            mu2edaq09:/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/builder0-mu2edaq09-21101/builder0-mu2edaq09-21101-000014-20231119144325-1239.log
+logger0:             mu2edaq09:/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/logger0-mu2edaq09-21102/logger0-mu2edaq09-21102-000014-20231119144325-1240.log
+dispatcher0:         mu2edaq09:/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/dispatcher0-mu2edaq09-10500/dispatcher0-mu2edaq09-10500-000014-20231119144325-1241.log
+
+
+get_lognames done (0.1 seconds).
+
+Sun Nov 19 14:43:25 CST 2023: CONFIG transition 013 Pasha
+Saving the run record...
+Saved run record in /tmp/run_record_attempted_mu2etrk/11, will copy over to
+yet-to-be-created directory
+/home/mu2etrk/test_stand/pasha_019/tfm_test/run_records/vst_001/<value of
+run number> on the start transition
+done (11.3 seconds).
+
+Sun Nov 19 14:43:37 CST 2023: CONFIG transition 015 Pasha
+
+Sending init transition to artdaq processes...
+Sun Nov 19 14:43:37.158009064: Sending transition to dispatcher0
+Sun Nov 19 14:43:37.187962141: Sending transition to logger0
+Sun Nov 19 14:43:37.216849089: Sending transition to builder0
+Sun Nov 19 14:43:37.246866427: Sending transition to tracker_vst
+done (1.1 seconds).
+
+tracker_vst at mu2edaq09:21100, after 0.0 seconds returned string was:
+Success
+
+builder0 at mu2edaq09:21101, after 0.0 seconds returned string was:
+Success
+
+logger0 at mu2edaq09:21102, after 0.0 seconds returned string was:
+Success
+
+dispatcher0 at mu2edaq09:10500, after 0.0 seconds returned string was:
+Success
+
+Ensuring FHiCL documents will be archived in the output *.root files
+
+done (0.0 seconds).
+
+Sun Nov 19 14:43:38 CST 2023: CONFIG transition 016 Pasha
+
+Process manager logfiles (if applicable):
+/home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/vst_001/pmt/pmt_000014_mu2edaq09_mu2etrk_partition_11_20231119144308
+
+Sun Nov 19 14:43:38 CST 2023: CONFIG transition complete
+#+end_src ----------------------------------------------------------------------
+** 6) START            : tfm_transition start                                
+#+begin_src *command output*                                                
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition start
+Sun Nov 19 14:44:57 CST 2023: START transition underway for run 14
+
+Sun Nov 19 14:44:57 CST 2023: START transition 001 Pasha : before put_config_info
+
+
+Sun Nov 19 14:44:57 CST 2023: START transition underway 002 Pasha : before execute_trace_script
+
+
+Environment variable TFM_TRACE_SCRIPT not defined; will not execute the
+would-be trace script pointed to by the variable
+
+Sun Nov 19 14:44:57 CST 2023: START transition underway 003 Pasha : self.manage_processes=1
+
+
+Sending start transition to artdaq processes...
+Sun Nov 19 14:44:57.535698527: Sending transition to dispatcher0
+Sun Nov 19 14:44:57.559443770: Sending transition to logger0
+Sun Nov 19 14:44:57.866431976: Sending transition to builder0
+Sun Nov 19 14:44:58.152766133: Sending transition to tracker_vst
+done (1.7 seconds).
+
+tracker_vst at mu2edaq09:21100, after 0.0 seconds returned string was:
+Success
+
+builder0 at mu2edaq09:21101, after 0.3 seconds returned string was:
+Success
+
+logger0 at mu2edaq09:21102, after 0.3 seconds returned string was:
+Success
+
+dispatcher0 at mu2edaq09:10500, after 0.0 seconds returned string was:
+Success
+
+
+Sun Nov 19 14:44:59 CST 2023: START transition underway 003 Pasha :record_directory:/home/mu2etrk/test_stand/pasha_019/tfm_test/run_records/vst_001 run_number: 14 [Sun Nov  19 20:44:59 UTC 2023]
+
+
+Run info can be found locally at /home/mu2etrk/test_stand/pasha_019/tfm_test/run_records/vst_001/000014
+
+
+Sun Nov 19 14:44:59 CST 2023: START transition complete for run 14
+#+end_src 
+** 7) STOP             : tfm_transition stop                                 
+- STOP and SHUTDOWN are combined
+#+begin_src *command output*                                                 
+mu2etrk@mu2edaq09:~/test_stand/pasha_019>tfm_transition stop
+Sun Nov 19 14:58:45 CST 2023: STOP transition underway for run 14
+
+Sending stop transition to artdaq processes...
+Sun Nov 19 14:58:45.172030095: Sending transition to tracker_vst
+Sun Nov 19 14:58:45.203188223: Sending transition to builder0
+Sun Nov 19 14:58:47.882590857: Sending transition to logger0
+Sun Nov 19 14:58:54.689789620: Sending transition to dispatcher0
+done (12.1 seconds).
+
+tracker_vst at mu2edaq09:21100, after 0.0 seconds returned string was:
+Success
+
+builder0 at mu2edaq09:21101, after 2.7 seconds returned string was:
+Success
+
+logger0 at mu2edaq09:21102, after 6.8 seconds returned string was:
+Success
+
+dispatcher0 at mu2edaq09:10500, after 1.5 seconds returned string was:
+Success
+
+
+Environment variable TFM_TRACE_SCRIPT not defined; will not execute the
+would-be trace script pointed to by the variable
+
+Sun Nov 19 14:58:57 CST 2023: STOP transition complete for run 14
+
+Sun Nov 19 14:58:57 CST 2023: SHUTDOWN transition underway
+
+Sending shutdown transition to artdaq processes...
+Sun Nov 19 14:58:57.329699937: Sending transition to tracker_vst
+Sun Nov 19 14:58:57.352937975: Sending transition to builder0
+Sun Nov 19 14:58:58.982060036: Sending transition to logger0
+Sun Nov 19 14:58:59.419293316: Sending transition to dispatcher0
+done (4.8 seconds).
+
+tracker_vst at mu2edaq09:21100, after 0.0 seconds returned string was:
+Success
+
+builder0 at mu2edaq09:21101, after 1.6 seconds returned string was:
+Success
+
+logger0 at mu2edaq09:21102, after 0.4 seconds returned string was:
+Success
+
+dispatcher0 at mu2edaq09:10500, after 1.7 seconds returned string was:
+Success
+
+
+Sun Nov 19 14:59:02 CST 2023: SHUTDOWN transition complete
+#+end_src
+--------------------------------------------------------------------------------
+** 8) at this point can issue CONFIG to configure the next run 
+** 9) CTRL-C to exit 
+* ------------------------------------------------------------------------------
+* back to [[file:tfm.org]]
+* ------------------------------------------------------------------------------

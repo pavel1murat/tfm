@@ -1,21 +1,25 @@
 #------------------------------------------------------------------------------
-DAQ setup script: /home/mu2etrk/test_stand/pasha_019/setup_ots.sh
+daq_setup_script: /home/mu2etrk/test_stand/pasha_019/setup_ots.sh
 
 # debug level can range from 0 to 4 (increasing order of verbosity)
-debug level: 1
+debug_level: 1
+#------------------------------------------------------------------------------
+# subsystems  id    source     destination  fragmentMode   
+#------------------------------------------------------------------------------
+Subsystem  :  1       none        none          none
 #------------------------------------------------------------------------------
 # adopt fixed format for boardreaders and friends - keep it simple
 #
-#              label         host    port subsystem       allowed     prepend
+#              label         host      port subsystem       allowed     prepend  target
 #                                                        processors
-#----------------------------------------------------------------------------
-BoardReader  component01   localhost  -1     1             -1          none
-BoardReader  component02   localhost  -1     1             -1          none
-
-EventBuilder EventBuilder1 localhost  -1     1             -1          none
-EventBuilder EventBuilder2 localhost  -1     1             -1          none
-
-DataLogger   DataLogger1   localhost  -1     1             -1          none
-
-Dispatcher   Dispatcher1   localhost  -1     1             -1          none
-#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------
+BoardReader : component01   localhost   -1    1             -1          none    none 
+BoardReader : component02   localhost   -1    1             -1          none    none 
+#
+EventBuilder: EventBuilder1 localhost   -1    1             -1          none    none
+EventBuilder: EventBuilder2 localhost   -1    1             -1          none    none
+#
+DataLogger  : DataLogger1   localhost   -1    1             -1          none    none
+#
+Dispatcher  : Dispatcher1   localhost   -1    1             -1          none    none
+#-----------------------------------------------------------------------------------

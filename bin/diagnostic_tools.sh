@@ -8,9 +8,10 @@ if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
     exit 1
 fi
 
-recorddir=$( sed -r -n 's/^\s*record[_ ]directory\s*:\s*(\S+).*/\1/p' $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings )
-recorddir=$( echo $( eval echo $recorddir ) )  # Expand environ variables in string     
+x=`cat $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings | grep '^record_directory' | awk -F : '{print $2}'`
+recorddir=$(eval echo $x)  # Expand environ variables in string     
 
+# echo recorddir=$recorddir
 function file_locations() {
     file_locations=""
 

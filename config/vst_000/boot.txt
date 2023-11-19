@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------
-# only one ':' on hte line is allowed
+# only one ':' on the line is allowed
 #------------------------------------------------------------------------------
 daq_setup_script : /home/mu2etrk/test_stand/pasha_019/setup_ots.sh
 debug_level      : 5
@@ -9,16 +9,14 @@ debug_level      : 5
 # disable_recovery :   True/False
 #------------------------------------------------------------------------------
 #            id    source     destination  fragmentMode   
-Subsystem:    2      none        none          False
-#------------------------------------------------------------------------------
+Subsystem:    1      none        none          False
+#-------------------------------------------------------------------------------------
 #              label         host    port subsystem       allowed     prepend   target
 #                                                        processors
-#----------------------------------------------------------------------------
-BoardReader : tracker_vst  localhost  -1      2              -1         none     none
+#-------------------------------------------------------------------------------------
+BoardReader : tracker_vst  localhost  -1      1              -1         none     none
+EventBuilder: builder0     localhost  -1      1            "0-63"       none     none
 
-EventBuilder: builder0     localhost  -1      2            "0-63"       none     none
-
-DataLogger  : logger0      localhost  -1      2            "0-63"       none     none
-
-Dispatcher  : dispatcher0  localhost  10500   2            "0-99"       none     none
+# DataLogger  : logger0      localhost  -1      2            "0-63"       none     none
+# Dispatcher  : dispatcher0  localhost  10500   2            "0-33"       none     none
 
