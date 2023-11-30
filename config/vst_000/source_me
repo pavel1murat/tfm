@@ -19,6 +19,10 @@ if [ ! -d $TFM_CONFIG_DIR/run_records/$TFM_CONFIG_NAME ] ; then
     mkdir -p $TFM_CONFIG_DIR/run_records/$TFM_CONFIG_NAME ; 
 fi
 
+if [ ! -d $TFM_CONFIG_DIR/OutputData/$TFM_CONFIG_NAME ] ; then 
+    mkdir -p $TFM_CONFIG_DIR/OutputData/$TFM_CONFIG_NAME ; 
+fi
+
 export            TFM_LOGDIR=$TFM_CONFIG_DIR/Logs/tfm
 #------------------------------------------------------------------------------
 # this is the directory where FCL files of all components reside 

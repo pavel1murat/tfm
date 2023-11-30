@@ -337,14 +337,14 @@ class FarmManager(Component):
         return port
 
     def settings_filename(self):
-        return self.config_dir+'/settings'
+        return os.path.expandvars(self.config_dir+'/settings')
 
 #------------------------------------------------------------------------------
 # for now, it is boot.txt, the extension can change, depending on the future 
 # initialization mechanism, likely to become '.py'
 ####
     def boot_filename(self):
-        return self.config_dir+'/boot.txt'
+        return os.path.expandvars(self.config_dir+'/boot.txt')
 
 #------------------------------------------------------------------------------
 # WK 8/31/21
@@ -811,7 +811,7 @@ class FarmManager(Component):
 
         fn = self.settings_filename();
 
-        if not os.path.exists(fn): raise Exception('Unable to find settings file '+fn)
+        if not os.path.exists(fn): raise Exception('Unable to find settings file %s'%fn)
 
         inf = open(fn)
 
