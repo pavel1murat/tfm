@@ -52,7 +52,6 @@ if (disable_bookkeeping and (disable_bookkeeping != "false")):
 else:
     from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
-from rc.control.utilities import expand_environment_variable_in_string
 from rc.control.utilities import make_paragraph
 from rc.control.utilities import get_pids
 from rc.control.utilities import host_is_local
@@ -806,6 +805,7 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 # at one day, will go away and initialization becomes an execution of a python script
+# expand env vars here, not later
 ####
     def read_settings(self):
 
@@ -816,7 +816,7 @@ class FarmManager(Component):
         inf = open(fn)
 
         for line in inf.readlines():
-            line = expand_environment_variable_in_string(line)
+            line = os.path.expandvars(line)
 
             # Allow same-line comments
             res = re.search(r"^(.*)#.*", line)
@@ -946,9 +946,8 @@ class FarmManager(Component):
                     self.disable_unique_rootfile_labels = False
                 else:
                     raise Exception(
-                        'disable_unique_rootfile_labels must be set to either [Tt]rue or [Ff]alse in settings file "%s"'
-                        % (fn)
-                    )
+                        'disable_unique_rootfile_labels must be set to either [Tt]rue'
+                        ' or [Ff]alse in settings file "%s"' % (fn))
             elif (
                 "disable_private_network_bookkeeping" in line
                 or "disable private network bookkeeping" in line
@@ -960,9 +959,8 @@ class FarmManager(Component):
                     self.disable_private_network_bookkeeping = False
                 else:
                     raise Exception(
-                        'disable_private_network_bookkeeping must be set to either [Tt]rue or [Ff]alse in settings file "%s"'
-                        % (fn)
-                    )
+                        'disable_private_network_bookkeeping must be set '
+                        'to either [Tt]rue or [Ff]alse in settings file "%s"' % (fn))
             elif "use_messageviewer" in line or "use messageviewer" in line:
                 token = line.split()[-1].strip()
 

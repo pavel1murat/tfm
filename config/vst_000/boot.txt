@@ -1,8 +1,8 @@
 #------------------------------------------------------------------------------
 # only one ':' on the line is allowed
 #------------------------------------------------------------------------------
-daq_setup_script : /home/mu2etrk/test_stand/pasha_019/setup_ots.sh
-debug_level      : 5
+daq_setup_script   : $MRB_TOP/setup_ots.sh
+debug_level        : 5
 #
 # request_address  : 
 # manage_processes :   True/False

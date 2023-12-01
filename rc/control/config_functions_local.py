@@ -12,7 +12,6 @@ import subprocess
 from rc.control.subsystem import Subsystem
 from rc.control.procinfo  import Procinfo
 
-from rc.control.utilities import expand_environment_variable_in_string
 from rc.control.utilities import make_paragraph
 
 #------------------------------------------------------------------------------
@@ -120,10 +119,11 @@ def get_boot_info_base(self, boot_filename):
         assert (nwords == 2), "ERROR reading the boot.txt line:"+line
 #------------------------------------------------------------------------------
 # skip comments but not empty lines: John uses empty lines for something
+# immediately expand evn vars in the value part...
 ########
         key = words[0].strip()
 
-        data = expand_environment_variable_in_string(words[1]).strip()
+        data = os.path.expandvars(words[1]).strip()
         par  = data.split();
         npar = len(par)
 #------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ def get_boot_info_base(self, boot_filename):
 ########
         elif (key == "daq_setup_script"):
             self.daq_setup_script = data;
-            self.daq_dir          = os.path.dirname(data) + "/"
+            self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
 
         elif (key == "request_address"):
             self.request_address = data

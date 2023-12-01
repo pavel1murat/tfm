@@ -30,15 +30,11 @@ import os
 import string
 from time import time
 
-from rc.control.utilities import expand_environment_variable_in_string
-
-
 def version_to_integer(version):
     res = re.search(r"v([0-9])_([0-9][0-9])_([0-9][0-9]).*", version)
     assert res, make_paragraph(
-        'Developer error: unexpected artdaq_database version format "%s". Please contact the artdaq-developers@fnal.gov mailing list.'
-        % (version)
-    )
+        ('Developer error: unexpected artdaq_database version format "%s". '
+        'Please contact the artdaq-developers@fnal.gov mailing list.') % version)
     majornum = int(res.group(1))
     minornum = int(res.group(2))
     patchnum = int(res.group(3))

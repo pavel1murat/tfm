@@ -1,23 +1,23 @@
-log_directory               : /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/$TFM_CONFIG_NAME
-data_directory_override     : /home/mu2etrk/test_stand/pasha_019/tfm_test/OutputData/$TFM_CONFIG_NAME
-record_directory            : /home/mu2etrk/test_stand/pasha_019/tfm_test/run_records/$TFM_CONFIG_NAME
-
-package_hashes_to_save: [artdaq]
-productsdir_for_bash_scripts: /cvmfs/mu2e.opensciencegrid.org/artexternals
-boardreader timeout: 600
-eventbuilder timeout: 600
-datalogger timeout: 600
-dispatcher timeout: 600
-max_fragment_size_bytes: 1284180560
-transfer_plugin_to_use: TCPSocket
-all_events_to_all_dispatchers: true
-max_configurations_to_list: 10
-disable_unique_rootfile_labels: false
-use_messageviewer: false
-use_messagefacility: true
-fake_messagefacility: false
-kill_existing_processes: true
-advanced_memory_usage: false
-strict_fragment_id_mode: false
+log_directory                      : $MRB_TOP/tfm_test/Logs/$TFM_CONFIG_NAME
+data_directory_override            : $MRB_TOP/tfm_test/OutputData/$TFM_CONFIG_NAME
+record_directory                   : $MRB_TOP/tfm_test/run_records/$TFM_CONFIG_NAME
+productsdir_for_bash_scripts       : $MRB_TOP/remoteProducts_mu2e_v2_07_00_e28_s126_debug
+#
+package_hashes_to_save             : [artdaq]
+boardreader timeout                : 600
+eventbuilder timeout               : 600
+datalogger timeout                 : 600
+dispatcher timeout                 : 600
+max_fragment_size_bytes            : 1284180560
+transfer_plugin_to_use             : TCPSocket
+all_events_to_all_dispatchers      : true
+max_configurations_to_list         : 10
+disable_unique_rootfile_labels     : false
+use_messageviewer                  : false
+use_messagefacility                : true
+fake_messagefacility               : false
+kill_existing_processes            : true
+advanced_memory_usage              : false
+strict_fragment_id_mode            : false
 disable_private_network_bookkeeping: false
-allowed_processors: "0-63"
+allowed_processors                 : "0-63"

@@ -12,7 +12,6 @@ from rc.control.utilities import make_paragraph
 from rc.control.utilities import get_commit_info
 from rc.control.utilities import get_commit_info_filename
 from rc.control.utilities import get_build_info
-from rc.control.utilities import expand_environment_variable_in_string
 
 def save_run_record_base(self):
 
@@ -50,7 +49,7 @@ def save_run_record_base(self):
     with open("%s/%s" % (outdir, config_saved_name), "w") as outf:
         with open(boot_fn) as inf:
             for line in inf.readlines():
-                outf.write(expand_environment_variable_in_string(line))
+                outf.write(os.path.expandvars(line))
 
     out_fn = "%s/%s" % (outdir, config_saved_name)
     if not os.path.exists(out_fn):
@@ -109,7 +108,7 @@ def save_run_record_base(self):
 
     with open(environfilename, "w") as environfile:
         for var in sorted([varname for varname in os.environ if re.search(r"^TFM_", varname)]):
-            environfile.write("export %s=%s\n"% (var,expand_environment_variable_in_string(os.environ[var])))
+            environfile.write("export %s=%s\n"% (var,os.environ[var]))
 
     # JCF, 11/20/14
 
@@ -132,11 +131,7 @@ def save_run_record_base(self):
         "TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd())
     )
     outf.write(
-        "DAQInterface logfile: %s:%s\n"
-        % (
-            os.environ["HOSTNAME"],
-            expand_environment_variable_in_string(os.environ["TFM_LOGFILE"]),
-        )
+        "DAQInterface logfile: %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"])
     )
 
     # Now save the commit hashes / versions of the packages listed in
