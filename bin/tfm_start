@@ -3,6 +3,7 @@
 # start Trigger Farm Manager in a given partition - $ARTDAQ_PARTITION_NUMBER
 # ARTDAQ_BASE_PORT and ARTDAQ_PORTS_PER_PARTITION are used by artdaq/artdaq/DAQdata/PortManager.cc
 # artdaq/artdaq/DAQdata/Globals.hh also uses ARTDAQ_PARTITION_NUMBER
+# tfm_start 
 #------------------------------------------------------------------------------
 script=$(basename $0)
 echo [$script:$LINENO] : $*

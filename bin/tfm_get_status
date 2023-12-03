@@ -1,0 +1,15 @@
+#!/bin/env bash
+#------------------------------------------------------------------------------
+# assume xmlrpc_c is setup by the UPS - TFM setup requires that
+#------------------------------------------------------------------------------
+source $TFM_DIR/bin/tfm_utils.sh
+tfm_preamble
+
+    port=`tfm_port $ARTDAQ_PARTITION_NUMBER`
+full_cmd="xmlrpc http://localhost:$port/RPC2 get_state daqint "
+
+echo $full_cmd
+
+eval $full_cmd
+
+exit 0

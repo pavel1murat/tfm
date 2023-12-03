@@ -4,11 +4,11 @@ import threading
 
 class Threadable(object):
     def __init__(self, period=1, func=lambda: None, name="threadable"):
-        self.ev = threading.Event()
+        self.ev     = threading.Event()
         self.__stop = False
         self.thread = threading.Thread(target=self.main, name=name)
         self.period = period
-        self.func = func
+        self.func   = func
 
     def main(self):
         while not self.__stop:

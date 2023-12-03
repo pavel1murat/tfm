@@ -415,25 +415,6 @@ def get_process_manager_log_filenames_base(self):
 
     return output
 
-##def softlink_process_manager_logfile(self, host):
-##
-##    fn  = get_process_manager_log_filename(self, host)
-##
-##    cmd = "ln -s %s %s/pmt/run%d-pmt_%s.log" % (fn,self.log_directory,self.run_number,host)
-##
-##    if not host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)
-##
-##    status = Popen(cmd,shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
-##
-##    return (status == 0)
-##
-##
-##def softlink_process_manager_logfiles_base(self):
-##
-##    for host in set([procinfo.host for procinfo in self.procinfos]):
-##        softlink_process_manager_logfile(self, host)
-##    return
-
 
 def find_process_manager_variable_base(self, line):
     return False
@@ -447,10 +428,8 @@ def reset_process_manager_variables_base(self):
     pass
 
 
-
 def process_manager_cleanup_base(self):
     pass
-
 
 def get_pid_for_process_base(self, procinfo):
 

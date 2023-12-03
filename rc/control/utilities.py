@@ -9,10 +9,10 @@ import sys
 import stat
 
 import subprocess
-from subprocess import Popen
+from   subprocess import Popen
 
-from time import sleep
-from time import time
+from   time       import sleep
+from   time       import time
 
 from threading import Thread
 

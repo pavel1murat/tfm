@@ -70,6 +70,14 @@ function tfm_transition_() {
 	          test $# == 1 || badargs=true
             translated_cmd="disabling"
 	          ;;
+        "pause")
+	          test $# == 1 || badargs=true
+            translated_cmd="pausing"
+	          ;;
+        "resume")
+	          test $# == 1 || badargs=true
+            translated_cmd="resuming"
+	          ;;
         "stop")
 	          test $# == 1 || badargs=true 
 	          translated_cmd="stopping"

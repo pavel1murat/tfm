@@ -8,7 +8,9 @@ from rc.io.rpc        import rpc_server
 from rc.threading     import threadable
 from rc.util.contexts import ContextObject
 
+import run_control_state
 
+#------------------------------------------------------------------------------
 class Component(ContextObject):
     """
     Dummy (or subclass-able) component for use with the LBNE Run Control prototype.
@@ -19,7 +21,7 @@ class Component(ContextObject):
     def __init__(self,
                  name         = "toycomponent",
                  rpc_host     = "localhost",
-                 control_host ="localhost",
+                 control_host = "localhost",
                  synchronous  = False,
                  rpc_port     = 6659,
                  skip_init    = False):
@@ -37,24 +39,25 @@ class Component(ContextObject):
         self.__rpc_port  = rpc_port
         self.run_params  = None
         self.__dummy_val = 0
+#------------------------------------------------------------------------------
+# initialize the RPC server and commands it can execute
+# two contexts corresponding to two threads
+#------------------------------------------------------------------------------
         self.contexts = [
-            (
-                "rpc_server",
-                rpc_server(port=self.__rpc_port,
-                           funcs={
-                               "state"              : self.state,
-                               "artdaq_process_info": self.artdaq_process_info,
-                               "state_change"       : self.state_change,
-                               "listconfigs"        : self.listconfigs,
-                               "trace_get"          : self.trace_get,
-                               "trace_set"          : self.trace_set,
-                           },
-                       ),
-            ),
-            ("runner", threadable(func=self.runner)),
+            ("rpc_server", rpc_server(port  = self.__rpc_port,
+                                      funcs = { "state"              : self.state,
+                                                "shutdown"           : self.complete_shutdown,
+                                                "get_state"          : self.get_state,
+                                                "artdaq_process_info": self.artdaq_process_info,
+                                                "state_change"       : self.state_change,
+                                                "listconfigs"        : self.listconfigs,
+                                                "trace_get"          : self.trace_get,
+                                                "trace_set"          : self.trace_set,
+                                            })),
+            ("runner"    , threadable(func=self.runner))
         ]
 #------------------------------------------------------------------------------
-# transition "booting" leads to "booted' state
+# transition "booting" leads to the "booted' state
 # states we need: 
 # 1. "booted" or "idle" : the state the system gets upon startup
 # 2. "configured"       : all processes are started, run number known, ready to start running
@@ -69,12 +72,16 @@ class Component(ContextObject):
 #
 # but do the cleanup step by step
 #-------
+        self.fState = None;
+        
         self.transition = { 
             "boot"        : {"state": "booting"    , "from": "stopped", "to": "booted" },
             "configure"   : {"state": "configuring", "from": "booted" , "to": "ready"  },
             "start"       : {"state": "starting"   , "from": "ready"  , "to": "running"},
-            "stop"        : {"state": "stopping"   , "from": "running", "to": "booted"},
-            "recover"     : {"state": "recovering" , "from": ""       , "to": "booted"},
+            "stop"        : {"state": "stopping"   , "from": "running", "to": "booted" },
+            "pause"       : {"state": "pausing"    , "from": "running", "to": "paused" },
+            "resume"      : {"state": "resuming"   , "from": "paused" , "to": "running"},
+            "recover"     : {"state": "recovering" , "from": ""       , "to": "booted" },
         }
         
         self.dict_state_to = {
@@ -119,6 +126,9 @@ class Component(ContextObject):
     def state(self, name):
         # if name != self.name: return "unknown"
         return self.__state
+
+    def get_state(self,name):
+        return self.fState.get_name()+':%s'%self.fState.get_completed()
 
     def artdaq_process_info(self, name):
         raise NotImplementedError()
@@ -165,20 +175,24 @@ class Component(ContextObject):
         self.run_params           = trace_args
         self.do_trace_set_boolean = True
 
+#------------------------------------------------------------------------------
+# should be able to shut down correctly from any state, not only from 'stopped'
+# to begin with, assume that we're in a 'stopped' state
+#---v--------------------------------------------------------------------------
+    def complete_shutdown(self,name):
+        print(" >>> complete_shutdown Requested");
+        self.shutdown()
+        return;
+
+#------------------------------------------------------------------------------
+# request to change state comes from the outside
+#---v--------------------------------------------------------------------------
     def state_change(self, name, requested, state_args):
-        # if name != self.name: return
-        # trep = datetime.datetime.utcnow()
 
-        if (requested in self.dict_state_from.keys() and 
-            self.__state not in self.dict_state_from[requested]
-        ):
-
-            self.print_log(
-                "w",
-                "\nWARNING: Unable to accept transition request "
-                '"%s" from current state "%s"; the command will have no effect.'
-                % (self.dict_correct_grammar[requested], self.__state),
-            )
+        if (requested in self.dict_state_from.keys() and (self.__state not in self.dict_state_from[requested])):
+            self.print_log("w","\nWARNING: Unable to accept transition request "
+                           '"%s" from current state "%s"; the command will have no effect.'
+                           % (self.dict_correct_grammar[requested], self.__state))
 
             allowed_transitions = []
 
@@ -188,16 +202,14 @@ class Component(ContextObject):
 
             assert len(allowed_transitions) > 0, "Zero allowed transitions"
 
-            self.print_log(
-                "w",
-                "Can accept the following transition request(s): "
-                + ", ".join(
-                    [
-                        self.dict_correct_grammar[transition]
-                        for transition in allowed_transitions
-                    ]
-                ),
-            )
+            self.print_log("w","Can accept the following transition request(s): "
+                           + ", ".join(
+                               [
+                                self.dict_correct_grammar[transition]
+                                   for transition in allowed_transitions
+                               ]
+                           ),
+                       )
             return
         # breakpoint()
         # set out transition state now.
@@ -213,7 +225,7 @@ class Component(ContextObject):
 # shutdown transition
 #------------------------------------------------------------------------------
             self.stop_running()
-            self.shutdown()
+#            self.shutdown()
         if requested == "pausing":
             self.pause_running()
         if requested == "booting":
@@ -313,34 +325,12 @@ class Component(ContextObject):
 
 def get_args():  # no-coverage
     parser = argparse.ArgumentParser(description="Simulated LBNE 35 ton component")
-    parser.add_argument(
-        "-n", "--name", type=str, dest="name", default="toy", help="Component name"
-    )
-    parser.add_argument(
-        "-r", "--rpc-port", type=int, dest="rpc_port", default=6660, help="RPC port"
-    )
-    parser.add_argument(
-        "-H",
-        "--rpc-host",
-        type=str,
-        dest="rpc_host",
-        default="localhost",
-        help="This hostname/IP addr",
-    )
-    parser.add_argument(
-        "-c",
-        "--control-host",
-        type=str,
-        dest="control_host",
-        default="localhost",
-        help="Control host",
-    )
-    parser.add_argument(
-        "-s",
-        "--is-synchronous",
-        dest="synchronous",
-        default=False,
-        action="store_true",
-        help="Component is synchronous (starts/stops w/ DAQ)",
-    )
+
+    parser.add_argument("-n", "--name"          , type=str, dest="name"    , default="toy"      , help="Component name")
+    parser.add_argument("-r", "--rpc-port"      , type=int, dest="rpc_port", default=6660       , help="RPC port"      )
+    parser.add_argument("-H", "--rpc-host"      , type=str, dest="rpc_host", default="localhost", help="This hostname/IP addr")
+    parser.add_argument("-c", "--control-host"  , type=str, dest="control_host", default="localhost", help="Control host" )
+    parser.add_argument("-s", "--is-synchronous", action ="store_true", dest ="synchronous", default=False, 
+                        help ="Component is synchronous (starts/stops w/ DAQ)")
+
     return parser.parse_args()
