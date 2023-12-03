@@ -50,26 +50,7 @@ function tfm_transition_() {
 #------------------------------------------------------------------------------
 	          test $# == 1 || test $# == 2 || badargs=true 
 	          translated_cmd="starting"
-            
-# 	          runnum=0
-#             highest_runnum=$(ls -1 $recorddir | awk '{print $9}' | sort -n | sed 's/^0*//' | tail -1)
-#             
-# 	          if [[ $# == 1 ]]; then
-#                 runnum=$((highest_runnum + 1))
-#             else
-#                 runnum=$2 
-#             fi
-#             
-# 	          xmlrpc_arg="run_number:i/"$runnum
-	          ;;
-        "enable")
-	          test $# == 1 || badargs=true
-            translated_cmd="enabling"
-	          ;;
-        "disable")
-	          test $# == 1 || badargs=true
-            translated_cmd="disabling"
-	          ;;
+            ;;
         "pause")
 	          test $# == 1 || badargs=true
             translated_cmd="pausing"
@@ -84,7 +65,7 @@ function tfm_transition_() {
 	          ;;
         "shutdown")
 	          test $# == 1 || badargs=true 
-	          translated_cmd="shutting"
+	          translated_cmd="shutdown"
 	          ;;
         "terminate")
 	          test $# == 1 || badargs=true 
@@ -106,10 +87,8 @@ function tfm_transition_() {
 #------------------------------------------------------------------------------
 # allow arguments to be undefined
 #------------------------------------------------------------------------------
-    if [[ -n $xmlrpc_arg ]]; then
-        full_cmd=${full_cmd}" 'struct/{"${xmlrpc_arg}"}'"
-    else
-        full_cmd=${full_cmd}" 'struct/{ignored_variable:i/999}' "
+    if [[ -n $xmlrpc_arg ]]; then full_cmd=${full_cmd}" 'struct/{"${xmlrpc_arg}"}'"
+                             else full_cmd=${full_cmd}" 'struct/{ignored_variable:i/999}' "
     fi
     
     if [ $debug != 0 ] ; then echo [$script:$LINENO] full_cmd=$full_cmd ; fi

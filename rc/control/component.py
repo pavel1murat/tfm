@@ -225,7 +225,6 @@ class Component(ContextObject):
 # shutdown transition
 #------------------------------------------------------------------------------
             self.stop_running()
-#            self.shutdown()
         if requested == "pausing":
             self.pause_running()
         if requested == "booting":
@@ -234,12 +233,14 @@ class Component(ContextObject):
         if requested == "configuring":
             self.run_params = state_args
             self.config()
-        if requested == "resuming":
-            self.resume_running()
-        if requested == "terminating":
-            self.terminate()
         if requested == "recovering":
             self.recover()
+        if requested == "resuming":
+            self.resume_running()
+        if requested == "shutdown":
+            self.complete_shutdown(name)
+        if requested == "terminating":
+            self.terminate()
 
     def wakeup(self):
         self.runner.wakeup()
