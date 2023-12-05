@@ -171,8 +171,18 @@ Nil
 - however, messages by message_facility go into individual log files, one per 
 art process
 * TFM scripts                                                                
-*** tfm_transition
-*** artdaq_process_info.sh                                                   
+** tfm_transition                                                            
+- handles transitions: config, start, stop, 
+- doesn't handle yet: pause, resume, shutdown
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_transition stop
+[tfm_transition:7] : parameters:stop
+[tfm_transition:96] full_cmd=xmlrpc http://localhost:18000/RPC2 state_change daqint stopping 'struct/{ignored_variable:i/999}'
+Result:
+
+Nil
+#+end_src
+** artdaq_process_info.sh                                                    
 - call signature:
 #+begin_src
       artdaq_process_info.sh [partition]
@@ -180,19 +190,22 @@ art process
 - if partition is specified, it is used to determine the communication port number 
 - otherwise, the value of $TFM_PARTITION is used
 
-*** tfm_status
-*** TODO listdaqcomps.sh                                                     
-- the printout doesn't seem to come up on the screen, gets printed by the next command
-#+begin_src                                                                  
-/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings is only
-applicable when working with the database
+** tfm_status (obsolete)                                                     
+- returns old state w/o completion                            
+#+begin_src
 
-/projects/mu2e/tdaq/pasha_013/DAQInterface>listdaqcomps.sh
+#+end_src 
+** tfm_get_status                                                            
+- returns status with completion percentage for transisitons
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
+xmlrpc http://localhost:18000/RPC2 get_state daqint
 Result:
 
-Nil
+String: 'configured:100'
 #+end_src
-*** listconfigs.sh                                                           
+** listconfigs.sh (obsolete)                                                 
+- don't think it is needed, no real use....
 #+begin_src                                                                  
 /projects/mu2e/tdaq/pasha_013/DAQInterface>listconfigs.sh
 Result:
