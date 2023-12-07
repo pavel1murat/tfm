@@ -3295,7 +3295,7 @@ class FarmManager(Component):
         self.print_log("i","\n%s: STOP transition underway for run %d"%(date_and_time(),self.run_number))
 
         self.fState = run_control_state.transition("stop")
-
+        self.fState.set_completed(0);
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
 
@@ -3342,6 +3342,7 @@ class FarmManager(Component):
 
         self.execute_trace_script("stop")
         self.complete_state_change("stopping")
+        self.fState.set_completed(50);
 #------------------------------------------------------------------------------
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------

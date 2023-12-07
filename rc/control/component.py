@@ -189,9 +189,12 @@ class Component(ContextObject):
 #---v--------------------------------------------------------------------------
     def state_change(self, name, requested, state_args):
 
+        print("component::state_change name=",name, "requested:",requested,"args:",state_args);
+
         if (requested in self.dict_state_from.keys() and (self.__state not in self.dict_state_from[requested])):
             self.print_log("w","\nWARNING: Unable to accept transition request "
-                           '"%s" from current state "%s"; the command will have no effect.'
+                           '"%s" from current state "%s";\n'
+                           'the command will have no effect.'
                            % (self.dict_correct_grammar[requested], self.__state))
 
             allowed_transitions = []
@@ -241,7 +244,10 @@ class Component(ContextObject):
             self.complete_shutdown(name)
         if requested == "terminating":
             self.terminate()
-
+        return "ok"
+#-------^----------------------------------------------------------------------
+#
+#---v--------------------------------------------------------------------------
     def wakeup(self):
         self.runner.wakeup()
 

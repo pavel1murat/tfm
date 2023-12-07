@@ -91,7 +91,7 @@ function tfm_transition_() {
                              else full_cmd=${full_cmd}" 'struct/{ignored_variable:i/999}' "
     fi
     
-    if [ $debug != 0 ] ; then echo [$script:$LINENO] full_cmd=$full_cmd ; fi
+    if [ $debug != 0 ] ; then echo [$script:$LINENO] : full_cmd=$full_cmd ; fi
     
     eval $full_cmd 
 }
