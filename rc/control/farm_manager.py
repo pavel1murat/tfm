@@ -349,14 +349,14 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # WK 8/31/21
 # Startup msgviewer early. check on it later
-####
+#---v--------------------------------------------------------------------------
     def start_message_viewer(self):
         self.msgviewer_proc = None  # initialize
         if self.use_messageviewer:
-
-            # Use messageviewer if it's available, i.e., if there's one already up 
-            # or if it's set up via the user-supplied setup script
-
+#------------------------------------------------------------------------------
+# Use messageviewer if it's available, i.e., if there's one already up 
+# or if it's set up via the user-supplied setup script
+#-----------v------------------------------------------------------------------
             try:
 
                 if self.have_artdaq_mfextensions() and is_msgviewer_running():
@@ -375,8 +375,9 @@ class FarmManager(Component):
                             % (version, qualifiers)
                         ),
                     )
-
+                    self.print_log("i","start_message_viewer:001 debug_level=%i",self.debug_level)
                     self.msgviewer_proc = self.launch_msgviewer()
+                    self.print_log("i","start_message_viewer:002 debug_level=%i",self.debug_level)
 
                 else:
                     self.print_log("i",make_paragraph(
@@ -464,7 +465,9 @@ class FarmManager(Component):
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
                  rpc_port         = 6659          ,
-                 partition        = 999           ):
+                 partition        = 999           ,
+                 debug_level      = 0
+    ):
 
         # Initialize Component, the base class of FarmManager
 
@@ -484,6 +487,7 @@ class FarmManager(Component):
         self.partition        = partition                # assume integer
         self.transfer         = "Autodetect"
         self.rpc_port         = rpc_port
+        self.debug_level      = debug_level
 
         self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
@@ -520,7 +524,6 @@ class FarmManager(Component):
         self.use_messageviewer    = True
         self.use_messagefacility  = True
         self.fake_messagefacility = False
-
 
         self.printlock            = RLock()
 
@@ -609,6 +612,8 @@ class FarmManager(Component):
         self.print_log("i",'%s: FarmManager in partition %d launched and now in "%s" state, listening on port %d'
             % (date_and_time(),self.partition,self.state(self.name),self.rpc_port)
         )
+
+        print(" >>>> FarmManager.debug_level = ",self.debug_level);
 
     def __del__(self):
         kill_tail_f()
@@ -2754,19 +2759,24 @@ class FarmManager(Component):
     def do_boot(self):
 #------------------------------------------------------------------------------
 # P.Murat: why a nested function? - hiding the name
-########
+#-------v----------------------------------------------------------------------
         def revert_failed_boot(failed_action):
             self.reset_variables()
             self.revert_failed_transition(failed_action)
 
-        self.print_log("i", "\n%s: BOOT transition underway" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition underway" % (date_and_time()))
+        self.print_log("i", "%s: BOOT, self.debug_level=%i" % (date_and_time(),self.debug_level))
 
         self.reset_variables()
+        self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" % (date_and_time(),self.debug_level))
+
         self.fState = run_control_state.transition("init");
         self.fState.set_completed(0);
 
         os.chdir(self.base_dir)
         boot_fn = self.boot_filename();
+
+        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" % (date_and_time(),boot_fn,self.debug_level))
 
         if not os.path.exists(boot_fn):
             raise Exception('ERROR: boot file %s does not exist' % boot_fn)
@@ -2779,6 +2789,7 @@ class FarmManager(Component):
         if file_extension == ".fcl":
             try:
                 self.create_setup_fhiclcpp_if_needed()
+                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (date_and_time(),self.debug_level))
             except:
                 raise
 
@@ -2799,16 +2810,20 @@ class FarmManager(Component):
 # P.Murat: here the boot.txt file is being read and parsed
 #-------
         try:
+            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (date_and_time(),self.debug_level))
             self.get_boot_info(self.boot_filename())
+            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (date_and_time(),self.debug_level))
             self.check_boot_info()
+            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (date_and_time(),self.debug_level))
         except Exception:
             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
             return
 
 #------------------------------------------------------------------------------
 # See the Procinfo.__lt__ function for details on sorting
-#-------
+#-------v----------------------------------------------------------------------
         self.procinfos.sort()
+        self.print_log("i", "%s: BOOT transition 0005 debug_level:%i" % (date_and_time(),self.debug_level))
 
         for ss in sorted(self.subsystems):
 
@@ -2837,10 +2852,12 @@ class FarmManager(Component):
                                    % (p.label,p.host,p.port,p.subsystem,p.rank),2)
 #------------------------------------------------------------------------------
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
-########
+#-------v----------------------------------------------------------------------
         self.print_log("i", "%s: BOOT transition 001 Pasha: start msg viewer" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition 001 debug_level:%i" % (date_and_time(),self.debug_level))
         self.start_message_viewer()
         self.print_log("i", "%s: BOOT transition 002 Pasha: done with msg viewer" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition 002 debug_level:%i" % (date_and_time(),self.debug_level))
 
         self.fState.set_completed(30);
 #------------------------------------------------------------------------------
@@ -2879,6 +2896,7 @@ class FarmManager(Component):
             self.validate_setup_script(random_host)
 
             self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (date_and_time()))
+            self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
@@ -2890,7 +2908,8 @@ class FarmManager(Component):
 # deal with message facility. 
 # -- also OK to do just once
 #-----------v------------------------------------------------------------------
-            self.print_log("i", "\n%s: BOOT transition 007 Pasha: before init_process_requirements\n" % (date_and_time()))
+            self.print_log("i", "%s: BOOT transition 004 Pasha: before init_process_requirements\n" % (date_and_time()))
+            self.print_log("i", "%s: BOOT transition 004 debug_level:%i" % (date_and_time(),self.debug_level))
             self.init_process_requirements()
             self.fState.set_completed(60);
 #------------------------------------------------------------------------------
@@ -2903,6 +2922,7 @@ class FarmManager(Component):
 #-------v-----------------------------------------------------------------------
         self.complete_state_change("booting")
         self.print_log("i", "%s: BOOT transition complete" % (date_and_time()))
+        self.print_log("i", "%s: BOOT transition complete debug_level:%i" % (date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
@@ -3834,6 +3854,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # the environment overrides the code defaults, the command line overrides both
 # start from figuring the artdaq partition number
+# parameters are passed to the FarmManager constructor
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
 
@@ -3848,7 +3869,8 @@ def get_args():  # no-coverage
     parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
     parser.add_argument("-H","--rpc-host"    ,type=str,dest="rpc_host"    ,default="localhost",help="this hostname/IP addr")
     parser.add_argument("-c","--control-host",type=str,dest="control_host",default="localhost",help="Control host")
-    parser.add_argument("-d","--config-dir"  ,type=str,dest="config_dir"  ,default=None       ,help="config dir"  )
+    parser.add_argument("-d","--debug-level" ,type=int,dest="debug_level" ,default=0          ,help="debug level, default=0")
+    parser.add_argument("-D","--config-dir"  ,type=str,dest="config_dir"  ,default=None       ,help="config dir"  )
 
     return parser.parse_args()
 
@@ -3889,11 +3911,6 @@ def main():  # no-coverage
         print(make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
                               'Will internally set HOSTNAME using socket.gethostname\n')))
         os.environ["HOSTNAME"] = socket.gethostname();
-#------------------------------------------------------------------------------
-# parse command line
-#---
-    args = get_args()
-
 #------------------------------------------------------------------------------
 # KILL signal handler - Ctrl-C, for example
 #---v--------------------------------------------------------------------------
@@ -3937,22 +3954,33 @@ def main():  # no-coverage
     default_sigterm_handler = signal.signal(signal.SIGTERM, handle_kill_signal)
     default_sighup_handler  = signal.signal(signal.SIGHUP , handle_kill_signal)
     default_sigint_handler  = signal.signal(signal.SIGINT , handle_kill_signal)
-
 #------------------------------------------------------------------------------
-# 'boot' once and go into  a daemon mode listening to commands
-#------------------------------------------------------------------------------ 
-    with FarmManager(**vars(args)) as tfm:
+# parse command line, then 'boot' once and enter a daemon mode listening to commands
+#---v--------------------------------------------------------------------------
+    args = get_args()
 
+    with FarmManager(**vars(args)) as tfm:
         tfm.__do_boot = False
         tfm.do_boot()
-       
-#        while True:
-        while (tfm.fKeepRunning):
-            sleep(5)
-            print("... FarmManager sleeping for 5 sec, keeprunning=",tfm.fKeepRunning);
 
+        while (tfm.fKeepRunning):
+#------------------------------------------------------------------------------
+# P.M. there is something odd happening when self.debug_level=0 - the MRB environment 
+#      seems to get corrupted
+#      for the moment, keep debug_level=1 and work around
+#------------------------------------------------------------------------------
+            if (tfm.debug_level > 1):
+                print("... FarmManager sleeping for 6 sec, keeprunning=",tfm.fKeepRunning,
+                      " debug_level=",tfm.debug_level);
+            sleep(5)
+#------------------------------------------------------------------------------
+# done, exit
+#-------v----------------------------------------------------------------------
         tfm.__del__()
     return
+
+#------------------------------------------------------------------------------
+# this is where the main starts
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
     main()

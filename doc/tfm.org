@@ -12,19 +12,22 @@
 * [[file:artdaq_daqinterface.org]]
 * ------------------------------------------------------------------------------
 * [[file:software_setup.org][software setup]]
-* farm_manager.py: server managing the trigger farm                          
-- parameters:
-|------------------------+---------------------------------+-----------|
-| flag                   | description                     | default   |
-|------------------------+---------------------------------+-----------|
-| -n, --name             | component name (what is that ?) | daqint    |
-| -p, --partition-number | partition number                | 888       |
-| -r, --rpc-port         | RPC port                        | 5570      |
-| -H, --rpc-host         | This hostname/IP addr           | localhost |
-| -c, --control-host     | Control host                    | localhost |
-| -d, --config-dir       | config directory                | None      |
-|                        |                                 |           |
-|------------------------+---------------------------------+-----------|
+* TODO [0/1]  farm_manager.py: server managing the trigger farm                          
+** command line parameters                                                   
+|------------------------+---------------------------------+------+-------------+---------------------|
+| flag                   | description                     | Type | default     | comment             |
+|------------------------+---------------------------------+------+-------------+---------------------|
+| -n, --name             | component name (what is that ?) | str  | "daqint"    |                     |
+| -p, --partition-number | partition number                | int  | 888         |                     |
+| -r, --rpc-port         | RPC port                        | int  | 5570        |                     |
+| -H, --rpc-host         | This hostname/IP addr           | str  | "localhost" |                     |
+| -c, --control-host     | Control host                    | str  | "localhost" |                     |
+|------------------------+---------------------------------+------+-------------+---------------------|
+| -d, --debug-level      | debug level                     | int  | 0           | can also be defined |
+|                        |                                 |      |             | in boot.txt         |
+|------------------------+---------------------------------+------+-------------+---------------------|
+| -D, --config-dir       | config directory                | str  | None        |                     |
+|------------------------+---------------------------------+------+-------------+---------------------|
 - config-dir contains all configuration files, has to be defined on the 
   command line
   last config-dir path component (subdirectory) is the configuration name
@@ -50,6 +53,9 @@
   - disable
   - stop
   - terminate
+** TODO [0/1] internal variables and their quirks                            
+*** TODO debug_level: when set to zero,  the environment gets corrupted      
+    for the moment, set to 1, and work around
 * configuration                                                              
 - the farm configuration consists of the following files:
 ** boot.txt : defines components the farm configuration

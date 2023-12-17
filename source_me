@@ -93,9 +93,12 @@ mkdir -p $TFM_LOGDIR
 export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $ARTDAQ_PARTITION_NUMBER`.log
 cat<<EOF
 
-* The TFM environment setup successful. To launch TFM: tfm_start.sh &
-* Output will be logged in ${TFM_LOGDIR}/tfm_partition_<N>.log, 
+* The TFM environment setup for configuration $TFM_CONFIG_NAME successful. 
+* To launch TFM: tfm_start.sh &
+* using ARTDAQ_PARTITION=$ARTDAQ_PARTITION
+* logfiles are located in ${TFM_LOGDIR}/tfm_partition_<N>.log, 
   where <N> is the partition the TF manager instance is running on
+* data will be logged in ... TO BE DEFINED
 
 EOF
  
