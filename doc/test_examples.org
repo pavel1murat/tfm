@@ -9,6 +9,7 @@ usually partition=11
 ** [[file:../config/demo]]                                                       
 - an ARTDAQ demo with 6 processess: two boardreaders, two event builders, dispatcher and logger
 - all on the same machine
+- ignore boot.py and boot.json - those are just prototypes
 ** [[file:../config/vst_000]]                                                    
 - Tracker VST : read the DTC registers
 - two processes, board_reader and event_builder, on the same machine

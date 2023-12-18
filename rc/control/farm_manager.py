@@ -3969,9 +3969,9 @@ def main():  # no-coverage
 #      seems to get corrupted
 #      for the moment, keep debug_level=1 and work around
 #------------------------------------------------------------------------------
-            if (tfm.debug_level > 1):
-                print("... FarmManager sleeping for 6 sec, keeprunning=",tfm.fKeepRunning,
-                      " debug_level=",tfm.debug_level);
+#            if (tfm.debug_level > 1):
+#                print("... FarmManager sleeping for 6 sec, keeprunning=",tfm.fKeepRunning,
+#                      " debug_level=",tfm.debug_level);
             sleep(5)
 #------------------------------------------------------------------------------
 # done, exit

@@ -1,0 +1,86 @@
+# -*- mode:tcl -*-
+###########################################################
+#
+###########################################################
+daq: {
+    aggregator: {
+        is_datalogger: true
+        buffer_count    :   10
+        expected_fragments_per_event    :   1
+        max_fragment_size_bytes   :   65338168
+        init_fragment_count   :   1
+        broadcast_buffer_size   :   0x6400000
+        sources: {
+        }
+    }
+    metrics: {
+    }
+}
+
+art: {
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : "ArtdaqSharedMemoryService"
+            waiting_time        : 300
+            resume_after_timeout: true
+        }
+
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider : "ArtdaqFragmentNamingService"
+            helper_plugin    : "Mu2e"
+        }
+
+    }
+
+    outputs: {
+        rootOutput: { module_type: RootDAQOut
+            # SelectEvents      # :     # []
+            fileName      :     "/tmp/raw.mu2e.trkvst.annex.%06r_%08s.art"
+            # compressionLevel      # :     # 0
+            outputCommands      :     ["drop *_*_*_*", 
+                                       "keep artdaq::Fragments_*_*_*",
+                                       "keep *::Mu2eFragment_*_*_*",
+                                       "keep mu2e::TriggerInfo_*_*_*",
+                                       "keep art::TriggerResults_*_*_*",
+                                       "keep artdaq::detail::RawEventHeader_*_*_*",
+                                       "keep mu2e::CaloClusters_*_*_*",
+                                       "keep mu2e::TimeClusters_*_*_*",
+                                       "keep mu2e::HelixSeeds_*_*_*",
+                                       "keep mu2e::KalSeeds_*_*_*",
+                                       "keep mu2e::Mu2eEventHeader_*_*_*",
+                                       "keep mu2e::IntensityInfo*_*_*_*",
+                                       "keep mu2e::CaloHits_CaloHitMakerFast_caphri_*"
+                                      ]
+            fileProperties : { 
+                maxSize     : 500000 
+                granularity : SubRun 
+            }
+            checkFileName  :     false
+        }
+
+        rootNetOutput: {
+            module_type: RootNetOutput
+            host_map      :     []
+            destinations: {
+            }
+
+            routing_table_config: {
+                use_routing_manager: false
+            }
+        }
+    }
+
+    physics: {
+        analyzers: {}
+
+        output    :   [ rootOutput, rootNetOutput ]
+        end_paths :   [ output ]
+    }
+
+    source: {
+        module_type: ArtdaqInput
+    }
+
+    process_name: DAQDL
+}
+

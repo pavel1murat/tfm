@@ -188,7 +188,7 @@ class Component(ContextObject):
 # request to change state comes from the outside
 #---v--------------------------------------------------------------------------
     def state_change(self, name, requested, state_args):
-
+        #breakpoint()
         print("component::state_change name=",name, "requested:",requested,"args:",state_args);
 
         if (requested in self.dict_state_from.keys() and (self.__state not in self.dict_state_from[requested])):

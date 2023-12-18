@@ -43,7 +43,7 @@ def launch_procs_on_host(self,host,
                          launch_commands_to_run_on_host,
                          launch_commands_to_run_on_host_background,
                          launch_commands_on_host_to_show_user):
-####
+    # breakpoint()
     debug_level = 2
     self.print_log("i", "Executing commands to launch processes on %s" % (host))
 
@@ -200,7 +200,7 @@ def launch_procs_base(self):
 
     for p in self.procinfos:
         if p.host == "localhost": p.host = get_short_hostname()
-
+        # breakpoint()
         if not p.host in launch_commands_to_run_on_host:
 #------------------------------------------------------------------------------
 # form the name of the PMT log file, assume know the run number
@@ -267,8 +267,8 @@ def launch_procs_base(self):
 
         launch_commands_to_run_on_host_background[p.host].append(launch_cmd)
         launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
-
-    print
+    # breakpoint()
+    # print
     # breakpoint()
     threads = []
     for host in launch_commands_to_run_on_host:

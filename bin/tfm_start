@@ -31,7 +31,7 @@ if [ -z $TFM_CONFIG_NAME ] ; then
 fi
 
 config_name=$TFM_CONFIG_NAME
- config_dir=$TFM_CONFIG_DIR/config_name
+ config_dir=$TFM_CONFIG_DIR/$config_name
 
 export    TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`
 export TFM_LOGFILE=$TFM_LOGDIR/tfm_partition_`printf %02i $ARTDAQ_PARTITION_NUMBER`.log
@@ -52,10 +52,10 @@ fi
 # 
 # the output is controled by env vars
 #------------------------------------------------------------------------------
-nohup stdbuf -oL $TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER \
-                                                     --rpc-port $TFM_PORT \
-                                                     --config-dir=$config_dir
-                                                     <&- >> $logfile 2>&1
+cmd="$TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER"
+cmd=$cmd" --rpc-port $TFM_PORT --config-dir=$config_dir"
+echo starting command: nohup stdbuf -oL $cmd  \>\> $logfile 2\>\&1
+nohup stdbuf -oL $cmd >> $logfile 2>&1
 
 pid=$( ps aux | grep "$TFM_TTY.*tail -n0 -f $logfile" | grep -v grep | awk '{print $2}' )
 
