@@ -24,7 +24,7 @@ daq: {
 
         resetRoc               : 0
         readData               : 0
-        readoutMode            : 0
+        readoutMode            : 0               ## 0:read digis
         max_fragment_size_bytes: 0x100000
 
         saveDTCRegisters             : 1          ## 1

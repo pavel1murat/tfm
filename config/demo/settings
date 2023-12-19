@@ -1,4 +1,4 @@
-#
+#------------------------------------------------------------------------------
 # JCF, Sep-16-2017
 
 # This file is an example of a settings file which would work with an
@@ -16,12 +16,15 @@
 # For more information on these variables and what they mean, see the
 # relevant section of the DAQInterface wiki,
 # https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
+#
+# P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
+#------------------------------------------------------------------------------
+log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
+data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
+record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
 
-log_directory               : /home/mu2etrk/test_stand/pasha_019/tfm_test/Logs/$TFM_CONFIG_NAME
-data_directory_override     : /home/mu2etrk/test_stand/pasha_019/tfm_test/OutputData/$TFM_CONFIG_NAME
-record_directory            : /home/mu2etrk/test_stand/pasha_019/tfm_test/run_records/$TFM_CONFIG_NAME
-
-productsdir_for_bash_scripts: $MRB_TOP/remoteProducts_mu2e_v2_06_11_e28_s124_prof
 package_hashes_to_save      : [ artdaq-demo, artdaq ]
 
 boardreader timeout         : 60

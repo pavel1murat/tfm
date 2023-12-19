@@ -1,12 +1,133 @@
-#!/bin/env bash
+#!/usr/bin/bash
 #------------------------------------------------------------------------------
-# call: tfm_configure config_dir config_name
-# source_me expects $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/source_me to exist
+# call: tfm_configure config_name partition
 #------------------------------------------------------------------------------
-export  TFM_CONFIG_DIR=$1
-export TFM_CONFIG_NAME=$2
+source $TFM_DIR/bin/tfm_utils.sh
 
-echo TFM_CONFIG_DIR=$1
-echo TFM_CONFIG_NAME=$2
+function cleanup() {
+    export PATH=$(echo $PATH | sed -r 's!'${TFM_DIR}/bin':*!!')
 
-source $TFM_DIR/source_me 
+    unset TFM_LOGDIR
+    unset TFM_LOGFILE
+    unset TFM_USER_SOURCE_ME_ERRNO
+    unset TFM_TTY
+    unset TFM_PORT
+}
+
+export         TFM_CONFIG_NAME=$1
+export ARTDAQ_PARTITION_NUMBER=$2
+if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
+    echo call: tfm_configure config_name partition
+    return
+fi
+#------------------------------------------------------------------------------
+# all parameters present
+#------------------------------------------------------------------------------
+if [ -n $TFM_VERSION ] ; then echo TFM_VERSION=$TFM_VERSION
+                         else echo "TFM not setup, bail out" ; return 1
+fi
+
+export TFM_TTY=$(tty | sed -r 's!/dev/!!')
+
+if ! [[ "$TFM_TTY" =~ pts/[0-9]+ ]]; then
+    cat<<EOF >&2
+WARNING: unable to determine tty. While this will not affect
+actual datataking, any DAQInterface launched in this environment
+may have problems with sending output to a MessageViewer instance
+EOF
+fi
+#------------------------------------------------------------------------------
+# this is the directory where FCL files of all components reside 
+# I don't think it is needed, but keep it around...
+#------------------------------------------------------------------------------
+export                TFM_SETTINGS=$MRB_TOP/config/$TFM_CONFIG_NAME/settings
+export         TFM_FHICL_DIRECTORY=$TFM_DIR/config
+#------------------------------------------------------------------------------
+# create output directories
+#------------------------------------------------------------------------------
+mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
+export ARTDAQ_LOG_FHICL=$OTS_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
+
+top_dir=$OTS_SCRATCH/$TFM_CONFIG_NAME
+for subdir in logs data run_records ; do
+    dir=$top_dir/$subdir
+    if [ ! -d $dir ] ; then mkdir -p $dir ; fi
+done
+#------------------------------------------------------------------------------
+# TFM is supposed to have its own logfile
+#------------------------------------------------------------------------------
+export     TFM_LOGDIR=$top_dir/logs
+#------------------------------------------------------------------------------
+# P.M. ARTDAQ_PARTITION_NUMBER is already defined
+#------------------------------------------------------------------------------
+# source $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/source_me
+
+if [[ -z $ARTDAQ_BASE_PORT           ]]; then export           ARTDAQ_BASE_PORT=10000 ; fi
+if [[ -z $ARTDAQ_PORTS_PER_PARTITION ]]; then export ARTDAQ_PORTS_PER_PARTITION=1000  ; fi
+
+export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`
+
+export PATH=$TFM_DIR/bin:$PATH
+
+if [[ -n $TFM_SETTINGS ]]; then
+    if [[ ! -e $TFM_SETTINGS ]]; then
+	      echo "ERROR: the TFM_SETTINGS environment variable doesn't point to a file which exists"
+	      cleanup
+	      return 1
+    fi
+
+    export TFM_SETUP_FHICLCPP=$( dirname $TFM_SETTINGS )/.setup_fhiclcpp
+
+else cat<<EOF
+ERROR: the environment variable TFM_SETTINGS hasn't been
+defined in $TFM_USER_SOURCE_ME. Please read the DAQInterface
+Manual at
+https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
+to learn how to properly set up the DAQInterface environment.
+EOF
+
+    cleanup
+    return 1
+fi
+#------------------------------------------------------------------------------
+# At this point, set various environment variables DAQInterface needs
+# to reasonable defaults if they weren't already set in
+# $TFM_USER_SOURCE_ME - or complain if there's no reasonable default
+#------------------------------------------------------------------------------
+if [ -z $TFM_PROCESS_MANAGEMENT_METHOD ]; then export TFM_PROCESS_MANAGEMENT_METHOD="direct" ; fi
+
+if [[ -z $TFM_FHICL_DIRECTORY ]]; then
+    export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
+    cat<<EOF
+WARNING: the environment variable TFM_FHICL_DIRECTORY hasn't
+been defined in $TFM_USER_SOURCE_ME, so we're going to
+assume the default configuration area is $TFM_FHICL_DIRECTORY
+EOF
+fi
+
+if [[ ! -e "$TFM_FHICL_DIRECTORY" && "$TFM_FHICL_DIRECTORY" != "IGNORED" ]]; then cat<<EOF
+ERROR: unable to find the FHiCL directory referred to by the
+TFM_FHICL_DIRECTORY environment variable,
+$TFM_FHICL_DIRECTORY
+EOF
+    cleanup
+    return 1
+fi
+
+if [[ -z $TFM_LOGDIR ]]; then export TFM_LOGDIR=/tmp/tfm_${USER} ; fi
+
+mkdir -p $TFM_LOGDIR
+#------------------------------------------------------------------------------
+# assume 100 partitions is enough
+#------------------------------------------------------------------------------
+export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $ARTDAQ_PARTITION_NUMBER`.log
+cat<<EOF
+
+* The TFM environment setup for configuration $TFM_CONFIG_NAME successful. 
+* To launch TFM: tfm_start.sh &
+* using ARTDAQ_PARTITION_NUMBER=$ARTDAQ_PARTITION_NUMBER
+* logfiles are located in ${TFM_LOGDIR}/tfm_partition_<N>.log, 
+  where <N> is the partition the TF manager instance is running on
+* data will be logged in ... TO BE DEFINED
+
+EOF

@@ -11,23 +11,20 @@ usually partition=11
 - all on the same machine
 - ignore boot.py and boot.json - those are just prototypes
 ** [[file:../config/vst_000]]                                                    
-- Tracker VST : read the DTC registers
+- Tracker VST : read the DTC registers and fake data with 1-word segment
 - two processes, board_reader and event_builder, on the same machine
 - event builder is writing the output
 ** [[file:../config/vst_001]]                                                    
-- TrackerVST : do the same but with four running processes: 
+- TrackerVST : read digis and the DTC registers
 - the board_reader, event_builder, logger and dispatcher.
-- one more step, and we will have an example with the data logger
-* running test example                                                       
+* running test example in a manual mode                                      
 - the sequence of steps is as follows:
 ** 1) initialize the TFM environment                                         
 - standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
 #+begin_src *command output*                                                 
 cd $MRB_TOP
-mkdir tfm_test
-export TFM_CONFIG_DIR=$MRB_TOP/tfm_test
-export TFM_CONFIG_NAME=demo
-cp -r $TFM_DIR/config/$TFM_CONFIG_NAME    ./tfm_test/.
+mkdir config   # if it didn't exist
+cp -r $TFM_DIR/config/demo   ./config/.
 #------------------------------------------------------------------------------
 # 1) edit daqinterface_settings
 # 2) edit boot.txt to define the setup script
@@ -35,9 +32,7 @@ cp -r $TFM_DIR/config/$TFM_CONFIG_NAME    ./tfm_test/.
 # - use the partition number consistently in ARTDAQ_LOG_FHICL
 #------------------------------------------------------------------------------
 export TFM_PROCESS_MANAGEMENT_METHOD=direct
-export              ARTDAQ_LOG_FHICL=$TFM_TEST_DIR/tmp_fcl/messagefacility_partition_11_murat.fcl
-source tfm_configure $TFM_CONFIG_DIR $TFM_CONFIG_NAME
-# export              USER=murat                     # need in a docker container
+source tfm_configure demo 11
 #+end_src
 1.1) make sure that the tfm_test/demo/settings file has everything needed defined
 - most likely, the template has wrong directory names in it
@@ -47,13 +42,12 @@ source tfm_configure $TFM_CONFIG_DIR $TFM_CONFIG_NAME
 - sourcing defines the env var TFM_PORT everywhere - smth to look at 
 - FarmManager logs its output to $TFM_LOGFILE
 #+begin_src                                                                  
-$TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$TFM_CONFIG_DIR/demo
+$TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$MRB_TOP/config/demo
 #+end_src
-** 2.5) start the "run control shell", a different shell session             
+** 2.5) in a different shell session, start the "run control shell"
+- don't forget to source tfm_configure
 #+begin_src
-export TFM_CONFIG_DIR=$MRB_TOP/tfm_test
-export TFM_CONFIG_NAME=demo
-$TFM_DIR/bin/tfm_configure $TFM_CONFIG_DIR $TFM_CONFIG_NAME
+source tfm_configure demo 11
 #+end_src
 ** 5) CONFIG           : tfm_transition config                               
 - in an RC shell, do 

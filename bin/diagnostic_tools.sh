@@ -3,12 +3,13 @@
 #------------------------------------------------------------------------------
 # always require that to be sourced first
 #------------------------------------------------------------------------------
-if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
-    echo \$TFM_DIR/source_me not sourced. BAIL OUT
-    exit 1
-fi
+# if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
+#    echo \$TFM_DIR/source_me not sourced. BAIL OUT
+#    exit 1
+# fi
 
-x=`cat $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings | grep '^record_directory' | awk -F : '{print $2}'`
+config_dir=$MRB_DIR/$TFM_CONFIG_NAME
+x=`cat $config_dir/settings | grep '^record_directory' | awk -F : '{print $2}'`
 recorddir=$(eval echo $x)  # Expand environ variables in string     
 
 # echo recorddir=$recorddir

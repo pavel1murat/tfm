@@ -1,0 +1,11 @@
+# -*- mode:tcl -*-
+#------------------------------------------------------------------------------
+# VST_001 runs in partition 8
+# not used yet
+#------------------------------------------------------------------------------
+# commanderPluginType : "xmlrpc"
+
+tfm_frontend : {
+    useRunInfoDB : false  # true
+    xmlrpcUrl    : "http://localhost:18000/RPC2"
+}

@@ -1,7 +1,12 @@
-log_directory                      : $MRB_TOP/tfm_test/Logs/$TFM_CONFIG_NAME
-data_directory_override            : $MRB_TOP/tfm_test/OutputData/$TFM_CONFIG_NAME
-record_directory                   : $MRB_TOP/tfm_test/run_records/$TFM_CONFIG_NAME
-productsdir_for_bash_scripts       : $MRB_TOP/remoteProducts_mu2e_v2_07_00_e28_s126_debug
+#------------------------------------------------------------------------------
+# to be merged with boot.txt
+# P.M. OTS_USER_STUB and REMOTE_PRODUCT_DIR are defined in setup_ots.sh
+#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
+#------------------------------------------------------------------------------
+log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
+data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
+record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts        : $REMOTE_PRODUCT_DIR
 #
 package_hashes_to_save             : [artdaq]
 boardreader timeout                : 600
