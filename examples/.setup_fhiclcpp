@@ -1,4 +1,0 @@
-export PRODUCTS="/projects/mu2e/tdaq/pasha_013/remoteProducts_mu2e_v2_06_11_e28_s124_prof"; . /projects/mu2e/tdaq/pasha_013/remoteProducts_mu2e_v2_06_11_e28_s124_prof/setup
-upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi > /dev/null 2>&1 
-
-setup "fhiclcpp" "v4_18_01" -q "e28:prof"
