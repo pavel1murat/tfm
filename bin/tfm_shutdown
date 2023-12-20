@@ -1,6 +1,10 @@
 #!/bin/env bash
 #------------------------------------------------------------------------------
 # assume xmlrpc_c is setup by the UPS - TFM setup requires that
+# 
+# call : tfm_shutdown [-v]
+#
+# -v : turns on verbose mode, prints the XMLRPC command itself
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 tfm_preamble
@@ -8,7 +12,7 @@ tfm_preamble
     port=`tfm_port $ARTDAQ_PARTITION_NUMBER`
 full_cmd="xmlrpc http://localhost:$port/RPC2 shutdown daqint "
 
-echo $full_cmd
+if [ ".$1" == ".-v" ] ; then echo $full_cmd ; fi
 
 eval $full_cmd
 

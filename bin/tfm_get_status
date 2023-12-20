@@ -1,6 +1,14 @@
 #!/bin/env bash
 #------------------------------------------------------------------------------
+# reports the status of the farm with completion percentage for transisitons,
+# for example : 'configured:90'
+# stable states always report completion at 100%, i.e. 'running:100'
+#
 # assume xmlrpc_c is setup by the UPS - TFM setup requires that
+#
+# call : tfm_get_status [-v]
+#
+# -v : turns on verbose mode, prints the XMLRPC command itself
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 tfm_preamble
@@ -8,8 +16,10 @@ tfm_preamble
     port=`tfm_port $ARTDAQ_PARTITION_NUMBER`
 full_cmd="xmlrpc http://localhost:$port/RPC2 get_state daqint "
 
-echo $full_cmd
-
-eval $full_cmd
+if [ ".$1" == ".-v" ] ; then echo $full_cmd ; fi
+#------------------------------------------------------------------------------
+# parse output to leave only the xmlrpc part
+#------------------------------------------------------------------------------
+eval $full_cmd | awk '{if ($0 != "") print $0}' | grep -v Result: | awk '{print $2}'
 
 exit 0

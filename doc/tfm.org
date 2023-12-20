@@ -61,9 +61,9 @@
 ** boot.txt : defines components the farm configuration
 ** settings : defined additional farm configuration parameters               
 - to be merged with boot.txt
-** source_me: defined extra env vars for the configuration
 ** .FCL files : one file per component                                       
 - component 'x' has its FCL file named 'x.fcl'
+- which directory this FCL file is taken from? 
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
@@ -188,7 +188,8 @@ Nil
 
 - however, messages by message_facility go into individual log files, one per 
 art process
-* TFM scripts                                                                
+* TFM command line scripts                                                   
+** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            
 - handles transitions: config, start, stop, 
 - doesn't handle yet: pause, resume, shutdown
@@ -213,106 +214,16 @@ Nil
 #+begin_src
 
 #+end_src 
-** tfm_get_status                                                            
-- returns status with completion percentage for transisitons
+** [[file:../bin/tfm_get_status][tfm_get_status]]                                                            
+- returns status of the farm (with completion percentage for transisitons)
+- stable states always report completion at 100%, i.e. 'running:100'
+- perhaps, rewrite in python to parse
 #+begin_src
 mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
-xmlrpc http://localhost:18000/RPC2 get_state daqint
-Result:
-
-String: 'configured:100'
+'configured:100'
 #+end_src
-** listconfigs.sh (obsolete)                                                 
-- don't think it is needed, no real use....
-#+begin_src                                                                  
-/projects/mu2e/tdaq/pasha_013/DAQInterface>listconfigs.sh
-Result:
-
-Nil
-/projects/mu2e/tdaq/pasha_013/DAQInterface>[config_functions_local.py] components_file: /projects/mu2e/tdaq/pasha_013/DAQInterface/known_boardreaders_list
-EMOE # of components found in listdaqcomps call: 31
-component01 (runs on localhost)
-component02 (runs on localhost)
-component03 (runs on localhost)
-component04 (runs on localhost)
-component05 (runs on localhost)
-component06 (runs on localhost)
-component07 (runs on localhost)
-component08 (runs on localhost)
-component09 (runs on localhost)
-component10 (runs on localhost)
-component1000 (runs on localhost)
-component1001 (runs on localhost)
-component11 (runs on localhost)
-component12 (runs on localhost)
-component13 (runs on localhost)
-component14 (runs on localhost)
-component15 (runs on localhost)
-component16 (runs on localhost)
-component17 (runs on localhost)
-component18 (runs on localhost)
-component19 (runs on localhost)
-component_buffer_mode (runs on localhost)
-component_dies_from_abort (runs on localhost)
-component_dies_from_exit (runs on localhost)
-component_dies_on_config (runs on localhost)
-component_fragment_size_blows_up (runs on localhost)
-component_hangs (runs on localhost)
-component_one_event_per_subrun (runs on localhost)
-component_subsystem_2 (runs on localhost)
-component_throws_exception (runs on localhost)
-component_throws_exception_on_config (runs on localhost)
-murat     128584  2.3  0.2 3299960 34292 pts/2   Sl   00:09   0:29 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
-murat     137942  0.0  0.0 2835944 10016 pts/2   S    00:14   0:00 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
-Appear to have duplicate processes for EventBuilder2 on 2451a76a3e84, pids: 128584 137942
-murat     128583  2.3  0.2 3295724 33788 pts/2   Sl   00:09   0:29 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
-murat     137943  0.0  0.0 2835944 9996 pts/2    S    00:14   0:00 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
-Appear to have duplicate processes for EventBuilder1 on 2451a76a3e84, pids: 128583 137943
-murat     128585  3.8  0.1 3027128 27952 pts/2   Sl   00:09   0:49 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
-murat     137923  0.0  0.0 2723632 10512 pts/2   S    00:14   0:00 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
-Appear to have duplicate processes for DataLogger1 on 2451a76a3e84, pids: 128585 137923
-murat     169563  1.0  0.2 3295724 33476 pts/2   Sl   06:51   0:11 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
-murat     184287  0.0  0.0 2835944 9996 pts/2    S    07:04   0:00 eventbuilder -c id: 10102 commanderPluginType: xmlrpc rank: 2 application_name: EventBuilder1 partition_number: 0
-Appear to have duplicate processes for EventBuilder1 on 2451a76a3e84, pids: 169563 184287
-murat     169564  1.0  0.2 3299960 33652 pts/2   Sl   06:51   0:11 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
-murat     184286  0.0  0.0 2840048 10420 pts/2   S    07:04   0:00 eventbuilder -c id: 10103 commanderPluginType: xmlrpc rank: 3 application_name: EventBuilder2 partition_number: 0
-Appear to have duplicate processes for EventBuilder2 on 2451a76a3e84, pids: 169564 184286
-murat     169565  1.7  0.1 3027128 28124 pts/2   Sl   06:51   0:19 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
-murat     184267  0.0  0.0 2723632 10504 pts/2   S    07:04   0:00 datalogger -c id: 10104 commanderPluginType: xmlrpc rank: 4 application_name: DataLogger1 partition_number: 0
-Appear to have duplicate processes for DataLogger1 on 2451a76a3e84, pids: 169565 184267
-Available configurations: 
-ascii_simulator_example
-circular_buffer_mode_example
-circular_buffer_mode_withRM
-complex_subsystems
-complicated_subsystems
-config_includes
-demo
-demo_largesystem
-dune_sample_system
-eventbuilder_diskwriting
-file_closing_example
-mediumsystem_with_routing_manager
-missed_requests
-mu2e_sample_system
-multiple_art_processes_example
-multiple_dataloggers
-multiple_fragment_ids
-multiple_fragments_per_read
-pdune_swtrig_DFO
-protodune_mock_system
-request_based_dataflow_example
-routing_manager_example
-simple_subsystems
-subconfigs
-subrun_example
-See file "/tmp/listconfigs_murat.txt" for saved record of the above configurations
-
-Please note that for the time being, the optional
-max_configurations_to_list variable which may be set in
-/projects/mu2e/tdaq/pasha_013/DAQInterface/daqinterface_settings is only
-applicable when working with the database
-#+end_src
+** [[file:../bin/tfm_start][tfm_start]] : start the farm manager, the script needs more debugging
+** [[file:../bin/tfm_shutdown][tfm_shutdown]] : stop all processes, shutdown the farm, stop the TFM
 * error codes                                                                
 - 140: 
 * ------------------------------------------------------------------------------

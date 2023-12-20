@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 #------------------------------------------------------------------------------
+# setup active artdaq configuration : config name and partition
+# a "configuration" is a subdirectory with config files in it   
+# available configurations are searched for in $MRB_TOP/config area
+#
 # call: tfm_configure config_name partition
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
