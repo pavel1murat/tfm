@@ -773,16 +773,41 @@ def get_build_info(pkgnames, setup_script):
 
 
 def fhicl_writes_root_file(fhicl_string):
+#------------------------------------------------------------------------------
+# 17-Apr-2018, KAB: added the MULTILINE flag to get this search to behave as desired.
+# 30-Aug-2018, KAB: added support for RootDAQOutput
+# P.M. the logic is completely childish.. a high schooler would fare better
+# all one needs to do is to look for a 'filename:' inside 2 nested levels
+#---v--------------------------------------------------------------------------
+    # breakpoint()
+    found = False
+    nest_level = 0;
+    for s in fhicl_string.split('\n'):
+        if ((s.strip() == '') or (s[0] == '#')): continue
+        words = s.split(':');
+        
+        for w in words:
+            w_stripped = w.lstrip().rstrip()
+            if (w_stripped == '{'):
+                nest_level += 1
+            elif (w_stripped == '}'):
+                nest_level -= 1
 
-    # 17-Apr-2018, KAB: added the MULTILINE flag to get this search to behave as desired.
-    # 30-Aug-2018, KAB: added support for RootDAQOutput
+        if (nest_level == 3):
+            if words[0].lstrip().rstrip() == 'fileName':
+                found = True;
+                break;
 
-    if ("RootOutput" in fhicl_string or "RootDAQOut" in fhicl_string) and re.search(
-        r"^\s*fileName\s*:\s*.*\.root", fhicl_string, re.MULTILINE
-    ):
-        return True
-    else:
-        return False
+    return found;
+        
+#     if ("RootOutput" in fhicl_string or "RootDAQOut" in fhicl_string) and re.search(
+#         r"^\s*fileName\s*:\s*.*\.root", fhicl_string, re.MULTILINE
+#     ):
+#         return True
+#     else:
+#         return False
+
+
 
 
 def fhiclize_document(filename):

@@ -1123,65 +1123,56 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 )
 
     firstLoggerRank = 9999999
+#------------------------------------------------------------------------------
+# if a BoardReader writes an output file, update firstLoggerRank as well
+#------------------------------------------------------------------------------
+    for p in self.procinfos:
+        if fhicl_writes_root_file(p.fhicl_used):
+            if p.rank < firstLoggerRank:
+                firstLoggerRank = p.rank
 
-    for procinfo in self.procinfos:
-        if fhicl_writes_root_file(procinfo.fhicl_used):
-            if procinfo.rank < firstLoggerRank:
-                firstLoggerRank = procinfo.rank
-
-    for i_proc in range(len(self.procinfos)):
-        if fhicl_writes_root_file(self.procinfos[i_proc].fhicl_used):
-            res = re.search(
-                r"firstLoggerRank\s*:\s*\S+", self.procinfos[i_proc].fhicl_used
-            )
+    for p in self.procinfos:
+        if fhicl_writes_root_file(p.fhicl_used):
+            res = re.search(r"firstLoggerRank\s*:\s*\S+",p.fhicl_used)
             if res:
-                self.procinfos[i_proc].fhicl_used = re.sub(
-                    "firstLoggerRank\s*:\s*\S+",
-                    "firstLoggerRank: %d" % (firstLoggerRank),
-                    self.procinfos[i_proc].fhicl_used,
-                )
+                p.fhicl_used = re.sub("firstLoggerRank\s*:\s*\S+",
+                                      "firstLoggerRank: %d" % (firstLoggerRank),
+                                      p.fhicl_used)
+    # breakpoint()
+    if self.data_directory_override:
+        for p in self.procinfos:
+#------------------------------------------------------------------------------
+# P.Murat: one could have process types, not names - no need to do 
+#          the string comparison every time...
+#          that also is error-prone
+#------------------------------------------------------------------------------
+            if (("EventBuilder" in p.name) or ("DataLogger" in p.name)):
 
-    if not self.data_directory_override is None:
-        for i_proc in range(len(self.procinfos)):
-            if (
-                "EventBuilder" in self.procinfos[i_proc].name
-                or "DataLogger" in self.procinfos[i_proc].name
-            ):
-
-                if fhicl_writes_root_file(self.procinfos[i_proc].fhicl_used):
-                    # 17-Apr-2018, KAB: switched to using the
-                    # "enclosing_table_range" function, rather
-                    # than "table_range", since we want to capture all of the
-                    # text inside the same
-                    # block as the RootOutput FHiCL value.
-                    # 30-Aug-2018, KAB: added support for RootDAQOutput
-                    start, end = enclosing_table_range(
-                        self.procinfos[i_proc].fhicl_used, "RootOutput"
-                    )
+                if fhicl_writes_root_file(p.fhicl_used):
+#------------------------------------------------------------------------------
+# 17-Apr-2018, KAB: switched to using the "enclosing_table_range" function, 
+# rather than "table_range", since we want to capture all of the text inside 
+# the same block as the RootOutput FHiCL value.
+# 30-Aug-2018, KAB: added support for RootDAQOutput
+#------------------------------------------------------------------------------
+                    start, end = enclosing_table_range(p.fhicl_used, "RootOutput")
                     if start == -1 and end == -1:
-                        start, end = enclosing_table_range(
-                            self.procinfos[i_proc].fhicl_used, "RootDAQOut"
-                        )
+                        start, end = enclosing_table_range(p.fhicl_used, "RootDAQOut")
+
                     assert start != -1 and end != -1
 
-                    rootoutput_table = self.procinfos[i_proc].fhicl_used[start:end]
-
-                    # 11-Apr-2018, KAB: changed the substition to only apply to
-                    # the text
-                    # in the rootoutput_table, and avoid picking up earlier
-                    # fileName
-                    # parameter strings in the document.
+                    rootoutput_table = p.fhicl_used[start:end]
+#------------------------------------------------------------------------------
+# 11-Apr-2018, KAB: changed the substition to only apply to the text in the rootoutput_table, 
+# and avoid picking up earlier fileName parameter strings in the document.
+#-------------------v----------------------------------------------------------
                     rootoutput_table = re.sub(
                         r"(.*fileName\s*:[\s\"]*)/[^\s]+/",
                         r"\1" + self.data_directory_override,
                         rootoutput_table,
                     )
 
-                    self.procinfos[i_proc].fhicl_used = (
-                        self.procinfos[i_proc].fhicl_used[:start]
-                        + rootoutput_table
-                        + self.procinfos[i_proc].fhicl_used[end:]
-                    )
+                    p.fhicl_used = (p.fhicl_used[:start]+rootoutput_table+p.fhicl_used[end:])
 
     for fhicl_key, fhicl_value in self.bootfile_fhicl_overwrites.items():
         print(fhicl_key, fhicl_value)
