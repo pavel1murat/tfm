@@ -12,7 +12,8 @@ import subprocess
 from rc.control.subsystem import Subsystem
 from rc.control.procinfo  import Procinfo
 
-from rc.control.utilities import make_paragraph
+# from rc.control.utilities import make_paragraph
+import rc.control.utilities as rcu; # import make_paragraph
 
 #------------------------------------------------------------------------------
 def get_config_parentdir():
@@ -54,7 +55,7 @@ def get_config_info_base(self):
                 ffp.append(dirname)
         else:
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     'Error: unable to find expected directory of FHiCL configuration files "%s"'
                     % (subconfig_dir)
                 )
@@ -285,7 +286,7 @@ def listconfigs_base(self):
 
     print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
     print(
-        make_paragraph(
+        rcu.make_paragraph(
             "Please note that for the time being, the optional max_configurations_to_list variable "
             "which may be set in %s is only applicable when working with the database\n"
             % os.environ["TFM_SETTINGS"]

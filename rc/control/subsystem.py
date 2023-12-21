@@ -1,6 +1,11 @@
 #------------------------------------------------------------------------------
-# "Subsystem" is a structure containing all the info about a given artdaq subsystem.
-####
+# "Subsystem" is a structure containing all info about a given artdaq subsystem
+# a subsystem has 
+# - an ID, 
+# - one or several input sources,
+# - one output destination,
+# - a mode in which it handles the artdaq fragments
+#-----------------------------------------------------------------------------
 class Subsystem(object):
     def __init__(self):
         self.id           =  -1

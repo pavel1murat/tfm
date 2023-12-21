@@ -4,7 +4,9 @@
 # a "configuration" is a subdirectory with config files in it   
 # available configurations are searched for in $MRB_TOP/config area
 #
-# call: tfm_configure config_name partition
+# defines env vars - has to be sourced...
+#
+# call: source tfm_configure config_name partition
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 
@@ -41,11 +43,11 @@ may have problems with sending output to a MessageViewer instance
 EOF
 fi
 #------------------------------------------------------------------------------
-# this is the directory where FCL files of all components reside 
-# I don't think it is needed, but keep it around...
+# this is the directory where the FCL files of all configurations reside 
+# with the subdirectory per configuration
 #------------------------------------------------------------------------------
+export         TFM_FHICL_DIRECTORY=$MRB_TOP/config
 export                TFM_SETTINGS=$MRB_TOP/config/$TFM_CONFIG_NAME/settings
-export         TFM_FHICL_DIRECTORY=$TFM_DIR/config
 #------------------------------------------------------------------------------
 # create output directories
 #------------------------------------------------------------------------------

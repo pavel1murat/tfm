@@ -102,7 +102,8 @@ def get_pids(greptoken, host="localhost", grepresults=None):
     if not host_is_local(host):
         cmd = "ssh -x %s '%s'" % (host, cmd)
 
-    proc = Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+    # breakpoint()
+    proc = subprocess.Popen(cmd, shell=True, executable="/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
 
     out, err = proc.communicate()
     lines = []

@@ -20,14 +20,16 @@ import pdb
 import random
 import re
 import shutil
-from   shutil     import copyfile
+# from   shutil     import copyfile
 import signal
 import socket
 import stat
 import string
 import subprocess
-from   threading  import RLock
-from   time       import sleep, time
+# from   threading  import RLock
+import threading
+# from   time       import sleep, time
+import time
 import traceback
 
 import run_control_state
@@ -53,35 +55,37 @@ if (disable_bookkeeping and (disable_bookkeeping != "false")):
 else:
     from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
-from rc.control.utilities import make_paragraph
-from rc.control.utilities import get_pids
-from rc.control.utilities import host_is_local
-from rc.control.utilities import is_msgviewer_running
-from rc.control.utilities import date_and_time
-from rc.control.utilities import date_and_time_more_precision
-from rc.control.utilities import construct_checked_command
-from rc.control.utilities import reformat_fhicl_documents
-from rc.control.utilities import fhicl_writes_root_file
-from rc.control.utilities import get_setup_commands
-from rc.control.utilities import kill_tail_f
-from rc.control.utilities import obtain_messagefacility_fhicl
-from rc.control.utilities import record_directory_info
-from rc.control.utilities import get_messagefacility_template_filename
-from rc.control.utilities import RaisingThread
+import rc.control.utilities as rcu 
+
+# from rc.control.utilities import make_paragraph
+# from rc.control.utilities import get_pids
+# from rc.control.utilities import host_is_local
+# from rc.control.utilities import is_msgviewer_running
+# from rc.control.utilities import date_and_time
+# from rc.control.utilities import date_and_time_more_precision
+# from rc.control.utilities import construct_checked_command
+# from rc.control.utilities import reformat_fhicl_documents
+# from rc.control.utilities import fhicl_writes_root_file
+# from rc.control.utilities import get_setup_commands
+# from rc.control.utilities import kill_tail_f
+# from rc.control.utilities import obtain_messagefacility_fhicl
+# from rc.control.utilities import record_directory_info
+# from rc.control.utilities import get_messagefacility_template_filename
+# from rc.control.utilities import RaisingThread
 
 try:
     import python_artdaq
-    from   python_artdaq import swig_artdaq
+    # from   python_artdaq import swig_artdaq
 
     # Here, "True" means that if python_artdaq is available, it's assumed
     # that artdaq_mfextensions is as well
 
-    messagefacility_fhicl_filename = obtain_messagefacility_fhicl(True)
+    messagefacility_fhicl_filename = rcu.obtain_messagefacility_fhicl(True)
     if (not "ARTDAQ_LOG_FHICL" in os.environ):
         #or os.environ["ARTDAQ_LOG_FHICL"] != messagefacility_fhicl_filename
 
-        raise Exception(make_paragraph(
-            ("Although the swig_artdaq python module is available, "
+        raise Exception(rcu.make_paragraph(
+            ("Although the python_artdaq.swig_artdaq python module is available, "
              "it needs the environment variable ARTDAQ_LOG_FHICL to point to %s"
          ) % (messagefacility_fhicl_filename)))
 
@@ -94,44 +98,54 @@ from rc.control.config_functions_local import get_boot_info_base
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import perform_periodic_action_base
-except:
-    from rc.control.all_functions_noop         import perform_periodic_action_base
-
-try:
-    imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import start_datataking_base
-except:
-    from rc.control.all_functions_noop         import start_datataking_base
-
-try:
-    imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import stop_datataking_base
-except:
-    from rc.control.all_functions_noop         import stop_datataking_base
-
-try:
-    imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import do_enable_base
-except:
-    from rc.control.all_functions_noop         import do_enable_base
-
-try:
-    imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import do_disable_base
-except:
-    from rc.control.all_functions_noop         import do_disable_base
-
-try:
-    imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import check_config_base
 except:
+    from rc.control.all_functions_noop         import perform_periodic_action_base
+    from rc.control.all_functions_noop         import start_datataking_base
+    from rc.control.all_functions_noop         import stop_datataking_base
+    from rc.control.all_functions_noop         import do_enable_base
+    from rc.control.all_functions_noop         import do_disable_base
     from rc.control.all_functions_noop         import check_config_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import start_datataking_base
+# except:
+#     from rc.control.all_functions_noop         import start_datataking_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import stop_datataking_base
+# except:
+#     from rc.control.all_functions_noop         import stop_datataking_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import do_enable_base
+# except:
+#     from rc.control.all_functions_noop         import do_enable_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import do_disable_base
+# except:
+#     from rc.control.all_functions_noop         import do_disable_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import check_config_base
+# except:
+#     from rc.control.all_functions_noop         import check_config_base
 
 process_management_methods = ["direct", "external_run_control"]
 
 if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
     raise Exception(
-        make_paragraph(
+        rcu.make_paragraph(
             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
              "what method to use to control the artdaq processes (%s, etc.)")
             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
@@ -145,7 +159,7 @@ else:
 
     if not legal_method_found:
         raise Exception(
-            make_paragraph(
+            rcu.make_paragraph(
                 'can\'t interpret the current value of TFM_PROCESS_MANAGEMENT_METHOD ("%s"); legal values are: %s'
                 % (
                     os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
@@ -192,7 +206,7 @@ elif (management_method == "external_run_control"):
 
 # This is the end of if-elifs of process management methods
 if not "TFM_FHICL_DIRECTORY" in os.environ:
-    raise Exception(make_paragraph(
+    raise Exception(rcu.make_paragraph(
         ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
          "if you wish to use the database rather than the local filesystem "
          "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
@@ -219,7 +233,7 @@ class FarmManager(Component):
     def print_log(self, severity, printstr, debuglevel=-999, newline=True):
         printstr = str(printstr)
 
-        dummy, month, day, time, timezone, year = date_and_time().split()
+        dummy, month, day, time, timezone, year = rcu.date_and_time().split()
         formatted_day = "%s-%s-%s" % (day, month, year)
 
         if self.debug_level >= debuglevel:
@@ -359,8 +373,8 @@ class FarmManager(Component):
 #-----------v------------------------------------------------------------------
             try:
 
-                if self.have_artdaq_mfextensions() and is_msgviewer_running():
-                    self.print_log("i",make_paragraph(
+                if self.have_artdaq_mfextensions() and rcu.is_msgviewer_running():
+                    self.print_log("i",rcu.make_paragraph(
                         "An instance of messageviewer already appears to be running; ",
                         "messages will be sent to the existing messageviewer")
                     )
@@ -368,7 +382,7 @@ class FarmManager(Component):
                 elif self.have_artdaq_mfextensions():
                     version, qualifiers = self.artdaq_mfextensions_info()
 
-                    self.print_log("i",make_paragraph(
+                    self.print_log("i",rcu.make_paragraph(
                             "artdaq_mfextensions %s, %s, appears to be available; "
                             "if windowing is supported on your host you should see the "
                             "messageviewer window pop up momentarily"
@@ -380,7 +394,7 @@ class FarmManager(Component):
                     self.print_log("i","start_message_viewer:002 debug_level=%i",self.debug_level)
 
                 else:
-                    self.print_log("i",make_paragraph(
+                    self.print_log("i",rcu.make_paragraph(
                         "artdaq_mfextensions does not appear to be available; "
                         "unable to launch the messageviewer window. This will not affect"
                         " actual datataking, it just means you'll need to look at the"
@@ -398,23 +412,23 @@ class FarmManager(Component):
     def validate_setup_script(self,node):
 
         ssh_timeout_in_seconds = 30
-        starttime              = time()
+        starttime              = time.time()
         debug_level            = 3
 
         self.print_log("i",
                        ("\n%s On randomly selected node (%s), will confirm that the DAQ setup script \n"
                         "%s\ndoesn't return a nonzero value when sourced...")
-                       % (date_and_time(),node, self.daq_setup_script),
+                       % (rcu.date_and_time(),node, self.daq_setup_script),
                        1,
                        False,
                 )
 
         cmd = "%s ; . %s for_running" % (
-            ";".join(get_setup_commands(self.productsdir, self.spackdir)),
+            ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
             self.daq_setup_script,
         )
 
-        if not host_is_local(node):
+        if not rcu.host_is_local(node):
             cmd = "timeout %d ssh %s '%s'" % (ssh_timeout_in_seconds,node,cmd)
 
         out = subprocess.Popen(cmd,
@@ -446,18 +460,17 @@ class FarmManager(Component):
                      "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
                     % (errmsg, node)
                 )
-            self.print_log("e", make_paragraph(errmsg))
-            raise Exception("Problem source-ing %s on %s" % (self.daq_setup_script, node))
+            self.print_log("e", rcu.make_paragraph(errmsg))
+            raise Exception("Problem sourcing %s on %s" % (self.daq_setup_script, node))
 
 
-        endtime = time()
+        endtime = time.time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
 #------------------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
-#------------------------------------------------------------------------------
-####
+#---v--------------------------------------------------------------------------
     def __init__(self,
                  name             = "toycomponent",
                  config_dir       = None          ,
@@ -525,7 +538,7 @@ class FarmManager(Component):
         self.use_messagefacility  = True
         self.fake_messagefacility = False
 
-        self.printlock            = RLock()
+        self.printlock            = threading.RLock()
 
         self.subconfigs_for_run   = []         # not sure what these are 
 #------------------------------------------------------------------------------
@@ -585,7 +598,7 @@ class FarmManager(Component):
         except:
             self.print_log("e", traceback.format_exc())
             self.print_log("e",
-                make_paragraph(
+                rcu.make_paragraph(
                     "An exception was thrown when trying to read FarmManager settings; "
                     "FarmManager will exit. Look at the messages above, make any necessary "
                     "changes, and restart.\n")
@@ -598,25 +611,25 @@ class FarmManager(Component):
                 if self.debug_level > 0:
                     config_str += " debug_logging: true"
                 
-                self.messageviewer_sender = swig_artdaq(config_str)
+                self.messageviewer_sender = python_artdaq.swig_artdaq(config_str)
             except:
                 pass
 
         if not os.access(self.record_directory, os.W_OK | os.X_OK):
-            self.print_log("e",make_paragraph(
+            self.print_log("e",rcu.make_paragraph(
                     ("FarmManager launch failed since it's been determined that you don't have"
                      " write access to the run records directory \"%s\"")
                     % (self.record_directory)))
             sys.exit(1)
 
         self.print_log("i",'%s: FarmManager in partition %d launched and now in "%s" state, listening on port %d'
-            % (date_and_time(),self.partition,self.state(self.name),self.rpc_port)
+            % (rcu.date_and_time(),self.partition,self.state(self.name),self.rpc_port)
         )
 
         print(" >>>> FarmManager.debug_level = ",self.debug_level);
 
     def __del__(self):
-        kill_tail_f()
+        rcu.kill_tail_f()
 #------------------------------------------------------------------------------
 # global actor functions
 ####
@@ -692,7 +705,7 @@ class FarmManager(Component):
     def do_trace_get(self, name=None):
         if name is None: name = self.run_params["name"]
 
-        self.print_log("d",'%s: do_trace_get has been called with name "%s"' % (date_and_time(), name),3)
+        self.print_log("d",'%s: do_trace_get has been called with name "%s"' % (rcu.date_and_time(), name),3)
 
 #------------------------------------------------------------------------------
 # P.Murat: 'p' is the Procinfo structure
@@ -715,12 +728,12 @@ class FarmManager(Component):
             fn = "/tmp/trace_get_%s_%s_partition%d.txt" % (p.label,self.fUser,self.partition);
 
             with open(fn,"w",) as trace_get_output: 
-                trace_get_output.write("\ntrace(s) below are as they appeared at %s:\n\n" % (date_and_time()))
+                trace_get_output.write("\ntrace(s) below are as they appeared at %s:\n\n" % (rcu.date_and_time()))
                 trace_get_output.write(p.lastreturned)
 
         threads = []
         for p in self.procinfos:
-            t = RaisingThread(target=send_trace_get_command, args=(self,p))
+            t = rcu.RaisingThread(target=send_trace_get_command, args=(self,p))
             threads.append(t)
             t.start()
 
@@ -750,7 +763,7 @@ class FarmManager(Component):
         self.print_log(
             "i",
             '%s: trace_set has been called with name "%s", masktype "%s", and maskval %s'
-            % (date_and_time(), name, masktype, maskval),
+            % (rcu.date_and_time(), name, masktype, maskval),
         )
 
         def send_trace_set_command(self,p):
@@ -773,7 +786,7 @@ class FarmManager(Component):
 
         threads = []
         for p in self.procinfos:
-            t = RaisingThread(target=send_trace_set_command, args=(self,p))
+            t = rcu.RaisingThread(target=send_trace_set_command, args=(self,p))
             threads.append(t)
             t.start()
 
@@ -790,9 +803,9 @@ class FarmManager(Component):
         alertmsg = ""
 
         if not extrainfo is None:
-            alertmsg = "\n\n" + make_paragraph('"' + extrainfo + '"')
+            alertmsg = "\n\n" + rcu.make_paragraph('"' + extrainfo + '"')
 
-        alertmsg += "\n" + make_paragraph(
+        alertmsg += "\n" + rcu.make_paragraph(
             ('FarmManager has set the DAQ back in the "Stopped" state; '
              'you may need to scroll above the Recover transition output '
              'to find messages which could help you provide any necessary adjustments.')
@@ -800,7 +813,7 @@ class FarmManager(Component):
         self.print_log("e", alertmsg)
         print
         self.print_log("e",
-            make_paragraph(
+            rcu.make_paragraph(
                 ('Details on how to examine the artdaq process logfiles can be found '
                  'in the "Examining your output" section of the FarmManager manual, '
                  'https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface#Examining-your-output')
@@ -851,7 +864,7 @@ class FarmManager(Component):
                 res = re.search(r".*\[(.*)\].*", line)
 
                 if not res:
-                    raise Exception(make_paragraph("Unable to parse package_hashes_to_save from"+fn))
+                    raise Exception(rcu.make_paragraph("Unable to parse package_hashes_to_save from"+fn))
 
                 if res.group(1).strip() == "":
                     continue
@@ -1046,7 +1059,7 @@ class FarmManager(Component):
 
         if self.advanced_memory_usage and self.max_fragment_size_bytes is not None:
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     ("Since advanced_memory_usage is set to true in the settings file (%s), "
                     "max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)")
                     % (fn)
@@ -1057,7 +1070,7 @@ class FarmManager(Component):
             missing_vars_string = ", ".join(missing_vars)
             print
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     "Unable to parse the following variable(s) meant to be set in the "
                     "settings file, %s"
                     % (fn + ": " + missing_vars_string)
@@ -1066,7 +1079,7 @@ class FarmManager(Component):
 
         if not self.advanced_memory_usage and not self.max_fragment_size_bytes:
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     "max_fragment_size_bytes isn't set in the settings file, %s; "
                     "this needs to be set since advanced_memory_usage isn't set to true"
                     % fn
@@ -1079,7 +1092,7 @@ class FarmManager(Component):
             or self.boardreader_priorities_on_stop is not None
         ):
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     ('Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config",'
                      ' "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" '
                      'are defined in %s; this is not allowed. For further information, '
@@ -1120,7 +1133,7 @@ class FarmManager(Component):
                     or "busy"    in p.lastreturned
                 ):
                     retry_counter += 1
-                    sleep(1)
+                    time.sleep(1)
                     if (p.lastreturned == "Success" or p.lastreturned == target_state):
                         redeemed       = True
                         p.state = target_state
@@ -1134,7 +1147,7 @@ class FarmManager(Component):
                 errmsg = ("Unexpected status message from process "
                           +p.label+" at "+p.host+":"+p.port+': "'+p.lastreturned+'"')
 
-                self.print_log("w", make_paragraph(errmsg))
+                self.print_log("w", rcu.make_paragraph(errmsg))
 
                 self.print_log("w","\nSee logfile %s for details" % (self.determine_logfilename(p)))
 
@@ -1143,7 +1156,7 @@ class FarmManager(Component):
                     and target_state == "Ready"
                     and "with ParameterSet" in p.lastreturned
                 ):
-                    self.print_log("w",make_paragraph(
+                    self.print_log("w",rcu.make_paragraph(
                         ("\nThis is likely because the fragment generator constructor in %s"
                          " threw an exception (see logfile %s for details).")
                         % (p.label, self.determine_logfilename(p))))
@@ -1171,11 +1184,11 @@ class FarmManager(Component):
             return self.artdaq_mfextensions_booleans[self.daq_setup_script]
 
         cmds  = []
-        cmds += get_setup_commands(self.productsdir, self.spackdir)
+        cmds += rcu.get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append('if test -n "$SETUP_ARTDAQ_MFEXTENSIONS" -o -d "$ARTDAQ_MFEXTENSIONS_DIR"; then true; else false; fi')
 
-        checked_cmd = construct_checked_command(cmds)
+        checked_cmd = rcu.construct_checked_command(cmds)
 
         status = subprocess.Popen(
             checked_cmd,
@@ -1203,7 +1216,7 @@ class FarmManager(Component):
         assert self.have_artdaq_mfextensions()
 
         cmds = []
-        cmds += get_setup_commands(self.productsdir, self.spackdir)
+        cmds += rcu.get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append(
             ('if [ -n "$SETUP_ARTDAQ_MFEXTENSIONS" ]; then printenv SETUP_ARTDAQ_MFEXTENSIONS; '
@@ -1234,7 +1247,7 @@ class FarmManager(Component):
         cmds            = []
         port_to_replace = 30000
         msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (self.partition,self.fUser)
-        cmds += get_setup_commands(self.productsdir, self.spackdir)
+        cmds += rcu.get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append("which msgviewer")
         cmds.append("cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl))
@@ -1243,7 +1256,7 @@ class FarmManager(Component):
         cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition * 1000, msgviewer_fhicl))
         cmds.append("msgviewer -c %s >/dev/null 2>&1 &"       % (msgviewer_fhicl))
 
-        msgviewercmd = construct_checked_command(cmds)
+        msgviewercmd = rcu.construct_checked_command(cmds)
 
         proc = subprocess.Popen(msgviewercmd,
                                 executable="/bin/bash",
@@ -1285,7 +1298,7 @@ class FarmManager(Component):
 
                 self.print_log(
                     "w",
-                    make_paragraph(
+                    rcu.make_paragraph(
                         "Exception caught when querying the status of artdaq process %s at %s:%s; exception type == %s, name == %s"
                         % (
                             procinfo.label,
@@ -1300,7 +1313,7 @@ class FarmManager(Component):
                 if "[Errno 111] Connection refused" in traceback.format_exc():
                     self.print_log(
                         "w",
-                        make_paragraph(
+                        rcu.make_paragraph(
                             ('An "[Errno 111] Connection refused" exception was thrown when attempting '
                             'to query artdaq process %s at %s:%s; this likely means the process no longer '
                              'exists -- try checking logfile %s for details')
@@ -1312,14 +1325,14 @@ class FarmManager(Component):
                         in self.procs_which_already_caused_connection_refused
                     ):
                         raise Exception(
-                            make_paragraph('Error: artdaq process "%s" has repeatedly returned "[Errno 111] '
+                            rcu.make_paragraph('Error: artdaq process "%s" has repeatedly returned "[Errno 111] '
                                            'Connection refused" when queried; this most likely means it\'s died')
                         )
                     else:
                         self.procs_which_already_caused_connection_refused.append(procinfo.label)
 
                 elif "[Errno 113] No route to host" in traceback.format_exc():
-                    raise Exception(make_paragraph(
+                    raise Exception(rcu.make_paragraph(
                         ('Error: an "[Errno 113] No route to host" exception was thrown '
                          'when attempting to query artdaq process %s at %s:%s; '
                          'this likely means there\'s an XML-RPC connection issue between this host and %s')
@@ -1337,11 +1350,11 @@ class FarmManager(Component):
                 errmsg = (
                     ('%s: "Error" state found to have been returned by process %s at %s:%s; '
                      'please check MessageViewer if up and/or the process logfile, %s')
-                    % (date_and_time(),procinfo.label,procinfo.host,procinfo.port,self.determine_logfilename(procinfo))
+                    % (rcu.date_and_time(),procinfo.label,procinfo.host,procinfo.port,self.determine_logfilename(procinfo))
                 )
 
                 print
-                self.print_log("e", make_paragraph(errmsg))
+                self.print_log("e", rcu.make_paragraph(errmsg))
                 self.print_log(
                     "i",
                     "\nWill remove %s from the list of processes" % (procinfo.label),
@@ -1420,7 +1433,7 @@ class FarmManager(Component):
                             < strictest_count_of_matching_required
                         ):
                             raise Exception(
-                                make_paragraph(
+                                rcu.make_paragraph(
                                     ('Logic on line "%s" of %s requires you need at least %d processes with a label'
                                      ' matching "%s", but only %d are requested for the run')
                                     % (line,
@@ -1465,7 +1478,7 @@ class FarmManager(Component):
                     current_count,
                 )
                 if (current_count < minimum_count):
-                    self.print_log("e",make_paragraph(
+                    self.print_log("e",rcu.make_paragraph(
                         ('Error: loss of process %s drops the total number of processes '
                          'whose labels match the regular expression "%s" to %d '
                          'out of an original total of %d; this violates the minimum number'
@@ -1486,7 +1499,7 @@ class FarmManager(Component):
             process_description = ""
             if "BoardReader" in procinfo.name:
                 process_description = "BoardReader"
-            elif fhicl_writes_root_file(procinfo.fhicl_used):
+            elif rcu.fhicl_writes_root_file(procinfo.fhicl_used):
                 process_description = "process that writes data to disk"
             elif "EventBuilder" in procinfo.name:
                 is_routingmanager_used = True
@@ -1511,7 +1524,7 @@ class FarmManager(Component):
 
             if process_description != "":
                 if "TFM_PROCESS_REQUIREMENTS_LIST" in os.environ:
-                    self.print_log("e",make_paragraph(
+                    self.print_log("e",rcu.make_paragraph(
                         ("Error: loss of process %s will now end the run, since it's a %s. "
                          "This is the default action because there are no special rules for it in %s. "
                          "To learn how to add rules, see the relevant section of the FarmManager manual, "
@@ -1519,7 +1532,7 @@ class FarmManager(Component):
                         % (procinfo.label,process_description,os.environ["TFM_PROCESS_REQUIREMENTS_LIST"]))
                     )
                 else:
-                    self.print_log("e",make_paragraph(
+                    self.print_log("e",rcu.make_paragraph(
                         ("Error: loss of process %s will now end the run, since it's a %s. "
                          "This is the default action because FarmManager wasn't provided "
                          "with a file overriding its default behavior. To learn how to override, "
@@ -1529,7 +1542,7 @@ class FarmManager(Component):
                         % (procinfo.label,process_description,os.environ["TFM_DIR"]))
                     )
 
-                raise Exception(make_paragraph(
+                raise Exception(rcu.make_paragraph(
                     ("Loss of process %s violates one of FarmManager's default requirements; "
                      "scroll up for more details. You can override this behavior by adding a rule "
                      "to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
@@ -1551,7 +1564,7 @@ class FarmManager(Component):
             for logfilename in all_logfilenames
             if "/%s-" % (procinfo.label) in logfilename
         ]
-        assert len(logfilename_in_list_form) <= 1, make_paragraph(
+        assert len(logfilename_in_list_form) <= 1, rcu.make_paragraph(
             ('Unable to locate logfile for process "%s" out of the following list of candidates: [%s]; '
             'this may be due to incorrect assumptions made by FarmManager about the format '
              'of the logfilenames. Please contact the artdaq-developers@fnal.gov mailing list')
@@ -1565,22 +1578,19 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 # Check that the boot file actually contained the definitions we wanted
-# The BoardReader info should be supplied by the configuration manager; 
-# info for the other artdaq process types (excluding their FHiCL documents) 
-# should be supplied in the boot file
-####
+#---v--------------------------------------------------------------------------
     def check_boot_info(self):
 
-        undefined_var = ""
+        undefined_var = None
 
-        if   self.daq_setup_script is None: undefined_var = "DAQ setup script"
-        elif self.debug_level      is None: undefined_var = "debug level"
+        if   self.daq_setup_script is None: undefined_var = "daq_setup_script"
+        elif self.debug_level      is None: undefined_var = "debug_level"
 
-        if undefined_var != "":
-            raise Exception(make_paragraph('Error: "%s" undefined in FarmManager boot file' % (undefined_var)))
+        if undefined_var :
+            raise Exception(rcu.make_paragraph('Error: "%s" undefined in FarmManager boot file' % (undefined_var)))
 
         if self.debug_level == 0:
-            self.print_log("w",make_paragraph(
+            self.print_log("w",rcu.make_paragraph(
                 ('"debug level" is set to %d in the boot file, %s; while this isn\'t an error '
                  'due to reasons of backwards compatibility, use of this debug level is highly discouraged')
                 % (self.debug_level, self.boot_filename()))
@@ -1592,7 +1602,7 @@ class FarmManager(Component):
         num_requested_routingmanagers = len([p.name for p in self.procinfos if p.name == "RoutingManager" ])
 
         if num_requested_routingmanagers > len(self.subsystems):
-            raise Exception(make_paragraph(
+            raise Exception(rcu.make_paragraph(
                 ("%d RoutingManager processes defined in the boot file provided; "
                  "you can't have more than the number of subsystems (%d)")
                 % (num_requested_routingmanagers, len(self.subsystems)))
@@ -1601,7 +1611,7 @@ class FarmManager(Component):
         for p in self.procinfos: p.print()
 
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
-            raise Exception(make_paragraph(
+            raise Exception(rcu.make_paragraph(
                     ("At least one of your desired artdaq processes has a duplicate label; "
                      "please check the boot file to ensure that each process gets a unique label"))
             )
@@ -1610,7 +1620,7 @@ class FarmManager(Component):
             dest = self.subsystems[ss].destination
             if dest is not None:
                 if (self.subsystems[dest] == None or ss not in self.subsystems[dest].sources):
-                    raise Exception(make_paragraph(
+                    raise Exception(rcu.make_paragraph(
                         ("Inconsistent subsystem configuration detected! Subsystem %s has destination %s, "
                          "but subsystem %s doesn't have %s in its list of sources!")
                         % (ss, dest, dest, ss))
@@ -1665,7 +1675,7 @@ class FarmManager(Component):
 
             cmd = "; ".join(cmds)
 
-            if not host_is_local(host): cmd = "ssh -f "+host+" '"+cmd+"'"
+            if not rcu.host_is_local(host): cmd = "ssh -f "+host+" '"+cmd+"'"
 
             num_logfile_checks     = 0
             max_num_logfile_checks = 5
@@ -1701,14 +1711,14 @@ class FarmManager(Component):
                              "%s\n"
                              "======================================================================\n")
                             % (err))
-                        raise Exception(make_paragraph(
+                        raise Exception(rcu.make_paragraph(
                             ("Error: there was a problem identifying the logfiles for at least some "
                              "of the artdaq processes. This may be the result of you not having write access "
                              "to the directories where the logfiles are meant to be written. "
                              "Please scroll up to see further output."))
                         )
                     else:
-                        sleep(2)  # Give the logfiles a bit of time to appear before the next check
+                        time.sleep(2)  # Give the logfiles a bit of time to appear before the next check
 #------------------------------------------------------------------------------
 # presence of oddly named processes should be checked well before this point
 ############
@@ -1755,7 +1765,7 @@ class FarmManager(Component):
             cmd = (
                 "%s ; . %s; ups active | sed -r -n 's/^(%s)\\s+(\\S+).*/\\1 \\2/p'"
                 % (
-                    ";".join(get_setup_commands(self.productsdir, self.spackdir)),
+                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
                     self.daq_setup_script,
                     "|".join(needed_packages),
                 )
@@ -1763,7 +1773,7 @@ class FarmManager(Component):
         elif self.spackdir != None:
             cmd = (
                 "%s ; . %s; spack find --loaded | sed -r -n 's/^(%s)@(\\S+).*/\\1 \\2/p'" % (
-                    ";".join(get_setup_commands(self.productsdir, self.spackdir)),
+                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
                     self.daq_setup_script,
                     "|".join(needed_packages),                
                 )
@@ -1820,7 +1830,7 @@ class FarmManager(Component):
 
                     if not re.search(r"v[0-9]+_[0-9]+_[0-9]+.*", version):
                         raise Exception(
-                            make_paragraph(
+                            rcu.make_paragraph(
                                 ('Error in %s: the version of the package "%s" this function has determined, '
                                  '"%s", is not the expected v<int>_<int>_<int>optionalextension format')
                                 % (self.fill_package_versions.__name__,package,version)
@@ -1841,7 +1851,7 @@ class FarmManager(Component):
     def execute_trace_script(self, transition):
 
         if "TFM_TRACE_SCRIPT" not in os.environ:
-            self.print_log("d",make_paragraph(
+            self.print_log("d",rcu.make_paragraph(
                 ("Environment variable TFM_TRACE_SCRIPT not defined; "
                  "will not execute the would-be trace script pointed to by the variable")),3)
 
@@ -1851,7 +1861,7 @@ class FarmManager(Component):
 
         if re.search(r"^%s" % (os.environ["TFM_DIR"]), trace_script):
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     ('The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", '
                      'appears to be located inside the FarmManager package itself. '
                      'Please copy it somewhere else before using it, and revert any edits which may have been made to %s.')
@@ -1870,7 +1880,7 @@ class FarmManager(Component):
 
             if trace_file == "":
                 raise Exception(
-                    make_paragraph(
+                    rcu.make_paragraph(
                         'Exception in %s: unable to determine TRACE_FILE setting from "%s"'
                         % (self.execute_trace_script.__name__, self.daq_setup_script)
                     )
@@ -1887,7 +1897,7 @@ class FarmManager(Component):
 
             hosts_for_rgang = set()
             for key in nodes_for_rgang.keys():
-                if host_is_local(key):
+                if rcu.host_is_local(key):
                     hosts_for_rgang.add("localhost")
                 else:
                     hosts_for_rgang.add(key)
@@ -1959,7 +1969,7 @@ class FarmManager(Component):
 
         p.state = self.verbing_to_states[command]
 
-        self.print_log("d","%s: Sending transition to %s" % (date_and_time_more_precision(), p.label),3)
+        self.print_log("d","%s: Sending transition to %s" % (rcu.date_and_time_more_precision(), p.label),3)
 
         try:
             if command == "Init":
@@ -2000,7 +2010,7 @@ class FarmManager(Component):
                     ("\n%s: Timeout sending %s transition to artdaq process %s at %s:%s; "
                      "try checking logfile %s for details\n")
                     % (
-                        date_and_time(),
+                        rcu.date_and_time(),
                         command,
                         p.label,
                         p.host,
@@ -2013,7 +2023,7 @@ class FarmManager(Component):
                     ("\n%s: artdaq process %s at %s:%s appears to have died (or at least refused "
                      "the connection) when sent the %s transition; try checking logfile %s for details")
                     % (
-                        date_and_time(),
+                        rcu.date_and_time(),
                         p.label,
                         p.host,
                         p.port,
@@ -2036,7 +2046,7 @@ class FarmManager(Component):
                     )
                 )
 
-            self.print_log("e", make_paragraph(output_message))
+            self.print_log("e", rcu.make_paragraph(output_message))
 
         return  # From process_command
 #------------------------------------------------------------------------------
@@ -2057,7 +2067,7 @@ class FarmManager(Component):
     def do_command(self, command):
 
         if command != "Start" and command != "Init" and command != "Stop":
-            self.print_log("i", "\n%s: %s transition underway" % (date_and_time(), command.upper()))
+            self.print_log("i", "\n%s: %s transition underway" % (rcu.date_and_time(), command.upper()))
 #------------------------------------------------------------------------------
 # JCF, Nov-8-2015
 
@@ -2097,7 +2107,7 @@ class FarmManager(Component):
         if command != "Stop" and command != "Pause" and command != "Shutdown":
             subsystems_in_order.reverse()
 
-        starttime = time()
+        starttime = time.time()
 
         self.print_log("i","\nSending %s transition to artdaq processes..." % (command.lower()),1,False)
         self.print_log("d", "", 3)
@@ -2119,23 +2129,23 @@ class FarmManager(Component):
                     proc_threads = {}
                     for p in self.procinfos:
                         if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
-                            t = RaisingThread(
+                            t = rcu.RaisingThread(
                                 target=self.process_command, args=(p, command)
                             )
                             proc_threads   [p.label] = t
-                            proc_starttimes[p.label] = time()
+                            proc_starttimes[p.label] = time.time()
                             t.start()
 
                     for label in proc_threads:
                         proc_threads[label].join()
-                        proc_endtimes[label] = time()
+                        proc_endtimes[label] = time.time()
 
         if self.exception:
-            raise Exception(make_paragraph("An exception was thrown during the %s transition." % (command)))
+            raise Exception(rcu.make_paragraph("An exception was thrown during the %s transition." % (command)))
 
-        sleep(1)
+        time.sleep(1)
 
-        endtime = time()
+        endtime = time.time()
         self.print_log("i", "done (%.1f seconds).\n" % (endtime - starttime))
 
         nfailed = len([p for p in self.procinfos if p.lastreturned != "Success" ])
@@ -2160,7 +2170,7 @@ class FarmManager(Component):
         try:
             self.check_proc_transition(self.target_states[command])
         except Exception:
-            raise Exception(make_paragraph(
+            raise Exception(rcu.make_paragraph(
                 ("An exception was thrown during the %s transition as at least one "
                  "of the artdaq processes didn't achieve its desired state.")
                 % (command))
@@ -2175,7 +2185,7 @@ class FarmManager(Component):
             else                      : assert False
 
             self.complete_state_change(verbing)
-            self.print_log("i", "\n%s: %s transition complete" % (date_and_time(), command.upper()))
+            self.print_log("i", "\n%s: %s transition complete" % (rcu.date_and_time(), command.upper()))
 
         return
 #-------^----------------------------------------------------------------------
@@ -2186,7 +2196,7 @@ class FarmManager(Component):
         self.revert_state_change(self.name, self.state(self.name))
         self.print_log("e", (traceback.format_exc()))
         self.print_log("e",
-            make_paragraph(
+            rcu.make_paragraph(
                 'An exception was thrown when %s; exception has been caught and system remains in the "%s" state'
                 % (failed_action, self.state(self.name))
             ),
@@ -2201,7 +2211,7 @@ class FarmManager(Component):
 
         for p in self.procinfos:
             if (("EventBuilder" in p.name) or ("DataLogger" in p.name)):
-                if fhicl_writes_root_file(p.fhicl_used):
+                if rcu.fhicl_writes_root_file(p.fhicl_used):
                     for label, contents in labeled_fhicl_documents:
                         self.print_log("d","Saving FHiCL for %s to %s" % (label, p.label),3)
                         try:
@@ -2209,7 +2219,7 @@ class FarmManager(Component):
                         except:
                             self.print_log("d", traceback.format_exc(), 2)
                             self.alert_and_recover(
-                                make_paragraph(
+                                rcu.make_paragraph(
                                     "An exception was thrown when attempting to add archive entry for %s to %s"
                                     % (label, p.label)
                                 )
@@ -2218,7 +2228,7 @@ class FarmManager(Component):
 
                         if p.lastreturned != "Success":
                             raise Exception(
-                                make_paragraph(
+                                rcu.make_paragraph(
                                     "Attempt to add config archive entry for %s to %s was unsuccessful"
                                     % (label, p.label)
                                 )
@@ -2289,7 +2299,7 @@ class FarmManager(Component):
                             break
                     if not found_priority_ranking:
                         raise Exception(
-                            make_paragraph(
+                            rcu.make_paragraph(
                                 ('Error: the process label "%s" didn\'t match with any of the regular expressions'
                                  ' used to rank transition priorities in the settings file, %s')
                                 % (p.label,self.settings_filename())
@@ -2304,13 +2314,13 @@ class FarmManager(Component):
         inode_fullname = "%s/%s" % (self.record_directory, inode_basename)
         if os.path.exists(inode_fullname):
             with open(inode_fullname) as inf:
-                if not inf.read().strip() == record_directory_info(self.record_directory):
-                    preface = make_paragraph(
+                if not inf.read().strip() == rcu.record_directory_info(self.record_directory):
+                    preface = rcu.make_paragraph(
                         ("Contents of existing %s file and returned value of call to the %s function don't match."
                          " This suggests that since the %s file was created the run records directory has been "
                          "unexpectedly altered. PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS "
                          "AS THIS MAY RESULT IN RUN NUMBER DUPLICATION. Then replace the existing %s file by executing: ")
-                        % (inode_fullname,record_directory_info.__name__,inode_fullname,inode_fullname)
+                        % (inode_fullname,rcu.record_directory_info.__name__,inode_fullname,inode_fullname)
                     )
                     self.print_log(
                         "e",
@@ -2329,7 +2339,7 @@ class FarmManager(Component):
                     raise Exception("Problem during run records check; scroll up for details")
         else:
             with open(inode_fullname, "w") as outf:
-                outf.write(record_directory_info(self.record_directory))
+                outf.write(rcu.record_directory_info(self.record_directory))
 
             for runrec in glob.glob("%s/*" % (self.record_directory)):
                 if re.search(r"/?[0-9]+$", runrec):
@@ -2339,7 +2349,7 @@ class FarmManager(Component):
                                "has been unexpectedly altered."
                                " PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS"
                                " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
-                    raise Exception(make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
+                    raise Exception(rcu.make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
 
 #------------------------------------------------------------------------------
 # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
@@ -2347,18 +2357,18 @@ class FarmManager(Component):
     def create_setup_fhiclcpp_if_needed(self):
         if not os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
             self.print_log("w",
-                           make_paragraph(
+                           rcu.make_paragraph(
                             ('File "%s", needed for formatting FHiCL configurations, does not appear to exist; '
                              'will attempt to auto-generate one...') % (os.environ["TFM_SETUP_FHICLCPP"])
                            ),
             )
             with open(os.environ["TFM_SETUP_FHICLCPP"], "w") as outf:
-                outf.write("\n".join(get_setup_commands(self.productsdir, self.spackdir)))
+                outf.write("\n".join(rcu.get_setup_commands(self.productsdir, self.spackdir)))
                 outf.write("\n\n")
                 if self.productsdir != None:
                     lines = subprocess.Popen(
                         '%s;ups list -aK+ fhiclcpp | sort -n'
-                        % (";".join(get_setup_commands(self.productsdir, self.spackdir))),
+                        % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir))),
                         executable="/bin/bash",
                         shell=True,
                         stdout=subprocess.PIPE,
@@ -2369,7 +2379,7 @@ class FarmManager(Component):
                     else:
                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
                         raise Exception(
-                            make_paragraph(
+                            rcu.make_paragraph(
                                 'Unable to find fhiclcpp ups product in products directory "%s" provided in the FarmManager settings file, "%s"'
                                 % (self.productsdir, self.settings_filename())
                             )
@@ -2394,7 +2404,7 @@ class FarmManager(Component):
                 )
             else:
                 raise Exception(
-                    make_paragraph(
+                    rcu.make_paragraph(
                         'Error: was unable to find or create a file "%s"'
                         % (os.environ["TFM_SETUP_FHICLCPP"])
                     )
@@ -2406,18 +2416,18 @@ class FarmManager(Component):
 
         self.create_setup_fhiclcpp_if_needed()
         # breakpoint()
-        obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+        rcu.obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
 
-        self.print_log("i", "\n%s: BOOT transition 008 Pasha: after messagefacility_fhicl\n" % (date_and_time()))
+        self.print_log("i", "\n%s: BOOT transition 008 Pasha: after messagefacility_fhicl\n" % (rcu.date_and_time()))
 
         cmds = []
 
         cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-            % (";".join(get_setup_commands(self.productsdir, self.spackdir)), 
+            % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)), 
                os.environ["TFM_SETUP_FHICLCPP"])
         )
         cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
-        cmds.append("fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename()))
+        cmds.append("fhicl-dump -l $dump_arg -c %s" % (rcu.get_messagefacility_template_filename()))
 
         proc = subprocess.Popen("; ".join(cmds),
                                 executable="/bin/bash",
@@ -2426,7 +2436,7 @@ class FarmManager(Component):
                                 stderr=subprocess.PIPE,
                                 encoding="utf-8")
 
-        self.print_log("i", "\n%s: BOOT transition 009 Pasha: after fhicl-dump\n" % (date_and_time()))
+        self.print_log("i", "\n%s: BOOT transition 009 Pasha: after fhicl-dump\n" % (rcu.date_and_time()))
         out, err = proc.communicate()
         status   = proc.returncode
 
@@ -2436,17 +2446,17 @@ class FarmManager(Component):
             self.print_log("e","STDOUT output: \n%s" % (out))
             self.print_log("e","STDERR output: \n%s" % (err))
             self.print_log("e",
-                make_paragraph(
+                rcu.make_paragraph(
                     ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                      " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                    % (get_messagefacility_template_filename())
+                    % (rcu.get_messagefacility_template_filename())
                 ),
             )
 
             raise Exception(
                 ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                  " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                % (get_messagefacility_template_filename())
+                % (rcu.get_messagefacility_template_filename())
             )
         return
 
@@ -2474,7 +2484,7 @@ class FarmManager(Component):
                 % (len(found_processes), len(self.procinfos)),
             )
 
-            assert type(found_processes) is list, make_paragraph(
+            assert type(found_processes) is list, rcu.make_paragraph(
                 "check_proc_heartbeats needs to return a list of procinfos"
                 " corresponding to the processes it found alive"
             )
@@ -2484,7 +2494,7 @@ class FarmManager(Component):
                 self.print_log("i", "All processes appear to be up")
                 break
             else:
-                sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
+                time.sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
                 if num_launch_procs_checks >= self.max_num_launch_procs_checks:
                     missing_processes = [
                         procinfo
@@ -2505,23 +2515,15 @@ class FarmManager(Component):
                             )
                         ),
                     )
-                    self.print_log(
-                        "e",
-                        make_paragraph(
-                            ('In order to investigate what happened, you can try re-running with "debug level"'
-                             ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
-                             ' what FarmManager did by doing the following:')
-                        ),
+                    self.print_log("e",
+                                   rcu.make_paragraph(
+                                    ('In order to investigate what happened, you can try re-running with "debug level"'
+                                     ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
+                                     ' what FarmManager did by doing the following:')
+                                   ),
                     )
 
-                    for host in set(
-                        [
-                            procinfo.host
-                            for procinfo in self.procinfos
-                            if procinfo in missing_processes
-                        ]
-                    ):
-
+                    for host in set([p.host for p in self.procinfos if p in missing_processes]):
                         self.print_log("i",
                                        ("\nPerform a clean login to %s, source the FarmManager environment, "
                                         "and execute the following:\n%s")
@@ -2540,7 +2542,7 @@ class FarmManager(Component):
 # P.Murat: create_time_server_proxy - make it a separate function
 #---v--------------------------------------------------------------------------
     def create_time_server_proxy(self):
-        starttime = time()
+        starttime = time.time()
         for p in self.procinfos:
 
             if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
@@ -2558,7 +2560,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 #       everything is fine
 #-------v----------------------------------------------------------------------
-        endtime = time()
+        endtime = time.time()
         self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
         return 0
 
@@ -2566,9 +2568,9 @@ class FarmManager(Component):
 #       get_lognames : returns 0 in case of success, -1 otherwise
 #---v--------------------------------------------------------------------------
     def get_lognames(self):
-        starttime = time()
+        starttime = time.time()
         self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." 
-                       % date_and_time(),1,False)
+                       % rcu.date_and_time(),1,False)
         try:
             self.process_manager_log_filenames = self.get_process_manager_log_filenames()
             self.get_artdaq_log_filenames()
@@ -2578,7 +2580,7 @@ class FarmManager(Component):
             self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
             return -1;
 
-        endtime = time()
+        endtime = time.time()
         self.print_log("i", "get_lognames done (%.1f seconds)." % (endtime - starttime))
         return 0;  # end of get_lognames
 
@@ -2603,13 +2605,13 @@ class FarmManager(Component):
                 "mkdir -p -m %s %s/%s" % (permissions, self.log_directory, subdir)
             )
 
-        for host in set([procinfo.host for procinfo in self.procinfos]):
-            logdircmd = construct_checked_command(logdir_commands_to_run_on_host)
+        for host in set([p.host for p in self.procinfos]):
+            logdircmd = rcu.construct_checked_command(logdir_commands_to_run_on_host)
 
-            if not host_is_local(host):
+            if not rcu.host_is_local(host):
                 logdircmd = "timeout %d ssh -f %s '%s'" % (ssh_timeout_in_seconds,host,logdircmd)
 
-            self.print_log("i", "\n%s: BOOT transition 004 Pasha: executing %s\n" % (date_and_time(),logdircmd))
+            self.print_log("i", "\n%s: BOOT transition 004 Pasha: executing %s\n" % (rcu.date_and_time(),logdircmd))
             proc = subprocess.Popen(
                 logdircmd,
                 executable="/bin/bash",
@@ -2618,7 +2620,7 @@ class FarmManager(Component):
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
             )
-            self.print_log("i", "\n%s: BOOT transition underway 006 Pasha done with mkdirs\n" % (date_and_time()))
+            self.print_log("i", "\n%s: BOOT transition underway 006 Pasha done with mkdirs\n" % (rcu.date_and_time()))
 
             out, err = proc.communicate()
             status   = proc.returncode
@@ -2635,7 +2637,7 @@ class FarmManager(Component):
                 )
                 self.print_log(
                     "e",
-                    make_paragraph(
+                    rcu.make_paragraph(
                         ("Returned value of %d suggests that the ssh call to %s timed out. "
                          "Perhaps a lack of public/private ssh keys resulted in ssh asking for a password?")
                         % (status, host)
@@ -2648,7 +2650,6 @@ class FarmManager(Component):
                 )
         return  # marks end of function
 
-
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
@@ -2657,7 +2658,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def check_hw_fcls(self):
 
-        starttime = time()
+        starttime = time.time()
         self.print_log("i", "\nObtaining FHiCL documents...", 1, False)
 
         try:
@@ -2682,7 +2683,7 @@ class FarmManager(Component):
                             fn_dictionary[filename.replace(".fcl", "_hw_cfg.fcl")] = True
                     else:
                         raise Exception(
-                            make_paragraph(
+                            rcu.make_paragraph(
                                 ('Error: filename "%s" found more than once given the set'
                                 ' of requested subconfigurations "%s" (see %s)')
                                 % (
@@ -2695,7 +2696,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would reupload the FCL files? 
-########
+#-------v------------------------------------------------------------------------------
         for p in self.procinfos:
             matching_filenames = ["%s.fcl" % p.label]
 
@@ -2710,7 +2711,7 @@ class FarmManager(Component):
                         found_fhicl = True
 
             if not found_fhicl:
-                self.print_log("e",make_paragraph(
+                self.print_log("e",rcu.make_paragraph(
                     'Unable to find a FHiCL document for %s in configuration "%s"; '
                     % (p.label," ".join(self.subconfigs_for_run),p.label))
                 )
@@ -2738,9 +2739,9 @@ class FarmManager(Component):
                 if p.fhicl_used != fhicl_before_sub:
                     rootfile_cntr += 1
 
-        endtime = time()
+        endtime = time.time()
         self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
-        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (rcu.date_and_time()))
 
         for p in self.procinfos:
             assert not p.fhicl is None and not p.fhicl_used is None
@@ -2764,11 +2765,12 @@ class FarmManager(Component):
             self.reset_variables()
             self.revert_failed_transition(failed_action)
 
-        self.print_log("i", "%s: BOOT transition underway" % (date_and_time()))
-        self.print_log("i", "%s: BOOT, self.debug_level=%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition underway" % (rcu.date_and_time()))
+        self.print_log("i", "%s: BOOT, self.debug_level=%i" % (rcu.date_and_time(),self.debug_level))
 
         self.reset_variables()
-        self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" 
+                       % (rcu.date_and_time(),self.debug_level))
 
         self.fState = run_control_state.transition("init");
         self.fState.set_completed(0);
@@ -2776,20 +2778,21 @@ class FarmManager(Component):
         os.chdir(self.base_dir)
         boot_fn = self.boot_filename();
 
-        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" % (date_and_time(),boot_fn,self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" 
+                       % (rcu.date_and_time(),boot_fn,self.debug_level))
 
         if not os.path.exists(boot_fn):
             raise Exception('ERROR: boot file %s does not exist' % boot_fn)
 #------------------------------------------------------------------------------
 # P.Murat : it looks that a boot file name could have a .fcl extension... wow!
 #           we're not using that ....
-########
+#-------v----------------------------------------------------------------------
         dummy, file_extension = os.path.splitext(boot_fn)
 
         if file_extension == ".fcl":
             try:
                 self.create_setup_fhiclcpp_if_needed()
-                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (date_and_time(),self.debug_level))
+                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             except:
                 raise
 
@@ -2808,13 +2811,13 @@ class FarmManager(Component):
                 raise Exception('Error: the command "%s" returned nonzero' % cmd)
 #------------------------------------------------------------------------------
 # P.Murat: here the boot.txt file is being read and parsed
-#-------
+#-------v----------------------------------------------------------------------
         try:
-            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.get_boot_info(self.boot_filename())
-            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.check_boot_info()
-            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
         except Exception:
             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
             return
@@ -2823,7 +2826,7 @@ class FarmManager(Component):
 # See the Procinfo.__lt__ function for details on sorting
 #-------v----------------------------------------------------------------------
         self.procinfos.sort()
-        self.print_log("i", "%s: BOOT transition 0005 debug_level:%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0005 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 
         for ss in sorted(self.subsystems):
 
@@ -2853,16 +2856,16 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 #-------v----------------------------------------------------------------------
-        self.print_log("i", "%s: BOOT transition 001 Pasha: start msg viewer" % (date_and_time()))
-        self.print_log("i", "%s: BOOT transition 001 debug_level:%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 001 Pasha: start msg viewer" % (rcu.date_and_time()))
+        self.print_log("i", "%s: BOOT transition 001 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
         self.start_message_viewer()
-        self.print_log("i", "%s: BOOT transition 002 Pasha: done with msg viewer" % (date_and_time()))
-        self.print_log("i", "%s: BOOT transition 002 debug_level:%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 002 Pasha: done with msg viewer" % (rcu.date_and_time()))
+        self.print_log("i", "%s: BOOT transition 002 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 
         self.fState.set_completed(30);
 #------------------------------------------------------------------------------
 # here we come if not self.manage_processes - is the sequence important ?
-########
+#-------v----------------------------------------------------------------------
         if self.msgviewer_proc is not None:
             # now wait/check status from msgviewer
             if self.msgviewer_proc.wait() != 0:
@@ -2895,8 +2898,8 @@ class FarmManager(Component):
 
             self.validate_setup_script(random_host)
 
-            self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (date_and_time()))
-            self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (rcu.date_and_time()))
+            self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
@@ -2908,8 +2911,8 @@ class FarmManager(Component):
 # deal with message facility. 
 # -- also OK to do just once
 #-----------v------------------------------------------------------------------
-            self.print_log("i", "%s: BOOT transition 004 Pasha: before init_process_requirements\n" % (date_and_time()))
-            self.print_log("i", "%s: BOOT transition 004 debug_level:%i" % (date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 004 Pasha: before init_process_requirements\n" % (rcu.date_and_time()))
+            self.print_log("i", "%s: BOOT transition 004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.init_process_requirements()
             self.fState.set_completed(60);
 #------------------------------------------------------------------------------
@@ -2921,13 +2924,13 @@ class FarmManager(Component):
 #  former end of DO_BOOT
 #-------v-----------------------------------------------------------------------
         self.complete_state_change("booting")
-        self.print_log("i", "%s: BOOT transition complete" % (date_and_time()))
-        self.print_log("i", "%s: BOOT transition complete debug_level:%i" % (date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition complete" % (rcu.date_and_time()))
+        self.print_log("i", "%s: BOOT transition complete debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        sleep(1);
+        time.sleep(1);
         self.fState = run_control_state.state("stopped")
         return
 
@@ -2935,18 +2938,17 @@ class FarmManager(Component):
 # CONFIG transition : 1) at this point the run number is known, don't need to pass
 #---v--------------------------------------------------------------------------
     def do_config(self, subconfigs_for_run=[], run_number=None):
-        # pdb.set_trace()
+        # breakpoint()
 
         self.fState = run_control_state.transition("configure")
 
-        self.print_log("i", "%s: CONFIG transition underway" % (date_and_time()))
+        self.print_log("i", "%s: CONFIG transition underway" % (rcu.date_and_time()))
         os.chdir(self.base_dir)
 #------------------------------------------------------------------------------
 # check subconfigs for this run - what they are? 
 # could this be done before launching the jobs ?
 # last segment of the self.config_dir is the config name
-########
-
+#-------v----------------------------------------------------------------------
         if subconfigs_for_run: 
             self.subconfigs_for_run = subconfigs_for_run
         else:
@@ -2962,15 +2964,15 @@ class FarmManager(Component):
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
 # See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
-# refer to the same thing
-########
+# refer to the same thing P.Murat: checks in check_hw_fcl look like nonsense - it costs nothing to keel the fcl files unique
+#-------v------------------------------------------------------------------------------
         self.print_log("i", "\n%s: CONFIG transition run_number:%d 001 Pasha" 
-                       % (date_and_time(),self.run_number))
+                       % (rcu.date_and_time(),self.run_number))
 
         rc = self.check_hw_fcls();
         if (rc != 0): return 
 
-        starttime = time()
+        starttime = time.time()
         self.print_log("i", "Reformatting the FHiCL documents...", 1, False)
 
         try:
@@ -2981,13 +2983,13 @@ class FarmManager(Component):
 # P.Murat: TODO
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
-########
+#-------v----------------------------------------------------------------------
         # breakpoint()
-        reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
+        rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
-        self.print_log("i", "done (%.1f seconds)." % (time() - starttime))
+        self.print_log("i", "done (%.1f seconds)." % (time.time() - starttime))
 
-        starttime = time()
+        starttime = time.time()
         self.print_log("i", "Bookkeeping the FHiCL documents...", 1, False)
 
         try:
@@ -3000,17 +3002,17 @@ class FarmManager(Component):
             )
             return
 
-        self.print_log("i", "done (%.1f seconds)." % (time() - starttime))
+        self.print_log("i", "done (%.1f seconds)." % (time.time() - starttime))
 #------------------------------------------------------------------------------
 # P.Murat: it doesn't make sense to submit the jobs before FCL's are reformatted, does it ?
 #          now, with the info on hand about the processes contained in procinfos, actually launch them
 #          this needs to be done every time
 ############
-        self.print_log("i", "\n%s: CONFIG transition 010 Pasha: before launching artdaq processes\n" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 010 Pasha: before launching artdaq processes\n" % (rcu.date_and_time()))
 
-        self.print_log("i", "\n%s Launching the artdaq processes" % date_and_time())
+        self.print_log("i", "\n%s Launching the artdaq processes" % rcu.date_and_time())
         self.called_launch_procs = True
-        self.launch_procs_time   = time()  # Will be used when checking logfile's timestamps
+        self.launch_procs_time   = time.time()  # Will be used when checking logfile's timestamps
 
         try:
 #------------------------------------------------------------------------------
@@ -3019,7 +3021,7 @@ class FarmManager(Component):
             # breakpoint()
             launch_procs_actions = self.launch_procs()
 
-            assert type(launch_procs_actions) is dict, make_paragraph(
+            assert type(launch_procs_actions) is dict, rcu.make_paragraph(
                 ("The launch_procs function needs to return a dictionary whose keys are the names of the hosts"
                  " on which it ran commands, and whose values are those commands"))
 
@@ -3028,19 +3030,20 @@ class FarmManager(Component):
             self.alert_and_recover("An exception was thrown in launch_procs(), see traceback above for more info")
             return
 
-        self.print_log("i", "\n%s: CONFIG transition 011 Pasha : done launching\n" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 011 Pasha : done launching\n" % (rcu.date_and_time()))
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
-############
+#-------v----------------------------------------------------------------------
+        # breakpoint()
         rc = self.check_launch_results();
         if (rc != 0): return;
 
-        self.print_log("i", "\n%s: CONFIG transition 012 Pasha : before create_time_server_proxy\n" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 012 Pasha : before create_time_server_proxy\n" % (rcu.date_and_time()))
 
         rc = self.create_time_server_proxy();
         if (rc != 0): return;
 
-        self.print_log("i", "\n%s: CONFIG transition 013 Pasha : before self.manage_processes\n" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 013 Pasha : before self.manage_processes\n" % (rcu.date_and_time()))
 #------------------------------------------------------------------------------
 # define names of all logfiles 
 ############
@@ -3056,7 +3059,7 @@ class FarmManager(Component):
 ########
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition)
 
-        self.print_log("i", "\n%s: CONFIG transition 013 Pasha" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 013 Pasha" % (rcu.date_and_time()))
 
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (
             self.fUser,
@@ -3073,7 +3076,7 @@ class FarmManager(Component):
 
         if os.path.exists(self.tmp_run_record): shutil.rmtree(self.tmp_run_record)
 
-        starttime = time()
+        starttime = time.time()
         self.print_log("i", "Saving the run record...", 1, False)
 
         try:
@@ -3081,13 +3084,13 @@ class FarmManager(Component):
         except Exception:
             self.print_log("w", traceback.format_exc())
             self.print_log("w",
-                           make_paragraph(
+                           rcu.make_paragraph(
                                ("WARNING: an exception was thrown when attempting to save the run record. "
                                 "While datataking may be able to proceed, this may also indicate a serious problem")
                            ),
             )
 
-        self.print_log("i", "done (%.1f seconds)." % (time() - starttime))
+        self.print_log("i", "done (%.1f seconds)." % (time.time() - starttime))
 
         try:
             self.check_config()
@@ -3096,7 +3099,7 @@ class FarmManager(Component):
             self.revert_failed_transition("calling experiment-defined function check_config()")
             return
 
-        self.print_log("i", "\n%s: CONFIG transition 015 Pasha" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 015 Pasha" % (rcu.date_and_time()))
 #------------------------------------------------------------------------------
 # sending 'Init' command to artdaq processes - at this point they should be already submitted
 # insert the last part of former do_boot right above
@@ -3113,7 +3116,7 @@ class FarmManager(Component):
                      'to the artdaq processes; see messages above for more info'))
                 return
 
-            starttime = time()
+            starttime = time.time()
 
             self.print_log("i","Ensuring FHiCL documents will be archived in the output *.root files",1,False)
             self.print_log("d", "\n", 3)
@@ -3134,13 +3137,13 @@ class FarmManager(Component):
 
             self.archive_documents(labeled_fhicl_documents)
 
-            endtime = time()
+            endtime = time.time()
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
         self.complete_state_change("configuring")
         self.fState.set_completed(90);
 
-        self.print_log("i", "\n%s: CONFIG transition 016 Pasha" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition 016 Pasha" % (rcu.date_and_time()))
 
         if self.manage_processes:
             self.print_log("i", 
@@ -3153,10 +3156,10 @@ class FarmManager(Component):
 #    and this is the end of the config step - run number is known ! 
 #------------------------------------------------------------------------------
         self.fState.set_completed(99);
-        sleep(1)
+        time.sleep(1)
         self.fState = run_control_state.state("configured")
 
-        self.print_log("i", "\n%s: CONFIG transition complete" % (date_and_time()))
+        self.print_log("i", "\n%s: CONFIG transition complete" % (rcu.date_and_time()))
         return
 
 
@@ -3167,7 +3170,7 @@ class FarmManager(Component):
     def do_start_running(self):
 
         self.print_log("i","\n%s: START transition underway for run %d" % 
-                       (date_and_time(), self.run_number))
+                       (rcu.date_and_time(), self.run_number))
 
         self.fState = run_control_state.transition("start")
 
@@ -3180,7 +3183,7 @@ class FarmManager(Component):
             rn        = int(rn_string)
             if (self.run_number == rn):
                 raise Exception(
-                    make_paragraph(
+                    rcu.make_paragraph(
                         ('Error: requested run number "%i" is found to already exist '
                          'in the run records directory "%s"; run duplicates are not allowed.')
                         % (self.run_number, subdir)))
@@ -3195,7 +3198,7 @@ class FarmManager(Component):
             except:
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover(
-                    make_paragraph(
+                    rcu.make_paragraph(
                         ('Error: Attempt to copy temporary run record "%s" into permanent run record'
                          ' "%s" didn\'t work; most likely reason is that you don\'t have write permission'
                          ' to %s, but it may also mean that your experiment\'s reusing a run number.'
@@ -3222,7 +3225,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # step X) put_config_info
 ########
-        self.print_log("i", "\n%s: START transition 001 Pasha : before put_config_info\n" % (date_and_time()))
+        self.print_log("i", "\n%s: START transition 001 Pasha : before put_config_info\n" % (rcu.date_and_time()))
 
         try:
             self.put_config_info()
@@ -3237,14 +3240,14 @@ class FarmManager(Component):
            os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition):
 
             os.chmod(rr_dir, 0o755)
-            copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition,
+            shutil.copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition,
                      "%s/rc_info_start.txt" % (rr_dir)
             )
             os.chmod(rr_dir, 0o555)
 
             if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
                 self.alert_and_recover(
-                    make_paragraph(
+                    rcu.make_paragraph(
                         ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt;"
                          " does original file exist?")
                         % (self.partition, rr_dir)
@@ -3253,11 +3256,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start TRACE ???
 ########
-        self.print_log("i", "\n%s: START transition underway 002 Pasha : before execute_trace_script\n" % (date_and_time()))
+        self.print_log("i", "\n%s: START transition underway 002 Pasha : before execute_trace_script\n" % (rcu.date_and_time()))
         self.execute_trace_script("start")
 
         self.print_log("i", "\n%s: START transition underway 003 Pasha : self.manage_processes=%i\n" 
-                       % (date_and_time(),self.manage_processes))
+                       % (rcu.date_and_time(),self.manage_processes))
         if self.manage_processes:
 
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
@@ -3278,7 +3281,7 @@ class FarmManager(Component):
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
         self.print_log("i", "\n%s: START transition underway 003 Pasha :record_directory:%s run_number: %i [%s]\n" 
-                       % (date_and_time(),self.record_directory,self.run_number,start_time))
+                       % (rcu.date_and_time(),self.record_directory,self.run_number,start_time))
 
         self.save_metadata_value("FarmManager start time",start_time);
 #------------------------------------------------------------------------------
@@ -3286,11 +3289,11 @@ class FarmManager(Component):
 # this should go away
 ########
 ##        if self.manage_processes:
-##            starttime = time()
+##            starttime = time.time()
 ##            self.print_log("i","\nAttempting to provide run-numbered softlinks to the logfiles...",1,False)
 ##            self.print_log("d", "", 2)
 ##            self.softlink_logfiles()
-##            endtime = time()
+##            endtime = time.time()
 ##            self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
 
         self.print_log("i", "\nRun info can be found locally at %s\n" % (self.run_record_directory()))
@@ -3300,10 +3303,10 @@ class FarmManager(Component):
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        sleep(1);
+        time.sleep(1);
         self.fState = run_control_state.state("running")
 
-        self.print_log("i","\n%s: START transition complete for run %d" % (date_and_time(), self.run_number))
+        self.print_log("i","\n%s: START transition complete for run %d" % (rcu.date_and_time(), self.run_number))
         return
 
 
@@ -3312,7 +3315,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
 
-        self.print_log("i","\n%s: STOP transition underway for run %d"%(date_and_time(),self.run_number))
+        self.print_log("i","\n%s: STOP transition underway for run %d"%(rcu.date_and_time(),self.run_number))
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
@@ -3336,14 +3339,14 @@ class FarmManager(Component):
             run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
             os.chmod(run_record_directory, 0o755)
 
-            copyfile(
+            shutil.copyfile(
                 "/tmp/info_to_archive_partition%d.txt" % self.partition,
                 "%s/rc_info_stop.txt" % (run_record_directory),
             )
             os.chmod(run_record_directory, 0o555)
 
             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
-                self.alert_and_recover(make_paragraph(
+                self.alert_and_recover(rcu.make_paragraph(
                     ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
                      "does original file exist?") % (self.partition, run_record_directory))
                 )
@@ -3371,10 +3374,10 @@ class FarmManager(Component):
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        sleep(1);
+        time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","\n%s: STOP transition complete for run %d"%(date_and_time(),self.run_number))
+        self.print_log("i","\n%s: STOP transition complete for run %d"%(rcu.date_and_time(),self.run_number))
         return
 
 #------------------------------------------------------------------------------
@@ -3394,13 +3397,13 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_terminate(self):
 
-        self.print_log("i", "\n%s: TERMINATE transition underway\n" % (date_and_time()))
+        self.print_log("i", "\n%s: TERMINATE transition underway\n" % (rcu.date_and_time()))
 
         if self.manage_processes:
 
             self.process_manager_cleanup()
 
-            starttime = time()
+            starttime = time.time()
             self.print_log("i", "Sending shutdown transition to artdaq processes...", 1, False)
 
             proc_starttimes = {}
@@ -3410,9 +3413,9 @@ class FarmManager(Component):
                 procinfo.state = self.verbing_to_states["Shutdown"]
 
                 try:
-                    proc_starttimes[procinfo.label] = time()
-                    procinfo.lastreturned = procinfo.server.daq.shutdown()
-                    proc_endtimes[procinfo.label] = time()
+                    proc_starttimes[procinfo.label] = time.time()
+                    procinfo.lastreturned           = procinfo.server.daq.shutdown()
+                    proc_endtimes[procinfo.label]   = time.time()
                 except Exception:
                     self.print_log(
                         "e",
@@ -3432,7 +3435,7 @@ class FarmManager(Component):
                     ):
                         procinfo.state = self.target_states["Shutdown"]
 
-            endtime = time()
+            endtime = time.time()
             self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
 
             if self.debug_level >= 2 or len(
@@ -3477,10 +3480,10 @@ class FarmManager(Component):
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        sleep(1);
+        time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i", "\n%s: TERMINATE transition complete" % (date_and_time()))
+        self.print_log("i", "\n%s: TERMINATE transition complete" % (rcu.date_and_time()))
         return
 
 #------------------------------------------------------------------------------
@@ -3488,7 +3491,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_recover(self):
         run_number_string = f" for run {self.run_number}" if self.run_number else ""
-        self.print_log("w","\n%s: RECOVER transition underway%s"%(date_and_time(),run_number_string))
+        self.print_log("w","\n%s: RECOVER transition underway%s"%(rcu.date_and_time(),run_number_string))
 
         self.in_recovery = True
 
@@ -3500,7 +3503,7 @@ class FarmManager(Component):
 
             self.in_recovery = False
             self.complete_state_change("recovering")
-            self.print_log("i","\n%s: RECOVER transition complete %s"%(date_and_time(),run_number_string))
+            self.print_log("i","\n%s: RECOVER transition complete %s"%(rcu.date_and_time(),run_number_string))
             return
 
         if self.state(self.name) == "running" or self.state(self.name) == "stopping":
@@ -3527,12 +3530,12 @@ class FarmManager(Component):
 
                 procinfo.state = self.verbing_to_states[command]
                 try:
-                    transition_starttime = time()
+                    transition_starttime = time.time()
                     if   command == "Stop"    : procinfo.lastreturned = procinfo.server.daq.stop()
                     elif command == "Shutdown": procinfo.lastreturned = procinfo.server.daq.shutdown()
                     else:
                         assert False
-                    transition_endtime = time()
+                    transition_endtime = time.time()
 
                     self.print_log(
                         "d",
@@ -3563,7 +3566,7 @@ class FarmManager(Component):
                     procinfo.state = self.target_states[command]
                 else:
                     raise Exception(
-                        make_paragraph(
+                        rcu.make_paragraph(
                             "Attempted %s sent to artdaq process %s "
                             % (command, procinfo.label)
                             + "at %s during recovery procedure"
@@ -3582,8 +3585,8 @@ class FarmManager(Component):
                 )
                 if (self.state(self.name) != "stopped" and 
                     self.state(self.name) != "booting" and 
-                    self.state(self.name) != "terminating"): self.print_log("e", make_paragraph(msg))
-                else                                       : self.print_log("d", make_paragraph(msg), 2)
+                    self.state(self.name) != "terminating"): self.print_log("e", rcu.make_paragraph(msg))
+                else                                       : self.print_log("d", rcu.make_paragraph(msg), 2)
 
                 return
             else:
@@ -3596,7 +3599,7 @@ class FarmManager(Component):
                 except Exception:
                     if "ProtocolError" not in traceback.format_exc():
                         self.print_log("e", traceback.format_exc())
-                    self.print_log("e", make_paragraph(
+                    self.print_log("e", rcu.make_paragraph(
                         "Exception caught during stop transition sent to artdaq process %s " % (procinfo.label)
                         + "at %s:%s during recovery procedure; " % (procinfo.host, procinfo.port)
                         + "it's possible the process no longer existed\n"),
@@ -3622,7 +3625,7 @@ class FarmManager(Component):
                 except Exception:
                     if "ProtocolError" not in traceback.format_exc():
                         self.print_log("e", traceback.format_exc())
-                    self.print_log("e",make_paragraph(
+                    self.print_log("e",rcu.make_paragraph(
                         "Exception caught during shutdown transition sent to artdaq process %s " % (procinfo.label)
                         + "at %s:%s during recovery procedure;" % (procinfo.host, procinfo.port)
                         + " it's possible the process no longer existed\n")
@@ -3645,17 +3648,17 @@ class FarmManager(Component):
 
                 self.print_log(
                     "d",
-                    make_paragraph(
+                    rcu.make_paragraph(
                         "A process previously was found to be missing; "
                         + "therefore will wait %d seconds before attempting to send the normal transitions as part of recovery\n"
                         % (sleep_on_heartbeat_failure)
                     ),
                     2,
                 )
-                sleep(sleep_on_heartbeat_failure)
+                time.sleep(sleep_on_heartbeat_failure)
 
             for name in ["BoardReader","EventBuilder","DataLogger","Dispatcher","RoutingManager"]:
-                self.print_log("i","%s: Attempting to cleanly wind down the %ss if they (still) exist"%(date_and_time(), name))
+                self.print_log("i","%s: Attempting to cleanly wind down the %ss if they (still) exist"%(rcu.date_and_time(), name))
 
                 threads = []
                 priorities_used = {}
@@ -3669,9 +3672,7 @@ class FarmManager(Component):
                 for priority in sorted(priorities_used.keys(), reverse=True):
                     for procinfo in self.procinfos:
                         if name in procinfo.name and priority == procinfo.priority:
-                            t = RaisingThread(
-                                target=attempted_stop, args=(self, procinfo)
-                            )
+                            t = rcu.RaisingThread(target=attempted_stop, args=(self, procinfo))
                             threads.append(t)
                             t.start()
 
@@ -3681,12 +3682,12 @@ class FarmManager(Component):
         if self.manage_processes:
             print
             self.print_log("i","%s: Attempting to kill off the artdaq processes from this run if they still exist"
-                           % (date_and_time()))
+                           % (rcu.date_and_time()))
             try:
                 self.kill_procs()
             except Exception:
                 self.print_log("e", traceback.format_exc())
-                self.print_log("e",make_paragraph(
+                self.print_log("e",rcu.make_paragraph(
                         ("An exception was thrown "
                          "within kill_procs(); artdaq processes may not all have been killed"))
                 )
@@ -3723,12 +3724,12 @@ class FarmManager(Component):
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        sleep(1);
+        time.sleep(1);
         self.fState = run_control_state.state("stopped")
 #------------------------------------------------------------------------------
 # marking the end of function
 #-------v----------------------------------------------------------------------
-        self.print_log("i","\n%s: RECOVER transition complete%s"%(date_and_time(),run_number_string))
+        self.print_log("i","\n%s: RECOVER transition complete%s"%(rcu.date_and_time(),run_number_string))
         return
 
 #------------------------------------------------------------------------------
@@ -3880,12 +3881,12 @@ def get_args():  # no-coverage
 def main():  # no-coverage
 
 #    if "TFM_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
-#        print(make_paragraph('Won\'t launch FarmManager; first run "source $TFM_DIR/source_me\n"'))
+#        print(rcu.make_paragraph('Won\'t launch FarmManager; first run "source $TFM_DIR/source_me\n"'))
 #        return
 
     process_management_methods = ["direct", "pmt", "external_run_control"]
     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-        raise Exception(make_paragraph(
+        raise Exception(rcu.make_paragraph(
             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
              "what method to use to control the artdaq processes (%s, etc.)")
             % (",".join(['"' + pmm + '"' for pmm in process_management_methods])))
@@ -3898,7 +3899,7 @@ def main():  # no-coverage
 
         if not legal_method_found:
             raise Exception(
-                make_paragraph(
+                rcu.make_paragraph(
                     ('TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD '
                     'environment variable ("%s"); legal values include %s')
                     % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
@@ -3908,7 +3909,7 @@ def main():  # no-coverage
             )
 
     if (os.environ.get("HOSTNAME") == None) :
-        print(make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
+        print(rcu.make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
                               'Will internally set HOSTNAME using socket.gethostname\n')))
         os.environ["HOSTNAME"] = socket.gethostname();
 #------------------------------------------------------------------------------
@@ -3918,14 +3919,14 @@ def main():  # no-coverage
         tfm.print_log(
             "e",
             "%s: FarmManager on partition %s caught kill signal %d"
-            % (date_and_time(), tfm.partition, signum),
+            % (rcu.date_and_time(), tfm.partition, signum),
         )
         tfm.recover()
 
         timeout   = 180  # Because the recover() call above is non-blocking
-        starttime = time()
+        starttime = time.time()
         while tfm.state(tfm.name) != "stopped":
-            if int(time() - starttime) > timeout:
+            if int(time.time() - starttime) > timeout:
                 tfm.print_log(
                     "e",
                     ("FarmManager signal handler recovery attempt timed out after %d seconds; "
@@ -3934,9 +3935,9 @@ def main():  # no-coverage
                 )
                 break
 
-            sleep(10)
+            time.sleep(10)
 
-        line = "%s: exiting..." % (date_and_time())
+        line = "%s: exiting..." % (rcu.date_and_time())
         print(line)
 
         tfm.__del__()
@@ -3972,7 +3973,7 @@ def main():  # no-coverage
 #            if (tfm.debug_level > 1):
 #                print("... FarmManager sleeping for 6 sec, keeprunning=",tfm.fKeepRunning,
 #                      " debug_level=",tfm.debug_level);
-            sleep(5)
+            time.sleep(5)
 #------------------------------------------------------------------------------
 # done, exit
 #-------v----------------------------------------------------------------------

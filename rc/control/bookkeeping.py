@@ -34,13 +34,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             True,
         )
     else:
-
         # JCF, Sep-20-2018: not yet logic for requiring an artdaq
         # version with a letter at the end of it (e.g., v3_02_01a as
         # opposed to v3_02_01)
 
-        min_majorver = "3"
-        min_minorver = "03"
+        min_majorver   = "3"
+        min_minorver   = "03"
         min_minorerver = "00"
 
         # ...so we'll also have a list of versions where if the artdaq

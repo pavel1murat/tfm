@@ -1,28 +1,28 @@
 
-import random
-import string
-import os
-import subprocess
-from subprocess import Popen
-import socket
-from time import sleep
-import re
-import sys
-import copy
+import random, string, os, sys, subprocess, socket, time, re, copy;
+# from subprocess import Popen
+# import socket
+# from time import sleep
+# import time
+# import re
+# import sys
+# import copy
 
 sys.path.append(os.environ["TFM_DIR"])
 
-from rc.control.utilities import host_is_local
-from rc.control.utilities import get_pids
-from rc.control.utilities import get_setup_commands
-from rc.control.utilities import date_and_time
-from rc.control.utilities import date_and_time_filename
-from rc.control.utilities import construct_checked_command
-from rc.control.utilities import obtain_messagefacility_fhicl
-from rc.control.utilities import make_paragraph
-from rc.control.utilities import get_short_hostname
-from rc.control.utilities import get_messagefacility_template_filename
-from rc.control.utilities import RaisingThread
+import rc.control.utilities as rcu;
+
+# from rc.control.utilities import host_is_local
+# from rc.control.utilities import get_pids
+# from rc.control.utilities import get_setup_commands
+# from rc.control.utilities import date_and_time
+# from rc.control.utilities import date_and_time_filename
+# from rc.control.utilities import construct_checked_command
+# from rc.control.utilities import obtain_messagefacility_fhicl
+# from rc.control.utilities import make_paragraph
+# from rc.control.utilities import get_short_hostname
+# from rc.control.utilities import get_messagefacility_template_filename
+# from rc.control.utilities import RaisingThread
 
 
 def bootfile_name_to_execname(bootfile_name):
@@ -52,7 +52,7 @@ def launch_procs_on_host(self,host,
 
     self.print_log("d","Before check for existing processes on %s" % host,debug_level)
     grepped_lines    = []
-    preexisting_pids = get_pids("\|".join(
+    preexisting_pids = rcu.get_pids("\|".join(
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
                                 host,grepped_lines)
 
@@ -63,7 +63,7 @@ def launch_procs_on_host(self,host,
 
         self.print_log("d","Before re-check for existing processes on %s" % (host),debug_level)
         grepped_lines    = []
-        preexisting_pids = get_pids(
+        preexisting_pids = rcu.get_pids(
             "\|".join(
                 [
                     "%s.*id:\s\+%s"
@@ -77,7 +77,7 @@ def launch_procs_on_host(self,host,
         )
 
     if len(preexisting_pids) > 0:
-        self.print_log("e",make_paragraph(
+        self.print_log("e",rcu.make_paragraph(
             ("On host %s, found artdaq process(es) already existing which use the ports"
              " TFM was going to use; this may be the result of an improper cleanup from"
              " a prior run: " % host))
@@ -86,7 +86,7 @@ def launch_procs_on_host(self,host,
         self.print_log("i",("...note that the process(es) may get automatically"
                             " cleaned up during DAQInterface recovery\n"),
         )
-        raise Exception(make_paragraph(
+        raise Exception(rcu.make_paragraph(
                 ("TFM found previously-existing artdaq processes using desired ports;"
                  " see error message above for details"))
         )
@@ -95,20 +95,19 @@ def launch_procs_on_host(self,host,
 #------------------------------------------------------------------------------
 #   Each command already terminated by ampersand
 ####
-    launchcmd = construct_checked_command(launch_commands_to_run_on_host)
+    launchcmd = rcu.construct_checked_command(launch_commands_to_run_on_host)
     launchcmd += "; "
     launchcmd += " ".join(launch_commands_to_run_on_host_background)
 
-    if not host_is_local(host):
+    if not rcu.host_is_local(host):
         launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
 
     self.print_log("d", "\nartdaq process launch commands to execute on %s (output will be in %s:%s):\n%s\n"
                    % (host,host,self.launch_attempt_files[host],"\n".join(launch_commands_on_host_to_show_user)),
                    debug_level)
 
-    proc = Popen(launchcmd,executable="/bin/bash",shell=True,
-                 stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
-                 encoding="utf-8")
+    proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
+                            stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
 
     out, _ = proc.communicate()
     status = proc.returncode
@@ -118,7 +117,7 @@ def launch_procs_on_host(self,host,
                        "Status error raised in attempting to launch processes on %s, to investigate, see %s:%s for output"
                        % (host, host, self.launch_attempt_files[host]))
 
-        self.print_log("i",make_paragraph(
+        self.print_log("i",rcu.make_paragraph(
             ('You can also try running again with the "debug level" in the boot file set to 4.'
              ' Otherwise, you can recreate what DAQInterface did by performing a clean login'
              ' to %s, source-ing the DAQInterface environment and executing the following:') % host)
@@ -141,18 +140,18 @@ def launch_procs_on_host(self,host,
 #------------------------------------------------------------------------------
 def launch_procs_base(self):
 
-    mf_fcl = obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+    mf_fcl = rcu.obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
     self.create_setup_fhiclcpp_if_needed()
 
     cmds = []
     cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-                % (";".join(get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
+                % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
     cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi")
-    cmds.append("fhicl-dump -l $dump_arg -c %s" % (get_messagefacility_template_filename()))
+    cmds.append("fhicl-dump -l $dump_arg -c %s" % (rcu.get_messagefacility_template_filename()))
 
     cmd = "; ".join(cmds)
-    proc = Popen(cmd,executable="/bin/bash",shell=True,
-                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
+    proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
     proc.wait();
 
     if proc.returncode != 0:
@@ -162,28 +161,25 @@ def launch_procs_base(self):
         self.print_log("e","STDOUT output: \n%s" % proc.stdout)
         self.print_log("e","STDERR output: \n%s" % proc.stderr)
 
-        self.print_log("e",make_paragraph(
+        self.print_log("e",rcu.make_paragraph(
             ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
              "one or more syntax errors, or there was a problem running fhicl-dump")
-            % (get_messagefacility_template_filename()))
+            % (rcu.get_messagefacility_template_filename()))
         )
 
         raise Exception(
             ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
              "one or more syntax errors (Or there was a problem running fhicl-dump)")
-            % (get_messagefacility_template_filename())
+            % (rcu.get_messagefacility_template_filename())
         )
 #------------------------------------------------------------------------------
 # copy message facility FCL to each remote host
 #------------------------------------------------------------------------------
     for host in set([procinfo.host for procinfo in self.procinfos]):
-        if not host_is_local(host):
+        if not rcu.host_is_local(host):
             cmd    = "scp -p %s %s:%s" % (mf_fcl,host,mf_fcl)
-            status = Popen(cmd,
-                           executable="/bin/bash",
-                           shell=True,
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL).wait()
+            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                                      stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
 
             if status != 0:
                 raise Exception('ERROR in %s executing "%s"' % (launch_procs_base.__name__, cmd))
@@ -199,7 +195,7 @@ def launch_procs_base(self):
     self.launch_attempt_files                 = {}
 
     for p in self.procinfos:
-        if p.host == "localhost": p.host = get_short_hostname()
+        if p.host == "localhost": p.host = rcu.get_short_hostname()
         # breakpoint()
         if not p.host in launch_commands_to_run_on_host:
 #------------------------------------------------------------------------------
@@ -207,7 +203,7 @@ def launch_procs_base(self):
 #------------------------------------------------------------------------------
             fn_format = self.pmt_log_filename_format()
             self.launch_attempt_files[p.host] =  fn_format % (
-                self.log_directory,self.run_number, p.host,self.fUser,self.partition,date_and_time_filename())
+                self.log_directory,self.run_number, p.host,self.fUser,self.partition,rcu.date_and_time_filename())
 
             launch_commands_to_run_on_host           [p.host] = []
             launch_commands_to_run_on_host_background[p.host] = []
@@ -215,7 +211,7 @@ def launch_procs_base(self):
 
             launch_commands_to_run_on_host[p.host].append("set +C")
             launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
-            launch_commands_to_run_on_host[p.host] += get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
+            launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
             launch_commands_to_run_on_host[p.host].append("source %s for_running >> %s 2>&1 " % (
                 self.daq_setup_script, self.launch_attempt_files[p.host])
             )
@@ -272,7 +268,7 @@ def launch_procs_base(self):
     # breakpoint()
     threads = []
     for host in launch_commands_to_run_on_host:
-        t = RaisingThread(
+        t = rcu.RaisingThread(
             target=launch_procs_on_host,
             args=(
                 self,
@@ -309,31 +305,26 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
             self.print_log(
                 "d",
                 "%s: Found the following processes on %s, will attempt to kill them: %s"
-                % (date_and_time(), host, " ".join(labels_of_found_processes)),
+                % (rcu.date_and_time(), host, " ".join(labels_of_found_processes)),
                 2,
             )
 
             cmd = "kill %s" % (" ".join(artdaq_pids))
-            if not host_is_local(host):
+            if not rcu.host_is_local(host):
                 cmd = "ssh -x " + host + " '" + cmd + "'"
 
-            proc = Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                                    stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             proc.wait()
             self.print_log(
                 "d",
                 "%s: Finished (attempted) kill of the following processes on %s: %s"
-                % (date_and_time(), host, " ".join(labels_of_found_processes)),
+                % (rcu.date_and_time(), host, " ".join(labels_of_found_processes)),
                 2,
             )
 
         else:
-            self.print_log("w",make_paragraph(
+            self.print_log("w",rcu.make_paragraph(
                 ("Despite receiving a termination signal, the following artdaq processes"
                  " on %s were not killed, so they'll be issued a SIGKILL: %s")
                 % (host, " ".join(labels_of_found_processes)))
@@ -341,40 +332,40 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
 
             cmd = "kill -9 %s" % (" ".join(artdaq_pids))
 
-            if not host_is_local(host): cmd = "ssh -x " + host + " '" + cmd + "'"
+            if not rcu.host_is_local(host): cmd = "ssh -x " + host + " '" + cmd + "'"
 
-            proc = Popen(cmd,executable="/bin/bash",shell=True,
-                         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                                    stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             proc.wait()
             self.print_log(
                 "d",
                 "%s: Finished (attempted) kill -9 of the following processes on %s: %s"
-                % (date_and_time(), host, " ".join(labels_of_found_processes)),
+                % (rcu.date_and_time(), host, " ".join(labels_of_found_processes)),
                 2,
             )
 #------------------------------------------------------------------------------
 # kill art processes
 ####
     if kill_art:
-        art_pids = get_pids("art -c .*partition_%d" % self.partition,host)
+        art_pids = rcu.get_pids("art -c .*partition_%d" % self.partition,host)
 
         if len(art_pids) > 0:
 
             cmd = "kill -9 %s" % (" ".join(art_pids))  # JCF, Dec-8-2018: the "-9" is apparently needed...
 
-            if not host_is_local(host): 
+            if not rcu.host_is_local(host): 
                 cmd = "ssh -x " + host + " '" + cmd + "'"
 
             self.print_log("d","%s: About to kill the artdaq-associated art processes on %s"
-                           % (date_and_time(),host),2)
+                           % (rcu.date_and_time(),host),2)
 
-            Popen(cmd,executable="/bin/bash",
-                  shell=True,
-                  stdout=subprocess.DEVNULL,
-                  stderr=subprocess.DEVNULL).wait()
-
+            subprocess.Popen(cmd,executable="/bin/bash",
+                             shell=True,
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL).wait()
+            
             self.print_log("d","%s: Finished kill of the artdaq-associated art processes on %s"
-                           % (date_and_time(), host),2)
+                           % (rcu.date_and_time(), host),2)
     return
 
 def kill_procs_base(self):
@@ -382,7 +373,7 @@ def kill_procs_base(self):
     for host in set([p.host for p in self.procinfos]):
         kill_procs_on_host(self, host, kill_art=True)
 
-    sleep(1)
+    time.sleep(1)
 
     for host in set([p.host for p in self.procinfos]):
         kill_procs_on_host(self, host, use_force=True)
@@ -400,9 +391,9 @@ def get_process_manager_log_filename(self, host):
     pattern   = fn_format % (self.log_directory,self.run_number,host,self.fUser,self.partition,"*")
     cmd       = "ls -tr1 "+pattern+" | tail -1"
 
-    if not host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)
+    if not rcu.host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)
 
-    x  = Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    x  = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     fn = x.stdout.readlines()[0].decode("utf-8").strip()
     return fn
 
@@ -440,9 +431,9 @@ def get_pid_for_process_base(self, procinfo):
     )
 
     grepped_lines = []
-    pids = get_pids(greptoken, procinfo.host, grepped_lines)
+    pids = rcu.get_pids(greptoken, procinfo.host, grepped_lines)
 
-    ssh_pids = get_pids("ssh .*" + greptoken, procinfo.host)
+    ssh_pids = rcu.get_pids("ssh .*" + greptoken, procinfo.host)
 
     cleaned_pids = [pid for pid in pids if pid not in ssh_pids]
 
@@ -462,7 +453,7 @@ def get_pid_for_process_base(self, procinfo):
 
 def mopup_process_base(self, procinfo):
 
-    if not host_is_local(procinfo.host):
+    if not rcu.host_is_local(procinfo.host):
         on_other_node = True
     else:
         on_other_node = False
@@ -475,10 +466,10 @@ def mopup_process_base(self, procinfo):
         if on_other_node:
             cmd = "ssh -x %s '%s'" % (procinfo.host, cmd)
 
-        status = Popen(cmd,executable="/bin/bash",shell=True,
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL).wait()
-        sleep(1)
+        status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                                  stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL).wait()
+        time.sleep(1)
 
         if get_pid_for_process_base(self, procinfo) is not None:
             cmd = "kill -9 %s > /dev/null 2>&1" % (pid)
@@ -491,12 +482,9 @@ def mopup_process_base(self, procinfo):
                 "A standard kill of the artdaq process %s on %s didn't work; resorting to a kill -9"
                 % (procinfo.label, procinfo.host),
             )
-            Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+
+            subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                             stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL
             ).wait()
 
     # Will need to perform some additional cleanup (clogged ports, zombie art
@@ -515,17 +503,16 @@ def mopup_process_base(self, procinfo):
             bootfile_name_to_execname(procinfo.name),
             procinfo.label,
         )
-        pids = get_pids(ssh_grepstring)
+        pids = rcu.get_pids(ssh_grepstring)
 
         if len(pids) == 1:
-            Popen(
-                "kill %s > /dev/null 2>&1" % (pids[0]),
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+            subprocess.Popen("kill %s > /dev/null 2>&1" % (pids[0]),
+                             executable="/bin/bash",
+                             shell=True,
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL
             ).wait()
-            pids = get_pids(ssh_grepstring)
+            pids = rcu.get_pids(ssh_grepstring)
             if len(pids) == 1:
                 ssh_mopup_ok = False
         elif len(pids) > 1:
@@ -541,12 +528,9 @@ def mopup_process_base(self, procinfo):
     if on_other_node:
         cmd = "ssh -x %s '%s'" % (procinfo.host, cmd)
 
-    Popen(
-        cmd,
-        executable="/bin/bash",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                     stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL,
     ).wait()
 
     unkilled_related_pids = get_related_pids_for_process(procinfo)
@@ -554,7 +538,7 @@ def mopup_process_base(self, procinfo):
         related_process_mopup_ok = True
     else:
         related_process_mopup_ok = False
-        self.print_log("d",make_paragraph(
+        self.print_log("d",rcu.make_paragraph(
             ("Warning: unable to normally kill process(es) associated with"
              " now-deceased artdaq process %s; on %s the following pid(s) remain:"
              " %s. Will now resort to kill -9 on these processes.")
@@ -565,16 +549,13 @@ def mopup_process_base(self, procinfo):
         if on_other_node:
             cmd = "ssh -x %s '%s'" % (procinfo.host, cmd)
 
-        Popen(
-            cmd,
-            executable="/bin/bash",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+        subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+                         stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL,
         ).wait()
 
     if not ssh_mopup_ok:
-        self.print_log("w",make_paragraph(
+        self.print_log("w",rcu.make_paragraph(
             ("There was a problem killing the ssh process to %s related "
              "to the deceased artdaq process %s at %s:%s; there *may* be issues "
             "with the next run using that host and port as a result")
@@ -582,7 +563,7 @@ def mopup_process_base(self, procinfo):
         )
 
     if not related_process_mopup_ok:
-        self.print_log("w",make_paragraph(
+        self.print_log("w",rcu.make_paragraph(
             ("At least some of the processes on %s related to deceased artdaq process "
              "%s at %s:%s (e.g. art processes) had to be forcibly killed; there *may* be "
              "issues with the next run using that host and port as a result")
@@ -612,9 +593,9 @@ def get_pids_and_labels_on_host(host, procinfos):
     # os.environ["ARTDAQ_PARTITION_NUMBER"])
 
     grepped_lines = []
-    pids = get_pids(greptoken, host, grepped_lines)
+    pids = rcu.get_pids(greptoken, host, grepped_lines)
 
-    ssh_pids = get_pids(sshgreptoken, host)
+    ssh_pids = rcu.get_pids(sshgreptoken, host)
 
     cleaned_pids = [pid for pid in pids if pid not in ssh_pids]
     cleaned_lines = [line for line in grepped_lines if " ssh " not in line]
@@ -634,15 +615,12 @@ def get_related_pids_for_process(procinfo):
 
     netstat_cmd = "netstat -alpn | grep %s" % (procinfo.port)
 
-    if not host_is_local(procinfo.host):
+    if not rcu.host_is_local(procinfo.host):
         netstat_cmd = "ssh -x %s '%s'" % (procinfo.host, netstat_cmd)
 
-    proc = Popen(
-        netstat_cmd,
-        executable="/bin/bash",
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+    proc = subprocess.Popen(netstat_cmd,executable="/bin/bash",shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
     )
 
     for procline in proc.stdout.readlines():
@@ -666,7 +644,7 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
     procinfos_to_remove = []
     found_processes     = []
 
-    for host in set([procinfo.host for procinfo in self.procinfos]):
+    for host in set([p.host for p in self.procinfos]):
 
         (pids,labels_of_found_processes) = get_pids_and_labels_on_host(host,self.procinfos)
 
@@ -680,7 +658,7 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
                     self.print_log(
                         "e",
                         "%s: Appear to have lost process with label %s on host %s"
-                        % (date_and_time(), procinfo.label, procinfo.host),
+                        % (rcu.date_and_time(), procinfo.label, procinfo.host),
                     )
                     procinfos_to_remove.append(procinfo)
 

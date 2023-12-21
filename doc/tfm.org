@@ -12,7 +12,7 @@
 * [[file:artdaq_daqinterface.org]]
 * ------------------------------------------------------------------------------
 * [[file:software_setup.org][software setup]]
-* TODO [0/1]  farm_manager.py: server managing the trigger farm                          
+* TODO [0/1]  farm_manager.py: server managing the trigger farm              
 ** command line parameters                                                   
 |------------------------+---------------------------------+------+-------------+---------------------|
 | flag                   | description                     | Type | default     | comment             |
@@ -58,12 +58,19 @@
     for the moment, set to 1, and work around
 * configuration                                                              
 - the farm configuration consists of the following files:
-** boot.txt : defines components the farm configuration
-** settings : defined additional farm configuration parameters               
-- to be merged with boot.txt
-** .FCL files : one file per component                                       
-- component 'x' has its FCL file named 'x.fcl'
-- which directory this FCL file is taken from? 
+-   boot.txt : defines components the farm configuration
+-   settings : defined additional farm configuration parameters               
+-              (to be merged with boot.txt)
+-   .FCL files : one file per component                                       
+-                component 'x' has its FCL file named 'x.fcl'
+- the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
+-      directory created in /tmp/`uuidgen` by 
+-      [[file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
+-      see self.get_config_info() there 
+-      after being copied, they are checked for being unique - not sure how one 
+-      can make such a mistake
+-      also what are multiple subconfigurations ?
+
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
@@ -188,6 +195,21 @@ Nil
 
 - however, messages by message_facility go into individual log files, one per 
 art process
+* starting TFM from the command line                                         
+-- need to specify partition, port, and active configuration
+
+   -- the partition has to be the same as the artdaq partition number, 
+      so no need to specify on the command line
+
+   -- the configuration dir could be anywhere, and TFM should not be making assumptions
+      about it
+
+   -- the port = 10000+1000*partition_number, also no need to improvise
+
+   -- however, for now keep the command line as is
+#+begin_src
+$TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$PWD/config/vst_001
+#+end_src
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            

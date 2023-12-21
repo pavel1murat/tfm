@@ -8,7 +8,7 @@
 #    exit 1
 # fi
 
-config_dir=$MRB_DIR/$TFM_CONFIG_NAME
+config_dir=$MRB_TOP/config/$TFM_CONFIG_NAME
 x=`cat $config_dir/settings | grep '^record_directory' | awk -F : '{print $2}'`
 recorddir=$(eval echo $x)  # Expand environ variables in string     
 
