@@ -8,7 +8,6 @@
 #+begin_src
 /Experiment/RunConfigurations/ActiveConfiguration : name of the active configuration
 #+end_src
-
 2) Each DAQ configuration should have a configuration record defined. 
    The configuration record contains the following fields:
    (start with two fields, evolve as needed)
