@@ -5,12 +5,14 @@
 * <2023-12-22 Fri> : 
 *tfm_frontend gets all inputs from the ODB, no more fcl's*
 1) the active configuration name is defined in ODB: 
+
 #+begin_src
 /Experiment/RunConfigurations/ActiveConfiguration : name of the active configuration
 #+end_src
+
 2) Each DAQ configuration should have a configuration record defined. 
    The configuration record contains the following fields:
-   (start with two fields, evolve as needed)
+   (start with two, evolve as needed)
 
 #+begin_src
 /Experiment/RunConfigurations/$configName : name of the run configuration
