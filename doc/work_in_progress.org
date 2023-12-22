@@ -5,6 +5,13 @@
 * <2023-12-22 Fri> : 
 *tfm_frontend gets all inputs from the ODB, no more fcl's*
 #+begin_src
+/Experiment/RunConfigurations/ActiveConfiguration : name of the active configuration
+#+end_src
+
+for each active configuration there should be a configuration record with the following fields:
+(start with two fields, that will evolve)
+
+#+begin_src
 /Experiment/RunConfigurations/$configName : name of the run configuration
   - UseRunInfoDB            : yes - the next run number comes from the PostgreSQL DB
                                     run transitions are recorded in the PostgreSQL DB
