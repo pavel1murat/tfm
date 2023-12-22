@@ -6,10 +6,10 @@
 *tfm_frontend gets all inputs from the ODB, no more fcl's*
 #+begin_src
 /Experiment/RunConfigurations/$configName : name of the run configuration
-  UseRunInfoDB            : yes - the next run number comes from the PostgreSQL DB
-                                  run transitions are recorded in the PostgreSQL DB
-                          : no  - DB is not used
-  ARTDAQ_PARTITION_NUMBER : DAQ partition used by the configuration
+  - UseRunInfoDB            : yes - the next run number comes from the PostgreSQL DB
+                                    run transitions are recorded in the PostgreSQL DB
+                            : no  - DB is not used
+  - ARTDAQ_PARTITION_NUMBER : DAQ partition used by the configuration
 #+end_src
 * running interactively                                                      
 export TFM_PORT=21000; python $TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$TFM_CONFIG_DIR/demo
