@@ -22,7 +22,14 @@
 #------------------------------------------------------------------------------
 import os, sys, re
 
+BOARD_READER    = 1;
+EVENT_BUILDER   = 2;
+DATA_LOGGER     = 3;
+DISPATCHER      = 4;
+ROUTING_MANAGER = 5;
+
 class Procinfo(object):
+
     def __init__(
         self,
         name,
@@ -50,6 +57,12 @@ class Procinfo(object):
         self.ffp                = fhicl_file_path
         self.priority           = 999
 
+        if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
+        elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
+        elif (name == "DataLogger"    ) : self._type = DATA_LOGGER    ;
+        elif (name == "Dispatcher"    ) : self._type = DISPATCHER     ;
+        elif (name == "RoutingManager") : self._type = ROUTING_MANAGER;
+
         # FHiCL code actually sent to the process
 
         # JCF, 11/11/14 -- note that "fhicl_used" will be modified
@@ -74,11 +87,15 @@ class Procinfo(object):
 #------------------------------------------------------------------------------
 # returns host:port
 #------------------------------------------------------------------------------
+    def type(self):
+        return self._type;
+
     def rpc_server(self):
         return self.host+':'+self.port;
 
     def print(self):
-        print("procinfo: name:%-20s"%self.name+" label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
+        print("procinfo: name:%-20s"%self.name+" type:%i"%self._type+
+              " label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
 
     def update_fhicl(self, fhicl):
         self.fhicl      = fhicl

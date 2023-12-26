@@ -20,6 +20,8 @@ function cleanup() {
     unset TFM_PORT
 }
 
+cleanup
+
 export         TFM_CONFIG_NAME=$1
 export ARTDAQ_PARTITION_NUMBER=$2
 if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
@@ -47,59 +49,33 @@ fi
 # with the subdirectory per configuration
 #------------------------------------------------------------------------------
 export         TFM_FHICL_DIRECTORY=$MRB_TOP/config
-export                TFM_SETTINGS=$MRB_TOP/config/$TFM_CONFIG_NAME/settings
+export          TFM_SETUP_FHICLCPP=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/.setup_fhiclcpp
+export                TFM_SETTINGS=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/settings
 #------------------------------------------------------------------------------
 # create output directories
 #------------------------------------------------------------------------------
 mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
 export ARTDAQ_LOG_FHICL=$OTS_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
 
-top_dir=$OTS_SCRATCH/$TFM_CONFIG_NAME
+top_output_dir=$OTS_SCRATCH/$TFM_CONFIG_NAME
 for subdir in logs data run_records ; do
-    dir=$top_dir/$subdir
+    dir=$top_output_dir/$subdir
     if [ ! -d $dir ] ; then mkdir -p $dir ; fi
 done
 #------------------------------------------------------------------------------
 # TFM is supposed to have its own logfile
 #------------------------------------------------------------------------------
-export     TFM_LOGDIR=$top_dir/logs
+export     TFM_LOGDIR=$top_output_dir/logs
 #------------------------------------------------------------------------------
 # P.M. ARTDAQ_PARTITION_NUMBER is already defined
 #------------------------------------------------------------------------------
-# source $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/source_me
-
 if [[ -z $ARTDAQ_BASE_PORT           ]]; then export           ARTDAQ_BASE_PORT=10000 ; fi
 if [[ -z $ARTDAQ_PORTS_PER_PARTITION ]]; then export ARTDAQ_PORTS_PER_PARTITION=1000  ; fi
 
-export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`
+export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`  # 10000 + 1000*partition_number
 
 export PATH=$TFM_DIR/bin:$PATH
 
-if [[ -n $TFM_SETTINGS ]]; then
-    if [[ ! -e $TFM_SETTINGS ]]; then
-	      echo "ERROR: the TFM_SETTINGS environment variable doesn't point to a file which exists"
-	      cleanup
-	      return 1
-    fi
-
-    export TFM_SETUP_FHICLCPP=$( dirname $TFM_SETTINGS )/.setup_fhiclcpp
-
-else cat<<EOF
-ERROR: the environment variable TFM_SETTINGS hasn't been
-defined in $TFM_USER_SOURCE_ME. Please read the DAQInterface
-Manual at
-https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/Artdaq-daqinterface
-to learn how to properly set up the DAQInterface environment.
-EOF
-
-    cleanup
-    return 1
-fi
-#------------------------------------------------------------------------------
-# At this point, set various environment variables DAQInterface needs
-# to reasonable defaults if they weren't already set in
-# $TFM_USER_SOURCE_ME - or complain if there's no reasonable default
-#------------------------------------------------------------------------------
 if [ -z $TFM_PROCESS_MANAGEMENT_METHOD ]; then export TFM_PROCESS_MANAGEMENT_METHOD="direct" ; fi
 
 if [[ -z $TFM_FHICL_DIRECTORY ]]; then

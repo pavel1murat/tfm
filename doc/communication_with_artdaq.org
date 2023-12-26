@@ -1,0 +1,250 @@
+#+startup:fold
+
+* ------------------------------------------------------------------------------
+* communication with ARTDAQ
+* ------------------------------------------------------------------------------
+
+* communication with artdaq processes  : CommanderInterface                  
+  file:../../artdaq/artdaq/ExternalComms/CommanderInterface.hh
+* commands (as specified in CommanderInterface.hh)                          
+*** add_config_archive_entry *BAD EXAMPLE*   from above                             
+- example:
+#+begin_src 
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>ps -efl | grep 21103 | grep -v grep
+0 S mu2etrk  10141     1  5  80   0 - 806924 poll_s 12:39 pts/9   00:08:48 eventbuilder -c id: 21103 commanderPluginType: xmlrpc rank: 3 application_name: eventbuilder02 partition_number: 11
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21103/RPC2 daq.add_config_archive_entry "eventbuilder02" "daq: {verbose: true}"
+Failed.  Invalid specification of parameter 1 (starting at zero).  Junk after parameter specification: ': {verbose: true}'
+#+end_src
+*** init
+*** soft_init
+*** reinit
+*** start
+*** pause
+*** resume
+*** stop
+*** shutdown
+*** status                                                                   
+- example:  
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21103/RPC2 daq.status
+Result:
+
+String: 'Running'
+#+end_src
+*** report
+*** legal_commands
+*** register_monitor
+*** unregister_monitor
+*** trace_get                                                                
+- retrieve TRACE masks of a given process 
+**** retrieve all masks                                                      
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_get ALL
+Result:
+
+String: 
+  eventbuilder01_SharedMemoryEventManager 0x1ff 0xff 0 \n
+  ArtConfigFile 0x1ff 0xff 0 \n
+  eventbuilder01_ShmemTransfer 0x1ff 0xff 0 \n
+  SharedMemoryFragmentManager 0x1ff 0xff 0 \n
+  eventbuilder02_art1_AutodetectTransfer 0x1ff 0xff 0 \n
+  rdreader01_CommandableFragmentGenerator 0x1ff 0xff 0 \n
+  datalogger01_RequestSender 0x1ff 0xff 0 \n
+  boardreader01_ShmemTransfer 0x1ff 0xff 0 \n
+  eventbuilder01_DataSenderManager 0x1ff 0xff 0 \n
+  eventbuilder02_SharedMemoryEventManager 0x1ff 0xff 0 \n
+  eventbuilder02_art1_TableReceiver 0x1ff 0xff 0 \n
+  eventbuilder02_DataReceiverCore 0x1ff 0xff 0 \n
+  eventbuilder02_FragmentBuffer 0x1ff 0xff 0 \n
+  datalogger01_art1_AutodetectTransfer 0x1ff 0xff 0 \n
+  eventbuilder01_xmlrpc_commander 0x1ff 0xff 0 \n
+  datalogger01_SharedMemoryEventManager 0x1ff 0xff 0 \n
+  eventbuilder02Main 0x1ff 0xff 0 \n
+  eventbuilder02_art1_TransferInterface 0x1ff 0xff 0 \n
+  datalogger01_TransferInterface 0x1ff 0xff 0 \n
+  eventbuilder02_AutodetectTransfer 0x1ff 0xff 0 \n
+  eventbuilder 0x1ff 0xff 0 \n
+  boardreader02_CommandableInterface 0x1ff 0xff 0 \n
+  eventbuilder01_FragmentBuffer 0x1ff 0xff 0 \n
+  eventbuilder02_DataReceiverManager 0x1ff 0xff 0 \n
+  boardreader01_AutodetectTransfer 0x1ff 0xff 0 \n
+  boardreader02_BoardReaderApp 0x1ff 0xff 0 \n
+  eventbuilder02_art1_ShmemTransfer 0x1ff 0xff 0 \n
+  CONF:LdStrD_C 0x1ff 0 0 \n
+  dispatcher01_DataReceiverCore 0x1ff 0xff 0 \n
+  datalogger01_TCPConnect 0x1ff 0xff 0 \n
+  dispatcher01_AutodetectTransfer 0x1ff 0xff 0 \n
+  TRACE 0x1ff 0xff 0 \n
+  ArtdaqFragmentNamingService 0x1ff 0xff 0 \n
+  ToyHardwareInterface 0x1ff 0xff 0 \n
+  FileDB:RDWRT_C 0x1ff 0 0 \n
+  datalogger01_art1_DataSenderManager 0x1ff 0xff 0 \n
+  eventbuilder02_TCPConnect 0x1ff 0xff 0 \n
+  boardreader02Main 0x1ff 0xff 0 \n
+  eventbuilder02_RequestSender 0x1ff 0xff 0 \n
+  configureMessageFacility 0x1ff 0xff 0 \n
+  dispatcher01_DispatcherCore 0x1ff 0xff 0 \n
+  datalogger01_art1_RootNetOutput 0x1ff 0xff 0 \n
+  CONF:CrtCfD_C 0x1ff 0 0 \n
+  datalogger01_ShmemTransfer 0x1ff 0xff 0 \n
+  eventbuilder01_art1_TransferInterface 0x1ff 0xff 0 \n
+  datalogger01Main 0x1ff 0xff 0 \n
+  eventbuilder02_xmlrpc_commander 0x1ff 0xff 0 \n
+  eventbuilder02_TransferInterface 0x1ff 0xff 0 \n
+  boardreader01_BoardReaderApp 0x1ff 0xff 0 \n
+  dispatcher 0x1ff 0xff 0 \n
+  dispatcher01_DataSenderManager 0x1ff 0xff 0 \n
+  eventbuilder01_art1_RootNetOutput 0x1ff 0xff 0 \n
+  MetricPlugin 0x1ff 0xff 0 \n
+  ArtdaqInputHelper 0x1ff 0xff 0 \n
+  boardreader 0x1ff 0xff 0 \n
+  UDP_mfPlugin 0x1ff 0xff 0 \n
+  eventbuilder01_TransferInterface 0x1ff 0xff 0 \n
+  boardreader02_TCPConnect 0x1ff 0xff 0 \n
+  MetricManager 0x1ff 0xff 0 \n
+  eventbuilder01_TCPConnect 0x1ff 0xff 0 \n
+  boardreader02_TableReceiver 0x1ff 0xff 0 \n
+  eventbuilder01_art1_AutodetectTransfer 0x1ff 0xff 0 \n
+  datalogger01_DataReceiverCore 0x1ff 0xff 0 \n
+  boardreader02_AutodetectTransfer 0x1ff 0xff 0 \n
+  boardreader02_DataSenderManager 0x1ff 0xff 0 \n
+  SharedMemoryEventManager 0x1ff 0xff 0 \n
+  dispatcher01_xmlrpc_commander 0x1ff 0xff 0 \n
+  boardreader01_DataSenderManager 0x1ff 0xff 0 \n
+  dispatcher01_CommandableInterface 0x1ff 0xff 0 \n
+  dispatcher01_SharedMemoryEventManager 0x1ff 0xff 0 \n
+  COFS:DpFle_C 0x1ff 0 0 \n
+  QuickVec 0x1ff 0xff 0 \n
+  eventbuilder02_ShmemTransfer 0x1ff 0xff 0 \n
+  eventbuilder02_BoardReaderCore 0x1ff 0xff 0 \n
+  eventbuilder01_CommandableInterface 0x1ff 0xff 0 \n
+  datalogger01_art1_RootDAQOutFile 0x1ff 0xff 0 \n
+  boardreader02_FragmentBuffer 0x1ff 0xff 0 \n
+  boardreader02_ShmemTransfer 0x1ff 0xff 0 \n
+  boardreader01_TCPConnect 0x1ff 0xff 0 \n
+  InputUtilities 0x1ff 0xff 0 \n
+  dispatcher01_TCPConnect 0x1ff 0xff 0 \n
+  PRVDR:FileDBIX_C 0x1ff 0 0 \n
+  datalogger01_FragmentBuffer 0x1ff 0xff 0 \n
+  GenFileOutput 0x1ff 0xff 0 \n
+  eventbuilder01_EventBuilderCore 0x1ff 0xff 0 \n
+  JSNU:DocUtils_C 0x1ff 0 0 \n
+  eventbuilder01_BoardReaderCore 0x1ff 0xff 0 \n
+  datalogger01_art1_TransferInterface 0x1ff 0xff 0 \n
+  boardreader02_RequestReceiver 0x1ff 0xff 0 \n
+  eventbuilder02_art1_RootNetOutput 0x1ff 0xff 0 \n
+  ArtdaqSharedMemoryService 0x1ff 0xff 0 \n
+  dispatcher01_RequestSender 0x1ff 0xff 0 \n
+  BuildInfo 0x1ff 0xff 0 \n
+  datalogger01_DataLoggerCore 0x1ff 0xff 0 \n
+  dispatcher01_DataReceiverManager 0x1ff 0xff 0 \n
+  ArtdaqDemoFragmentNameHelper 0x1ff 0xff 0 \n
+  ArtdaqInput_source 0x1ff 0xff 0 \n
+  datalogger01_art1_RootDAQOut 0x1ff 0xff 0 \n
+  DispatcherApp 0x1ff 0xff 0 \n
+  boardreader01_FragmentBuffer 0x1ff 0xff 0 \n
+  rdreader02_CommandableFragmentGenerator 0x1ff 0xff 0 \n
+  datalogger01_xmlrpc_commander 0x1ff 0xff 0 \n
+  dispatcher01_TransferInterface 0x1ff 0xff 0 \n
+  eventbuilder01_RequestSender 0x1ff 0xff 0 \n
+  datalogger01_art1_TableReceiver 0x1ff 0xff 0 \n
+  datalogger 0x1ff 0xff 0 \n
+  boardreader01_RequestReceiver 0x1ff 0xff 0 \n
+  boardreader01_xmlrpc_commander 0x1ff 0xff 0 \n
+  trace_cntl 0x1ff 0xff 0 \n
+  ToySimulator 0x1ff 0xff 0 \n
+  eventbuilder01Main 0x1ff 0xff 0 \n
+  LoadParameterSet 0x1ff 0xff 0 \n
+  JSNU:Document_C 0x1ff 0 0 \n
+  eventbuilder02_art1_DataSenderManager 0x1ff 0xff 0 \n
+  datalogger01_DataSenderManager 0x1ff 0xff 0 \n
+  eventbuilder02_EventBuilderCore 0x1ff 0xff 0 \n
+  datalogger01_CommandableInterface 0x1ff 0xff 0 \n
+  dispatcher01Main 0x1ff 0xff 0 \n
+  SharedMemoryEventReceiver 0x1ff 0xff 0 \n
+  eventbuilder01_art1_TableReceiver 0x1ff 0xff 0 \n
+  boardreader02_TransferInterface 0x1ff 0xff 0 \n
+  datalogger01_AutodetectTransfer 0x1ff 0xff 0 \n
+  SharedMemoryManager 0x1ff 0xff 0 \n
+  boardreader01_CommandableInterface 0x1ff 0xff 0 \n
+  boardreader02_BoardReaderCore 0x1ff 0xff 0 \n
+  datalogger01_art1_ShmemTransfer 0x1ff 0xff 0 \n
+  boardreader01_TableReceiver 0x1ff 0xff 0 \n
+  boardreader01Main 0x1ff 0xff 0 \n
+  boardreader01_TransferInterface 0x1ff 0xff 0 \n
+  eventbuilder01_DataReceiverCore 0x1ff 0xff 0 \n
+  eventbuilder01_DataReceiverManager 0x1ff 0xff 0 \n
+  eventbuilder01_AutodetectTransfer 0x1ff 0xff 0 \n
+  boardreader01_BoardReaderCore 0x1ff 0xff 0 \n
+  boardreader02_xmlrpc_commander 0x1ff 0xff 0 \n
+  CONF:OpLdStr_C 0x1ff 0 0 \n
+  datalogger01_DataReceiverManager 0x1ff 0xff 0 \n
+  eventbuilder01_art1_DataSenderManager 0x1ff 0xff 0 \n
+  dispatcher01_ShmemTransfer 0x1ff 0xff 0 \n
+  eventbuilder02_CommandableInterface 0x1ff 0xff 0 \n
+  CheckIntegrity 0x1ff 0xff 0 \n
+  PRVDR:FileDB_C 0x1ff 0 0 \n
+  Fragment 0x1ff 0xff 0 \n
+  eventbuilder01_art1_ShmemTransfer 0x1ff 0xff 0 \n
+  eventbuilder02_DataSenderManager 0x1ff 0xff 0 \n
+  dispatcher01_FragmentBuffer 0x1ff 0xff 0 \n
+  CONF:OpBase_C 0x1ff 0 0 \n
+  ShmemWrapper 0x1ff 0xff 0 \n
+  _TRACE_ 0x1ff 0xff 0 \n
+#+end_src
+**** just one name:                                                          
+#+begin_src                                       
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_get boardreader01*
+Result:
+
+String: '1ff ff 0'
+#+end_src
+*** trace_set                                                                
+- set trace configuration, 
+**** example 1                                                               
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_set s/M s/ALL s/0xffffffffff
+Result:
+
+String: 'Success'
+#+end_src
+**** example 2                                                               
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_set ToySimulator* M s/0xfffff
+Result:
+
+String: 'Success'
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_get ToySimulator
+Result:
+
+String: 'fffff ff 0'
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_set ToySimulator* S s/0xfffff
+Result:
+
+String: 'Success'
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_get ToySimulator
+Result:
+
+String: 'fffff fffff 0'
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_set ToySimulator* T s/0xfffff
+Result:
+
+String: 'Success'
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21105/RPC2 daq.trace_get ToySimulator
+Result:
+
+String: 'fffff fffff fffff'
+#+end_src
+*** meta_command
+*** rollover_subrun
+*** clear_config_archive                                                     
+- example:                                          
+#+begin_src
+xmlrpc http://localhost:21103/RPC2 daq.clear_config_archive
+#+end_src
+* ports used:                                                                
+- port = 10000+500+partition_number*1000+rank 
+- port has to be defined in the sender process
+* ------------------------------------------------------------------------------
+* back to [[file:./tfm.org]]
+* ------------------------------------------------------------------------------

@@ -11,6 +11,8 @@ from rc.util.contexts import ContextObject
 import run_control_state
 
 #------------------------------------------------------------------------------
+# P.M. why we're inheriting from something with LBNE in the name ?
+#------------------------------------------------------------------------------
 class Component(ContextObject):
     """
     Dummy (or subclass-able) component for use with the LBNE Run Control prototype.
@@ -36,9 +38,10 @@ class Component(ContextObject):
         self.synchronous = synchronous
         self.__state     = "stopped"
         self.__rpc_host  = rpc_host
-        self.__rpc_port  = rpc_port
         self.run_params  = None
         self.__dummy_val = 0
+        self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
+        self.__rpc_port  = 10000+1000*self.__partition;
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
 # two contexts corresponding to two threads
@@ -122,6 +125,12 @@ class Component(ContextObject):
             "resuming"   : "resume",
             "terminating": "terminate",
         }
+
+    def rpc_port(self):
+        return self.__rpc_port
+
+    def partition(self):
+        return self.__partition
 
     def state(self, name):
         # if name != self.name: return "unknown"

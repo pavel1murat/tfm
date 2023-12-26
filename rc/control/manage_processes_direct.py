@@ -203,7 +203,7 @@ def launch_procs_base(self):
 #------------------------------------------------------------------------------
             fn_format = self.pmt_log_filename_format()
             self.launch_attempt_files[p.host] =  fn_format % (
-                self.log_directory,self.run_number, p.host,self.fUser,self.partition,rcu.date_and_time_filename())
+                self.log_directory,self.run_number, p.host,self.fUser,self.partition(),rcu.date_and_time_filename())
 
             launch_commands_to_run_on_host           [p.host] = []
             launch_commands_to_run_on_host_background[p.host] = []
@@ -224,7 +224,7 @@ def launch_procs_base(self):
 # Assume if this works, eventbuilder, etc. are also there
 ############
             launch_commands_to_run_on_host[p.host].append(
-                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition,self.launch_attempt_files[p.host])
+                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition(),self.launch_attempt_files[p.host])
             )
             # launch_commands_to_run_on_host[ p.host ].append("setup valgrind v3_13_0")
             # launch_commands_to_run_on_host[ p.host ].append("export LD_PRELOAD=libasan.so")
@@ -245,7 +245,7 @@ def launch_procs_base(self):
                 p.port,
                 p.rank,
                 p.label,
-                self.partition)
+                self.partition())
         )
         if p.allowed_processors is not None:
             base_launch_cmd = "taskset --cpu-list %s %s" % (
@@ -347,7 +347,7 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
 # kill art processes
 ####
     if kill_art:
-        art_pids = rcu.get_pids("art -c .*partition_%d" % self.partition,host)
+        art_pids = rcu.get_pids("art -c .*partition_%d" % self.partition(),host)
 
         if len(art_pids) > 0:
 
@@ -388,7 +388,7 @@ def kill_procs_base(self):
 def get_process_manager_log_filename(self, host):
 
     fn_format = self.pmt_log_filename_format();
-    pattern   = fn_format % (self.log_directory,self.run_number,host,self.fUser,self.partition,"*")
+    pattern   = fn_format % (self.log_directory,self.run_number,host,self.fUser,self.partition(),"*")
     cmd       = "ls -tr1 "+pattern+" | tail -1"
 
     if not rcu.host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)

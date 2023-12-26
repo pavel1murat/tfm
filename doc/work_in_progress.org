@@ -2,8 +2,7 @@
 * ------------------------------------------------------------------------------
 * WORK IN PROGRESS:
 * ------------------------------------------------------------------------------
-* <2023-12-22 Fri> : 
-*tfm_frontend gets all inputs from the ODB, no more fcl's*
+* <2023-12-22 Fri> : tfm_frontend gets all inputs from the ODB, no more fcls 
 
 - the active configuration name is defined in ODB: 
 

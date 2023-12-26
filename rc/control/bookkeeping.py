@@ -1,12 +1,14 @@
-
+###############################################################################
+#
+###############################################################################
 from __future__ import print_function
-import os
-import sys
+import os, sys
 
 sys.path.append(os.environ["TFM_DIR"])
 
-import string
-import re
+import string, re
+
+from rc.control.procinfo import *
 
 from rc.control.utilities import table_range
 from rc.control.utilities import enclosing_table_range
@@ -112,8 +114,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 r"\n[^#]*max_fragment_size_bytes\s*:\s*([0-9\.exabcdefABCDEF]+)",
                 procinfo.fhicl_used,
             )
-
-            if "BoardReader" in procinfo.name:
+            # breakpoint()
+            if procinfo.type() == BOARD_READER:
                 if len(res) > 0:
                     max_fragment_size_token = res[-1]
 
@@ -162,7 +164,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         subsystem_fragment_ids  [ss] = []
 
     for procinfo in self.procinfos:
-        if "BoardReader" in procinfo.name:
+        if procinfo.type() == BOARD_READER:
 
             generated_fragments_per_event = 1
             reader_ids = []
@@ -726,7 +728,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                   % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
 
         if self.request_address is None:
-            request_address = "227.128.%d.%d" % (self.partition,128 + int(p.subsystem))
+            request_address = "227.128.%d.%d" % (self.partition(),128 + int(p.subsystem))
         else:
             request_address = self.request_address
 
@@ -737,7 +739,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                               p.fhicl_used)
 
         p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+",
-                              "partition_number: %d" % self.partition,p.fhicl_used)
+                              "partition_number: %d" % self.partition(),p.fhicl_used)
 
     # JCF, Apr-17-2019
 
@@ -828,7 +830,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     (subsystem_id, router_process_for_subsystem.target)
                 ] = (
                     int(os.environ["ARTDAQ_BASE_PORT"])
-                    + 10 + int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])*self.partition + int(router_id)
+                    + 10 + int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])*self.partition() + int(router_id)
                 )
                 router_id += 1
 
@@ -1143,10 +1145,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         for p in self.procinfos:
 #------------------------------------------------------------------------------
 # P.Murat: one could have process types, not names - no need to do 
-#          the string comparison every time...
-#          that also is error-prone
+#          the string comparison every time... that also is much more error-prone
 #------------------------------------------------------------------------------
-            if (("EventBuilder" in p.name) or ("DataLogger" in p.name)):
+            # breakpoint()
+            if ((p.type() == EVENT_BUILDER) or (p.type() == DATA_LOGGER)):
 
                 if fhicl_writes_root_file(p.fhicl_used):
 #------------------------------------------------------------------------------

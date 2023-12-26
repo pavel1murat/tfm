@@ -59,7 +59,7 @@
 * configuration                                                              
 - the farm configuration consists of the following files:
 -   boot.txt : defines components the farm configuration
--   settings : defined additional farm configuration parameters               
+-   [[file:settings.org][settings]] : defined additional farm configuration parameters               
 -              (to be merged with boot.txt)
 -   .FCL files : one file per component                                       
 -                component 'x' has its FCL file named 'x.fcl'
@@ -174,6 +174,7 @@ Result:
 
 Nil
 #+end_src 
+* [[file:./communication_with_artdaq.org][communication with artdaq]]
 * log file naming                                                            
   [[file:../rc/control/farm_manager.py::/def determine_logfilename/]]
 
@@ -196,6 +197,16 @@ Nil
 - however, messages by message_facility go into individual log files, one per 
 art process
 * starting TFM from the command line                                         
+at this point in time (realively early development stage) it is useful 
+to submit TFM in a mode where all its printed output goes to the screen
+
+#+begin_src
+configuration=vst_001
+partition=8
+source tfm_configure $configuration $partition
+$TFM_DIR/rc/control/farm_manager.py -p $partition --rpc-port $TFM_PORT --config-dir=$PWD/config/$configuration
+#+end_src
+
 -- need to specify partition, port, and active configuration
 
    -- the partition has to be the same as the artdaq partition number, 
@@ -207,9 +218,6 @@ art process
    -- the port = 10000+1000*partition_number, also no need to improvise
 
    -- however, for now keep the command line as is
-#+begin_src
-$TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER --rpc-port $TFM_PORT --config-dir=$PWD/config/vst_001
-#+end_src
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            
@@ -246,6 +254,7 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
 #+end_src
 ** [[file:../bin/tfm_start][tfm_start]] : start the farm manager, the script needs more debugging
 ** [[file:../bin/tfm_shutdown][tfm_shutdown]] : stop all processes, shutdown the farm, stop the TFM
+* [[file:./dqm.org][DQM]]
 * error codes                                                                
 - 140: 
 * ------------------------------------------------------------------------------

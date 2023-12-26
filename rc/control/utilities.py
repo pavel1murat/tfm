@@ -777,26 +777,47 @@ def fhicl_writes_root_file(fhicl_string):
 # 17-Apr-2018, KAB: added the MULTILINE flag to get this search to behave as desired.
 # 30-Aug-2018, KAB: added support for RootDAQOutput
 # P.M. the logic is completely childish.. a high schooler would fare better
-# all one needs to do is to look for a 'filename:' inside 2 nested levels
+# a high schooler would look for 'outputs: {' and a 'fileName:'
 #---v--------------------------------------------------------------------------
     # breakpoint()
-    found = False
-    nest_level = 0;
-    for s in fhicl_string.split('\n'):
-        if ((s.strip() == '') or (s[0] == '#')): continue
-        words = s.split(':');
-        
-        for w in words:
-            w_stripped = w.lstrip().rstrip()
-            if (w_stripped == '{'):
-                nest_level += 1
-            elif (w_stripped == '}'):
-                nest_level -= 1
+    found          = False
+    fhicl_struct   = [];
+    nest_level     = 0;
+    key            = None
+    inside_outputs = 0;
 
-        if (nest_level == 3):
-            if words[0].lstrip().rstrip() == 'fileName':
+    for s in fhicl_string.split('\n'):
+        s_strip  = s.strip();
+        l1       = 0;
+        if ((s_strip[l1:] == '') or (s[0] == '#')): continue
+        loc = s_strip[l1:].find(':');
+        if (loc >= 0): 
+            key = s_strip[:loc].strip()
+            l1  = loc;
+#------------------------------------------------------------------------------
+# 
+#-------v----------------------------------------------------------------------
+        if (key == 'outputs'):
+          inside_outputs = 1
+          if (s_strip.find('{') >= 0):
+              fhicl_struct.append(key);
+              nest_level +=1
+        elif (inside_outputs == 1):
+            if (key == 'fileName'):
+#------------------------------------------------------------------------------
+# the output module label doesn't matter
+# assume certain structure of the FHICL document
+#---------------v--------------------------------------------------------------
                 found = True;
                 break;
+            else:
+                if (s_strip.find('{') >= 0):
+                    nest_level +=1
+                    fhicl_struct.append(key);
+                if (s_strip.find('}') >= 0):
+                    nest_level -=1
+                    fhicl_struct.pop()
+                    if (nest_level == 0): inside_outputs = 0
 
     return found;
         

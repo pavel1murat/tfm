@@ -10,13 +10,13 @@
 # the user will need to (A) make sure that a directory called
 # $HOME/run_records has been created and (B) make sure to set the
 # productsdir_for_bash_scripts variable, below, to a products
-# directory containing the xmlrpc_c package (needed for DAQInterface
-# to receive commands)
+# directory containing the xmlrpc_c package (needed to receive commands)
 
 # For more information on these variables and what they mean, see the
 # relevant section of the DAQInterface wiki,
 # https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
-#
+#------------------------------------------------------------------------------
+# to be merged with boot.txt
 # P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
 #      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 #------------------------------------------------------------------------------
@@ -36,13 +36,14 @@ aggregator timeout          : 30
 
 advanced_memory_usage       : true
 
-# disable_unique_rootfile_labels: true
-# max_fragment_size_bytes       : 1024000
-# max_configurations_to_list    : 
-# use_messageviewer             : true
+use_messageviewer           : false
 #     By default, if windowing is supported and artdaq_mfextensions is installed, 
 #     a MessageViewer window will pop up during runs which will print out messages 
 #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
+
+# disable_unique_rootfile_labels: true
+# max_fragment_size_bytes       : 1024000
+# max_configurations_to_list    : 
 # fake_messagefacility 
 #     When set to true, DAQInterface will format its messages to appear like MessageFacility messages
 # boardreader_priorities 

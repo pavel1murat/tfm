@@ -1,25 +1,25 @@
 #------------------------------------------------------------------------------
+daq_setup_script: $MRB_TOP/setup_ots.sh
+
 # debug level can range from 0 to 4 (increasing order of verbosity)
-#------------------------------------------------------------------------------
-daq_setup_script : $MRB_TOP/setup_ots.sh
-debug_level      : 4
+debug_level: 4
 #------------------------------------------------------------------------------
 # subsystems  id    source     destination  fragmentMode   
 #------------------------------------------------------------------------------
 Subsystem  :  1       none        none          none
 #------------------------------------------------------------------------------
-# adopt fixed format for boardreaders and friends - keep it simple
+# adopt fixed format for boardreaders and friends - and keep it simple
 #
-#              label         host      port subsystem       allowed     prepend  target
-#                                                        processors
-#------------------------------------------------------------------------------------
-BoardReader : component01   localhost   -1    1             -1          none    none 
-BoardReader : component02   localhost   -1    1             -1          none    none 
+#              label         host      port subsystem  allowed   prepend target
+#                                                     processors
+#------------------------------------------------------------------------------
+BoardReader : boardreader01  localhost   -1    1          -1       none    none 
+BoardReader : boardreader02  localhost   -1    1          -1       none    none 
 #
-EventBuilder: EventBuilder1 localhost   -1    1             -1          none    none
-EventBuilder: EventBuilder2 localhost   -1    1             -1          none    none
+EventBuilder: eventbuilder01 localhost   -1    1          -1       none    none
+EventBuilder: eventbuilder02 localhost   -1    1          -1       none    none
 #
-DataLogger  : DataLogger1   localhost   -1    1             -1          none    none
+DataLogger  : datalogger01   localhost   -1    1          -1       none    none
 #
-Dispatcher  : Dispatcher1   localhost   -1    1             -1          none    none
-#-----------------------------------------------------------------------------------
+Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
+#------------------------------------------------------------------------------

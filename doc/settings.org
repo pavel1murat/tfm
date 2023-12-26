@@ -1,0 +1,32 @@
+#+startup:fold
+* ------------------------------------------------------------------------------
+* parameters stored in the 'settings' file
+* ------------------------------------------------------------------------------
+* log_directory : 
+* record_directory :
+* spack_root_for_bash_scripts :
+* package_hashes_to_save :
+* boardreader_timeout :
+* eventbuilder_timeout :
+* datalogger_timeout :
+* dispatcher_timeout : 
+* routing_manager_timeout :
+* boardreader_priorities : 
+* boardreader_priorities_on_config : 
+* boardreader_priorities_on_start :
+* boardreader_priorities_on_stop
+* max_fragment_size_bytes :
+* max_configurations_to_list :
+* disable_unique_rootfile_labels : 
+* disable_private_network_bookkeeping : 
+* use_messageviewer : 
+* use_messagefacility :
+* advanced_memory_usage :
+* strict_fragment_id_mode :
+* fake_messagefacility :
+* data_directory_override : 
+* transfer_plugin_to_use : 
+* allowed_processors : 
+* max_launch_checks : 
+* launch_procs_wait_time : 
+* kill_existing_processes : 

@@ -51,9 +51,11 @@ fi
 # - FCL files for all executables
 # 
 # the output is controled by env vars
+# ARTDAQ_PARTITION_NUMBER has to be specified as it is used by the farm, 
+# so no need to pass it on the command line
 #------------------------------------------------------------------------------
 cmd="$TFM_DIR/rc/control/farm_manager.py -p $ARTDAQ_PARTITION_NUMBER"
-cmd=$cmd" --rpc-port $TFM_PORT --config-dir=$config_dir"
+cmd=$cmd" --rpc-port $TFM_PORT --config-dir $config_dir"
 echo starting command: nohup stdbuf -oL $cmd  \>\> $logfile 2\>\&1
 nohup stdbuf -oL $cmd >> $logfile 2>&1
 
