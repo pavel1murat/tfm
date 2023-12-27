@@ -14,25 +14,39 @@
 * [[file:software_setup.org][software setup]]
 * TODO [0/1]  farm_manager.py: server managing the trigger farm              
 ** command line parameters                                                   
-|------------------------+---------------------------------+------+-------------+---------------------|
-| flag                   | description                     | Type | default     | comment             |
-|------------------------+---------------------------------+------+-------------+---------------------|
-| -n, --name             | component name (what is that ?) | str  | "daqint"    |                     |
-| -p, --partition-number | partition number                | int  | 888         |                     |
-| -r, --rpc-port         | RPC port                        | int  | 5570        |                     |
-| -H, --rpc-host         | This hostname/IP addr           | str  | "localhost" |                     |
-| -c, --control-host     | Control host                    | str  | "localhost" |                     |
-|------------------------+---------------------------------+------+-------------+---------------------|
-| -d, --debug-level      | debug level                     | int  | 0           | can also be defined |
-|                        |                                 |      |             | in boot.txt         |
-|------------------------+---------------------------------+------+-------------+---------------------|
-| -D, --config-dir       | config directory                | str  | None        |                     |
-|------------------------+---------------------------------+------+-------------+---------------------|
-- config-dir contains all configuration files, has to be defined on the 
-  command line
-  last config-dir path component (subdirectory) is the configuration name
+- example: 
+#+begin_src
+configuration=vst_001
+partition=8
+source tfm_configure $configuration $partition
+$TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
+#+end_src
+** Comments:
+   -- env['ARTDAQ_PARTITION_NUMBER'] is set by tfm_configure and used by the farm_manager
+
+   -- the TFM port number = 10000+1000*partition_number, no need to improvise
+
+   -- the configuration dir could be anywhere, and TFM should not be making assumptions
+      about it
+
+   -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
+      (when debugging a given configuration, may want to create a copy)
+
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| flag               | description                     | Type | default     | comment                                                            |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -n, --name         | component name (what is that ?) | str  | "daqint"    |                                                                    |
+| -H, --rpc-host     | This hostname/IP addr           | str  | "localhost" |                                                                    |
+| -c, --control-host | Control host                    | str  | "localhost" |                                                                    |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -d, --debug-level  | debug level                     | int  | -1          | if specified, overrides settings in boot.txt                       |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -D, --config-dir   | config directory                | str  | None        | contains all configuration files, has to be defined                |
+|                    |                                 |      |             | on the command line. Last config-dir path component (subdirectory) |
+|                    |                                 |      |             | is the configuration name                                          |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
 - knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
-- at startup goes directly into a 'booted' state
+- at startup, TFM goes directly into a 'booted' state
 - 'config' step defines new run number and configures the farm for that
 - start 
 - stop actually stops the procecesses, so new 'configure' is needed
@@ -43,7 +57,7 @@
 - need to figure the difference between the 'terminate' and 'shutdown'
 - states  : Ready, Running, Paused, Stopped
 - commands: Init , Start, Pause, Resume, Stop, Shutdown
-- transition commands sent by [[file:../bin/send_transition.sh]]
+- transition commands sent by [[file:../bin/tfm_transition][tfm_transition]]
   - boot,
   - config
   - start :
@@ -196,27 +210,6 @@ Nil
 
 - however, messages by message_facility go into individual log files, one per 
 art process
-* starting TFM from the command line                                         
-at this point in time (realively early development stage) it is useful 
-to submit TFM in a mode where all its printed output goes to the screen
-
-#+begin_src
-configuration=vst_001
-partition=8
-source tfm_configure $configuration $partition
-$TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
-#+end_src
-
-   -- env['ARTDAQ_PARTITION_NUMBER'] is set by tfm_configure and used by the farm_manager
-
-   -- the TFM port number = 10000+1000*partition_number, no need to improvise
-
-   -- the configuration dir could be anywhere, and TFM should not be making assumptions
-      about it
-
-   -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
-      (when debugging a given configuration, may want to create a copy)
-
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            
