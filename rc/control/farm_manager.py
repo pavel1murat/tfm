@@ -515,31 +515,32 @@ class FarmManager(Component):
         # document used to initialize each artdaq process, but not
         # given with an absolute path in the #include .
 
-        self.fhicl_file_path      = []
+        self.fhicl_file_path        = []
 
-        self.__do_boot            = False
-        self.__do_shutdown        = False
-        self.__do_config          = False
-        self.__do_start_running   = False
-        self.__do_stop_running    = False
-        self.__do_terminate       = False
-        self.__do_pause_running   = False
-        self.__do_resume_running  = False
-        self.__do_recover         = False
+        self.__do_boot              = False
+        self.__do_shutdown          = False
+        self.__do_config            = False
+        self.__do_start_running     = False
+        self.__do_stop_running      = False
+        self.__do_terminate         = False
+        self.__do_pause_running     = False
+        self.__do_resume_running    = False
+        self.__do_recover           = False
 #        self.__do_enable          = False
 #        self.__do_disable         = False
 
-        self.do_trace_get_boolean = False
-        self.do_trace_set_boolean = False
+        self.do_trace_get_boolean   = False
+        self.do_trace_set_boolean   = False
 
-        self.messageviewer_sender = None
-        self.use_messageviewer    = True
-        self.use_messagefacility  = True
-        self.fake_messagefacility = False
+        self.messageviewer_sender   = None
+        self.use_messageviewer      = True
+        self.use_messagefacility    = True
+        self.fake_messagefacility   = False
+        self._validate_setup_script = 1
 
-        self.printlock            = threading.RLock()
+        self.printlock              = threading.RLock()
 
-        self.subconfigs_for_run   = []         # not sure what these are 
+        self.subconfigs_for_run     = []         # not sure what these are 
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 ########
@@ -840,24 +841,27 @@ class FarmManager(Component):
         inf = open(fn)
 
         for line in inf.readlines():
-            line = os.path.expandvars(line)
+            line = os.path.expandvars(line).strip()
+            line = line.split('#')[0];
+#------------------------------------------------------------------------------
+# skip empty and comment-only lines
+# each line is supposed to have a 'key:data' format
+# try to order the keywords alphabetically - that simplifies their management
+#------------------------------------------------------------------------------
+            if (line == '') :                               continue
 
-            # Allow same-line comments
-            res = re.search(r"^(.*)#.*", line)
-            if res: line = res.group(1)
+            words = line.split(':');
+            key   = words[0].strip()
+            data  = words[1].strip()
 
-            line = line.strip()
-
-            if re.search(r"^\s*#", line):
-                continue
+            if "advanced_memory_usage" in line or "advanced memory usage" in line:
+                res = re.search(r"[Tt]rue",data)
+                if res: self.advanced_memory_usage = True
             elif "log_directory" in line or "log directory" in line:
                 self.log_directory = line.split()[-1].strip()
             elif "record_directory" in line or "record directory" in line:
                 self.record_directory = line.split()[-1].strip()
-            elif (
-                "productsdir_for_bash_scripts" in line
-                or "productsdir for bash scripts" in line
-            ):
+            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
                 self.productsdir = line.split()[-1].strip()
             elif (
                 "spack_root_for_bash_scripts" in line
@@ -899,10 +903,7 @@ class FarmManager(Component):
                     ]
                 else:
                     raise Exception('Incorrectly formatted line "%s" in %s'%(line.strip(),fn))
-            elif (
-                "boardreader_priorities_on_config:" in line
-                or "boardreader priorities on config:" in line
-            ):
+            elif ("boardreader_priorities_on_config:" in line or "boardreader priorities on config:" in line):
                 res = re.search(
                     r"^\s*boardreader[ _]priorities[ _]on[ _]config:\s*(.*)", line
                 )
@@ -999,13 +1000,6 @@ class FarmManager(Component):
 
                 if res:
                     self.use_messagefacility = False
-            elif "advanced_memory_usage" in line or "advanced memory usage" in line:
-                token = line.split()[-1].strip()
-
-                res = re.search(r"[Tt]rue", token)
-
-                if res:
-                    self.advanced_memory_usage = True
             elif "strict_fragment_id_mode" in line or "strict fragment id mode" in line:
                 token = line.split()[-1].strip()
 
@@ -1040,9 +1034,12 @@ class FarmManager(Component):
                 if res:
                     self.attempt_existing_pid_kill = True
 
-        #------------------------------------------------------------------------------
-        # make sure all needed variables were properly initialized
-        #------------------------------------------------------------------------------
+            elif (key == 'validate_setup_script'):
+                self._validate_setup_script = int(data)
+#------------------------------------------------------------------------------
+# end of the input loop
+# make sure all needed variables were properly initialized
+#------------------------------------------------------------------------------
         missing_vars = []
 
         # Must wait at least one seconds between checks
@@ -2900,7 +2897,8 @@ class FarmManager(Component):
             hosts        = [procinfo.host for procinfo in self.procinfos]
             random_host  = random.choice(hosts)
 
-            self.validate_setup_script(random_host)
+            if (self._validate_setup_script):
+                self.validate_setup_script(random_host)
 
             self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (rcu.date_and_time()))
             self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))

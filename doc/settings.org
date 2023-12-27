@@ -2,12 +2,16 @@
 * ------------------------------------------------------------------------------
 * parameters stored in the 'settings' file
 * ------------------------------------------------------------------------------
-* log_directory : 
-* record_directory :
+* log_directory : directory with log files
+* record_directory : directory containing book-keeping run records
 * spack_root_for_bash_scripts :
 * package_hashes_to_save :
 * boardreader_timeout :
 * eventbuilder_timeout :
+* data_directory_override                                                    
+- directory name. 
+- If specified, redirects the data output into the specified directory
+- by default, output goes to /tmp
 * datalogger_timeout :
 * dispatcher_timeout : 
 * routing_manager_timeout :
@@ -19,14 +23,17 @@
 * max_configurations_to_list :
 * disable_unique_rootfile_labels : 
 * disable_private_network_bookkeeping : 
-* use_messageviewer : 
+* use_messageviewer   : default 'true'                                       
+- set to 'false' not to waste time
 * use_messagefacility :
 * advanced_memory_usage :
 * strict_fragment_id_mode :
 * fake_messagefacility :
-* data_directory_override : 
 * transfer_plugin_to_use : 
 * allowed_processors : 
 * max_launch_checks : 
 * launch_procs_wait_time : 
 * kill_existing_processes : 
+* validate_setup_script: if != 0, run validation of the setup [default=1]    
+- adds extra time to the initial transition
+* ------------------------------------------------------------------------------
