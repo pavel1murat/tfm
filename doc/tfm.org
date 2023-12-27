@@ -22,7 +22,7 @@ source tfm_configure $configuration $partition
 $TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
 #+end_src
 ** Comments:
-   -- env['ARTDAQ_PARTITION_NUMBER'] is set by tfm_configure and used by the farm_manager
+   -- env['ARTDAQ_PARTITION_NUMBER'] is set by [[file:../bin/tfm_configure][tfm_configure]] and used by the farm_manager
 
    -- the TFM port number = 10000+1000*partition_number, no need to improvise
 
