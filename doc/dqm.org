@@ -1,6 +1,7 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
 * DQM logic
+- rely on ROOT web-based graphics, no need in anything else
 * ------------------------------------------------------------------------------
 - DQM clients run independent on ARTDAQ and connect to dispatcher at any point in time
 - when a client connects to the dispatcher, it sends to the dispatcher a configuration 
@@ -9,7 +10,7 @@
 
 - a DQM client fills histograms and tells ROOT where to display them
 
-* DQM client FCL for 'demo' example : file:../config/demo/dqm_client01.fcl
+* DQM client FCL for the 'demo' example : [[file:../config/demo/dqm_client01.fcl]]
 * ------------------------------------------------------------------------------
 * back to [[file:./tfm.org]]
 * ------------------------------------------------------------------------------
