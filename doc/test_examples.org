@@ -7,9 +7,12 @@ usually partition=11
 * ------------------------------------------------------------------------------
 * tested examples                                                            
 ** [[file:../config/demo]]                                                       
-- an ARTDAQ demo with 6 processess: two boardreaders, two event builders, dispatcher and logger
-- all on the same machine
+- ARTDAQ demo with 6 processess: two boardreaders, two event builders, dispatcher and logger
+- all running on the same machine
+- DQM prototype running : check file:../config/demo/dqm_client01.fcl 
+- DQM prototype uses modules from [[file:../../artdaq_demo/artdaq-demo/ArtModules]]
 - ignore boot.py and boot.json - those are just prototypes
+** file:../config/stm_swtest_001 : reformat STM file into ART format
 ** [[file:../config/vst_000]]                                                    
 - Tracker VST : read the DTC registers and fake data with 1-word segment
 - two processes, board_reader and event_builder, on the same machine

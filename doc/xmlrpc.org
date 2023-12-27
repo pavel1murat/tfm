@@ -1,0 +1,30 @@
+#+startup:fold
+* ------------------------------------------------------------------------------
+* information on XMLRPC
+* ------------------------------------------------------------------------------
+** checkout code                                                             
+svn checkout http://svn.code.sf.net/p/xmlrpc-c/code/stable xmlrpc-c
+
+** https://www.xml.com/pub/a/2001/10/29/xmlrpc.html - the most useful link   
+- snippet which creates a struct 
+- array uses round brackets
+#+begin_src
+result = xmlrpc_client_call( &env,
+                             url,
+                             "some_func",
+                             "({s:i,s:i})",
+                             "my great argument", 1,
+                             "my next argument",  2
+                           )
+#+end_src
+** https://xmlrpc-c.sourceforge.io/doc/xmlrpc.html
+** http://xmlrpc.com/         
+** RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
+** code examples: https://xmlrpc-c.sourceforge.io/example-code.php
+** TFM status                                                                    
+#+begin_src                                                                   
+xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
+#+end_src 
+* ------------------------------------------------------------------------------
+* back to [[file:tfm.org]]
+* ------------------------------------------------------------------------------
