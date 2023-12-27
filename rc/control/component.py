@@ -25,11 +25,11 @@ class Component(ContextObject):
                  rpc_host     = "localhost",
                  control_host = "localhost",
                  synchronous  = False,
-                 rpc_port     = 6659,
+#                 rpc_port     = 6659,
                  skip_init    = False):
 
-        if rpc_port > Component.__MAXPORT:
-            raise ValueError("Maximum allowed port is %s" % Component.__MAXPORT)
+#        if rpc_port > Component.__MAXPORT:
+#            raise ValueError("Maximum allowed port is %s" % Component.__MAXPORT)
 
         if name == "daq":
             raise ValueError("Name 'daq' is not allowed for individual components")

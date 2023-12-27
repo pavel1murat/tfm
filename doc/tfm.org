@@ -204,20 +204,19 @@ to submit TFM in a mode where all its printed output goes to the screen
 configuration=vst_001
 partition=8
 source tfm_configure $configuration $partition
-$TFM_DIR/rc/control/farm_manager.py -p $partition --rpc-port $TFM_PORT --config-dir=$PWD/config/$configuration
+$TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
 #+end_src
 
--- need to specify partition, port, and active configuration
+   -- env['ARTDAQ_PARTITION_NUMBER'] is set by tfm_configure and used by the farm_manager
 
-   -- the partition has to be the same as the artdaq partition number, 
-      so no need to specify on the command line
+   -- the TFM port number = 10000+1000*partition_number, no need to improvise
 
    -- the configuration dir could be anywhere, and TFM should not be making assumptions
       about it
 
-   -- the port = 10000+1000*partition_number, also no need to improvise
+   -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
+      (when debugging a given configuration, may want to create a copy)
 
-   -- however, for now keep the command line as is
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            

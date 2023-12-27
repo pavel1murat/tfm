@@ -477,9 +477,9 @@ class FarmManager(Component):
                  rpc_host         = "localhost"   ,
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
-                 rpc_port         = 6659          ,
-                 partition        = 999           ,
-                 debug_level      = 0
+#                 rpc_port         = 6659          ,
+#                 partition        = 999           ,
+                 debug_level      = -1
     ):
 
         # Initialize Component, the base class of FarmManager
@@ -489,7 +489,7 @@ class FarmManager(Component):
                            rpc_host     = rpc_host,
                            control_host = control_host,
                            synchronous  = synchronous,
-                           rpc_port     = rpc_port,
+#                           rpc_port     = rpc_port,
                            skip_init    = False)
 
         self.reset_variables()
@@ -497,10 +497,9 @@ class FarmManager(Component):
         self.fUser            = os.environ.get("USER");
         self.fKeepRunning     = True
         self.config_dir       = config_dir
-        self._partition       = partition                # assume integer
         self.transfer         = "Autodetect"
-        self.rpc_port         = rpc_port
-        self.debug_level      = debug_level
+#        self._partition       = partition                # assume integer
+#        self.rpc_port         = rpc_port
 
         self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
@@ -623,10 +622,15 @@ class FarmManager(Component):
             sys.exit(1)
 
         self.print_log("i",'%s: FarmManager in partition %d launched and now in "%s" state, listening on port %d'
-            % (rcu.date_and_time(),self.partition(),self.state(self.name),self.rpc_port)
+                       % (rcu.date_and_time(),self.partition(),self.state(self.name),self.rpc_port())
         )
 
         print(" >>>> FarmManager.debug_level = ",self.debug_level);
+#------------------------------------------------------------------------------
+# P.M. if debug_level is defined on the command line, override the config file settings
+#------------------------------------------------------------------------------
+        if (debug_level >= 0): self.debug_level = debug_level
+
 
     def __del__(self):
         rcu.kill_tail_f()
@@ -664,9 +668,6 @@ class FarmManager(Component):
 # The actual transition functions called by Run Control; note these just set booleans 
 # which are tested in the runner() function, called periodically by run control
 #---v--------------------------------------------------------------------------
-    def partition(self):
-        return self._partition;
-
     def boot(self):
         self.__do_boot = True
 
@@ -3869,11 +3870,11 @@ def get_args():  # no-coverage
     parser = argparse.ArgumentParser(description="FarmManager")
 
     parser.add_argument("-n","--name"        ,type=str,dest="name"        ,default="daqint"   ,help="Component name")
-    parser.add_argument("-p","--partition"   ,type=int,dest="partition"   ,default=pn         ,help="Partition number")
-    parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
+#    parser.add_argument("-p","--partition"   ,type=int,dest="partition"   ,default=pn         ,help="Partition number")
+#    parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
     parser.add_argument("-H","--rpc-host"    ,type=str,dest="rpc_host"    ,default="localhost",help="this hostname/IP addr")
     parser.add_argument("-c","--control-host",type=str,dest="control_host",default="localhost",help="Control host")
-    parser.add_argument("-d","--debug-level" ,type=int,dest="debug_level" ,default=0          ,help="debug level, default=0")
+    parser.add_argument("-d","--debug-level" ,type=int,dest="debug_level" ,default=-1         ,help="debug level, default=-1")
     parser.add_argument("-D","--config-dir"  ,type=str,dest="config_dir"  ,default=None       ,help="config dir"  )
 
     return parser.parse_args()
