@@ -12,10 +12,9 @@
 
   file:../../artdaq/artdaq/DAQrate/SharedMemoryEventManager.cc::/::RunArt/
 
- and it is the job which provides the transfer
+ and it is that job which connects the dispatcher to the DQM client and provides the transfer
 
-** the DQM client fills histograms and tells ROOT where to display them
-
+** the DQM client fills histograms and tells ROOT where to display them      
 * DQM client FCL for the 'demo' example : [[file:../config/demo/dqm_client01.fcl]]
 * ------------------------------------------------------------------------------
 * back to [[file:./tfm.org][tfm.org]]
