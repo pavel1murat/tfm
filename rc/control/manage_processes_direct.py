@@ -573,7 +573,7 @@ def mopup_process_base(self, procinfo):
 # If you change what this function returns, you should rename it for obvious reasons
 #------------------------------------------------------------------------------
 def get_pids_and_labels_on_host(host, procinfos):
-
+    # breakpoint()
     greptoken = (
         "[0-9]:[0-9][0-9]\s\+.*\(%s\).*application_name.*partition_number:\s*%s"
         % ("\|".join(set([bootfile_name_to_execname(p.name) for p in procinfos])),

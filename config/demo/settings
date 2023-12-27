@@ -10,7 +10,8 @@
 # the user will need to (A) make sure that a directory called
 # $HOME/run_records has been created and (B) make sure to set the
 # productsdir_for_bash_scripts variable, below, to a products
-# directory containing the xmlrpc_c package (needed to receive commands)
+# directory containing the xmlrpc_c package (needed for DAQInterface
+# to receive commands)
 
 # For more information on these variables and what they mean, see the
 # relevant section of the DAQInterface wiki,
@@ -61,3 +62,5 @@ use_messageviewer           : false
 #     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
 #     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
 #     Info is provided in the memory management details section.
+#
+# validate_setup_script              : false

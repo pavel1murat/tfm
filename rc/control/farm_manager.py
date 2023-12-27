@@ -1,7 +1,5 @@
 #!/bin/env python3
-#------------------------------------------------------------------------------
-# call: farm_manager.py --config-dir <dir>
-#------------------------------------------------------------------------------
+
 import os, sys
 
 sys.path.append(os.environ["TFM_DIR"])
@@ -22,12 +20,15 @@ import pdb
 import random
 import re
 import shutil
+# from   shutil     import copyfile
 import signal
 import socket
 import stat
 import string
 import subprocess
+# from   threading  import RLock
 import threading
+# from   time       import sleep, time
 import time
 import traceback
 
@@ -40,7 +41,7 @@ from inspect      import currentframe, getframeinfo
 # home brew
 #------------------------------------------------------------------------------
 from rc.control                 import subsystem
-from rc.control.procinfo        import *
+from rc.control.procinfo        import Procinfo
 
 from rc.io.timeoutclient        import TimeoutServerProxy
 from rc.control.component       import Component
@@ -55,6 +56,22 @@ else:
     from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
 import rc.control.utilities as rcu 
+
+# from rc.control.utilities import make_paragraph
+# from rc.control.utilities import get_pids
+# from rc.control.utilities import host_is_local
+# from rc.control.utilities import is_msgviewer_running
+# from rc.control.utilities import date_and_time
+# from rc.control.utilities import date_and_time_more_precision
+# from rc.control.utilities import construct_checked_command
+# from rc.control.utilities import reformat_fhicl_documents
+# from rc.control.utilities import fhicl_writes_root_file
+# from rc.control.utilities import get_setup_commands
+# from rc.control.utilities import kill_tail_f
+# from rc.control.utilities import obtain_messagefacility_fhicl
+# from rc.control.utilities import record_directory_info
+# from rc.control.utilities import get_messagefacility_template_filename
+# from rc.control.utilities import RaisingThread
 
 try:
     import python_artdaq
@@ -76,6 +93,7 @@ except ImportError:
     pass  # Users shouldn't need to worry if their installations don't yet have python_artdaq available
 
 from rc.control.config_functions_local import get_boot_info_base
+# from rc.control.config_functions_local import listdaqcomps_base
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
@@ -92,6 +110,36 @@ except:
     from rc.control.all_functions_noop         import do_enable_base
     from rc.control.all_functions_noop         import do_disable_base
     from rc.control.all_functions_noop         import check_config_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import start_datataking_base
+# except:
+#     from rc.control.all_functions_noop         import start_datataking_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import stop_datataking_base
+# except:
+#     from rc.control.all_functions_noop         import stop_datataking_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import do_enable_base
+# except:
+#     from rc.control.all_functions_noop         import do_enable_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import do_disable_base
+# except:
+#     from rc.control.all_functions_noop         import do_disable_base
+
+# try:
+#     imp.find_module("daqinterface_overrides_for_experiment")
+#     from daqinterface_overrides_for_experiment import check_config_base
+# except:
+#     from rc.control.all_functions_noop         import check_config_base
 
 process_management_methods = ["direct", "external_run_control"]
 
@@ -155,6 +203,7 @@ elif (management_method == "external_run_control"):
     ):  # Actually used in get_boot_info() despite external_run_control
         return False
 
+
 # This is the end of if-elifs of process management methods
 if not "TFM_FHICL_DIRECTORY" in os.environ:
     raise Exception(rcu.make_paragraph(
@@ -188,24 +237,34 @@ class FarmManager(Component):
         formatted_day = "%s-%s-%s" % (day, month, year)
 
         if self.debug_level >= debuglevel:
-#------------------------------------------------------------------------------
-# JCF, Dec-31-2019
-# The swig_artdaq instance by default writes to stdout, so no explicit print call is needed
-#------------------------------------------------------------------------------
-            ms = self.messageviewer_sender
-            if self.use_messagefacility and (ms != None):
+
+            # JCF, Dec-31-2019
+            # The swig_artdaq instance by default writes to stdout, so no
+            # explicit print call is needed
+            if self.use_messagefacility and self.messageviewer_sender is not None:
                 if severity == "e":
-                    ms.write_error("FarmManager partition %d"   % self.partition(),printstr)
+                    self.messageviewer_sender.write_error(
+                        "FarmManager partition %d" % self.partition(),printstr
+                    )
                 elif severity == "w":
-                    ms.write_warning("FarmManager partition %d" % self.partition(),printstr)
+                    self.messageviewer_sender.write_warning(
+                        "FarmManager partition %d" % self.partition(),printstr
+                    )
                 elif severity == "i":
-                    ms.write_info("FarmManager partition %d"    % self.partition(),printstr)
+                    self.messageviewer_sender.write_info(
+                        "FarmManager partition %d" % self.partition(),printstr)
                 elif severity == "d":
-                    ms.write_debug("FarmManager partition %d"   % self.partition(),printstr)
+                    self.messageviewer_sender.write_debug(
+                        "FarmManager partition %d" % self.partition(),printstr)
+
             else:
                 with self.printlock:
                     if self.fake_messagefacility:
-                        print("%%MSG-%s FarmManager %s %s %s" % (severity, formatted_day, time, timezone),flush=True)
+                        print(
+                            "%%MSG-%s FarmManager %s %s %s"
+                            % (severity, formatted_day, time, timezone),
+                            flush=True,
+                        )
                     if not newline and not self.fake_messagefacility:
                         sys.stdout.write(printstr)
                         sys.stdout.flush()
@@ -349,7 +408,7 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 # make sure that the setup script to be executed on each node runs successfully 
-#---v--------------------------------------------------------------------------
+####
     def validate_setup_script(self,node):
 
         ssh_timeout_in_seconds = 30
@@ -418,9 +477,9 @@ class FarmManager(Component):
                  rpc_host         = "localhost"   ,
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
+                 rpc_port         = 6659          ,
+                 partition        = 999           ,
                  debug_level      = 0
-                 # rpc_port         = 6659          ,
-                 # partition        = 999           ,
     ):
 
         # Initialize Component, the base class of FarmManager
@@ -430,7 +489,7 @@ class FarmManager(Component):
                            rpc_host     = rpc_host,
                            control_host = control_host,
                            synchronous  = synchronous,
-                           # rpc_port     = rpc_port,
+                           rpc_port     = rpc_port,
                            skip_init    = False)
 
         self.reset_variables()
@@ -438,10 +497,10 @@ class FarmManager(Component):
         self.fUser            = os.environ.get("USER");
         self.fKeepRunning     = True
         self.config_dir       = config_dir
+        self._partition       = partition                # assume integer
         self.transfer         = "Autodetect"
+        self.rpc_port         = rpc_port
         self.debug_level      = debug_level
-        # self.rpc_port         = rpc_port
-        # self.partition        = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
 
         self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
@@ -533,7 +592,7 @@ class FarmManager(Component):
         }
 #------------------------------------------------------------------------------
 # now, read settings file - should become executing python
-#---v--------------------------------------------------------------------------
+########
         try:
             self.read_settings()
         except:
@@ -564,8 +623,7 @@ class FarmManager(Component):
             sys.exit(1)
 
         self.print_log("i",'%s: FarmManager in partition %d launched and now in "%s" state, listening on port %d'
-            % (rcu.date_and_time(),
-               self.partition(),self.state(self.name),self.rpc_port())
+            % (rcu.date_and_time(),self.partition(),self.state(self.name),self.rpc_port)
         )
 
         print(" >>>> FarmManager.debug_level = ",self.debug_level);
@@ -606,6 +664,9 @@ class FarmManager(Component):
 # The actual transition functions called by Run Control; note these just set booleans 
 # which are tested in the runner() function, called periodically by run control
 #---v--------------------------------------------------------------------------
+    def partition(self):
+        return self._partition;
+
     def boot(self):
         self.__do_boot = True
 
@@ -765,10 +826,10 @@ class FarmManager(Component):
         return
 
 
-#--------------------------------------------------------------------------
-# P.M. one day, this will go away and initialization becomes an execution 
-# of a python script expand env vars here, not later
-#---v----------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# at one day, will go away and initialization becomes an execution of a python script
+# expand env vars here, not later
+####
     def read_settings(self):
 
         fn = self.settings_filename();
@@ -977,9 +1038,10 @@ class FarmManager(Component):
 
                 if res:
                     self.attempt_existing_pid_kill = True
-#------------------------------------------------------------------------------
-# make sure all needed variables were properly initialized
-#------------------------------------------------------------------------------
+
+        #------------------------------------------------------------------------------
+        # make sure all needed variables were properly initialized
+        #------------------------------------------------------------------------------
         missing_vars = []
 
         # Must wait at least one seconds between checks
@@ -1044,8 +1106,8 @@ class FarmManager(Component):
 
         if self.boardreader_priorities is not None:
             self.boardreader_priorities_on_config = self.boardreader_priorities
-            self.boardreader_priorities_on_start  = self.boardreader_priorities
-            self.boardreader_priorities_on_stop   = self.boardreader_priorities
+            self.boardreader_priorities_on_start = self.boardreader_priorities
+            self.boardreader_priorities_on_stop = self.boardreader_priorities
 
     def check_proc_transition(self, target_state):
 
@@ -1194,8 +1256,7 @@ class FarmManager(Component):
         cmds.append("cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl))
         cmds.append('res=$( grep -l "port: %d" %s )' % (port_to_replace, msgviewer_fhicl))
         cmds.append("if [[ -n $res ]]; then true ; else false ; fi")
-        cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition()*1000, 
-                                                                 msgviewer_fhicl))
+        cmds.append("sed -r -i 's/port: [^\s]+/port: %d/' %s" % (10005 + self.partition() * 1000, msgviewer_fhicl))
         cmds.append("msgviewer -c %s >/dev/null 2>&1 &"       % (msgviewer_fhicl))
 
         msgviewercmd = rcu.construct_checked_command(cmds)
@@ -2711,8 +2772,8 @@ class FarmManager(Component):
         self.print_log("i", "%s: BOOT, self.debug_level=%i" % (rcu.date_and_time(),self.debug_level))
 
         self.reset_variables()
-#        self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" 
-#                       % (rcu.date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" 
+                       % (rcu.date_and_time(),self.debug_level))
 
         self.fState = run_control_state.transition("init");
         self.fState.set_completed(0);
@@ -2720,8 +2781,8 @@ class FarmManager(Component):
         os.chdir(self.base_dir)
         boot_fn = self.boot_filename();
 
-#        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" 
-#                       % (rcu.date_and_time(),boot_fn,self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" 
+                       % (rcu.date_and_time(),boot_fn,self.debug_level))
 
         if not os.path.exists(boot_fn):
             raise Exception('ERROR: boot file %s does not exist' % boot_fn)
@@ -2734,7 +2795,7 @@ class FarmManager(Component):
         if file_extension == ".fcl":
             try:
                 self.create_setup_fhiclcpp_if_needed()
-#                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             except:
                 raise
 
@@ -2752,14 +2813,14 @@ class FarmManager(Component):
             if status != 0:
                 raise Exception('Error: the command "%s" returned nonzero' % cmd)
 #------------------------------------------------------------------------------
-# P.Murat: read and parse the boot file
+# P.Murat: here the boot.txt file is being read and parsed
 #-------v----------------------------------------------------------------------
         try:
-#            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.get_boot_info(self.boot_filename())
-#            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.check_boot_info()
-#            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
         except Exception:
             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
             return
@@ -2768,7 +2829,7 @@ class FarmManager(Component):
 # See the Procinfo.__lt__ function for details on sorting
 #-------v----------------------------------------------------------------------
         self.procinfos.sort()
-#        self.print_log("i", "%s: BOOT transition 0005 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 0005 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 
         for ss in sorted(self.subsystems):
 
@@ -2799,10 +2860,10 @@ class FarmManager(Component):
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 #-------v----------------------------------------------------------------------
         self.print_log("i", "%s: BOOT transition 001 Pasha: start msg viewer" % (rcu.date_and_time()))
-#        self.print_log("i", "%s: BOOT transition 001 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 001 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
         self.start_message_viewer()
         self.print_log("i", "%s: BOOT transition 002 Pasha: done with msg viewer" % (rcu.date_and_time()))
-#        self.print_log("i", "%s: BOOT transition 002 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition 002 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 
         self.fState.set_completed(30);
 #------------------------------------------------------------------------------
@@ -2832,8 +2893,8 @@ class FarmManager(Component):
 # after adding TRACE functionality to your setup script; 
 # while a cost, the benefit here seems to outweight the cost.
 #
-# P.Murat: it is enough to validate the setup script just once in a while
-#-------v----------------------------------------------------------------------
+# -- P.Murat: validation of the setup script needs to be done just once
+########
         if self.manage_processes:
             hosts        = [procinfo.host for procinfo in self.procinfos]
             random_host  = random.choice(hosts)
@@ -2841,7 +2902,7 @@ class FarmManager(Component):
             self.validate_setup_script(random_host)
 
             self.print_log("i", "%s: BOOT transition 003 Pasha: done checking setup script" % (rcu.date_and_time()))
-#            self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+            self.print_log("i", "%s: BOOT transition 003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
@@ -2854,7 +2915,7 @@ class FarmManager(Component):
 # -- also OK to do just once
 #-----------v------------------------------------------------------------------
             self.print_log("i", "%s: BOOT transition 004 Pasha: before init_process_requirements\n" % (rcu.date_and_time()))
-            # breakpoint()
+            self.print_log("i", "%s: BOOT transition 004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
             self.init_process_requirements()
             self.fState.set_completed(60);
 #------------------------------------------------------------------------------
@@ -2867,7 +2928,7 @@ class FarmManager(Component):
 #-------v-----------------------------------------------------------------------
         self.complete_state_change("booting")
         self.print_log("i", "%s: BOOT transition complete" % (rcu.date_and_time()))
-#        self.print_log("i", "%s: BOOT transition complete debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+        self.print_log("i", "%s: BOOT transition complete debug_level:%i" % (rcu.date_and_time(),self.debug_level))
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
@@ -3798,23 +3859,22 @@ class FarmManager(Component):
 # the environment overrides the code defaults, the command line overrides both
 # start from figuring the artdaq partition number
 # parameters are passed to the FarmManager constructor
-# rely on ARTDAQ_PARTITION_NUMBER having been defined
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
 
-#    pn = None;
-#    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
-#    if (x) : pn = int(x);
+    pn = None;
+    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
+    if (x) : pn = int(x);
     
     parser = argparse.ArgumentParser(description="FarmManager")
 
     parser.add_argument("-n","--name"        ,type=str,dest="name"        ,default="daqint"   ,help="Component name")
-    parser.add_argument("-D","--config-dir"  ,type=str,dest="config_dir"  ,default=None       ,help="config dir"  )
-#    parser.add_argument("-p","--partition"   ,type=int,dest="partition"   ,default=pn         ,help="Partition number")
-#    parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
+    parser.add_argument("-p","--partition"   ,type=int,dest="partition"   ,default=pn         ,help="Partition number")
+    parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
     parser.add_argument("-H","--rpc-host"    ,type=str,dest="rpc_host"    ,default="localhost",help="this hostname/IP addr")
     parser.add_argument("-c","--control-host",type=str,dest="control_host",default="localhost",help="Control host")
     parser.add_argument("-d","--debug-level" ,type=int,dest="debug_level" ,default=0          ,help="debug level, default=0")
+    parser.add_argument("-D","--config-dir"  ,type=str,dest="config_dir"  ,default=None       ,help="config dir"  )
 
     return parser.parse_args()
 
@@ -3862,7 +3922,7 @@ def main():  # no-coverage
         tfm.print_log(
             "e",
             "%s: FarmManager on partition %s caught kill signal %d"
-            % (rcu.date_and_time(), tfm.partition(), signum),
+            % (rcu.date_and_time(), tfm.partition, signum),
         )
         tfm.recover()
 

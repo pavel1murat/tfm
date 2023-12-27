@@ -726,7 +726,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
                                   "expected_fragments_per_event: %d"
                                   % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
-
+        # breakpoint()
         if self.request_address is None:
             request_address = "227.128.%d.%d" % (self.partition(),128 + int(p.subsystem))
         else:

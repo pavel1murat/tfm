@@ -84,17 +84,35 @@ def get_boot_info_base(self, boot_filename):
     if not inf: 
         raise Exception("ERROR: TFM unable to locate configuration file "+boot_filename)
 
+#     memberDict = {
+#         "name"              : None,
+#         "label"             : None,
+#         "host"              : None,
+#         "port"              : "not set",
+#         "fhicl"             : None,
+#         "subsystem"         : "not set",
+#         "allowed_processors": "not set",
+#         "target"            : "not set",
+#         "prepend"           : "not set",
+#     }
+#     subsystemDict = {
+#         "id"                : None,
+#         "source"            : "not set",
+#         "destination"       : "not set",
+#         "fragmentMode"      : "not set",
+#     }
+
     num_expected_processes = 0
     num_actual_processes   = 0
 #------------------------------------------------------------------------------
 # assume format : "key : parameters"
-#---v--------------------------------------------------------------------------
+####
     lines = inf.readlines()
-    for line in lines:
+    for i_line, line in enumerate(lines):
         l1 = line.split('#')[0].strip();
 #------------------------------------------------------------------------------
 # skip comment lines
-#-------v------------------------------------------------------------------------------
+########
         if (len(l1) == 0):                                  continue
 
         words  = l1.split(':')
@@ -103,9 +121,10 @@ def get_boot_info_base(self, boot_filename):
 #------------------------------------------------------------------------------
 # skip comments but not empty lines: John uses empty lines for something
 # immediately expand evn vars in the value part...
-#-------v----------------------------------------------------------------------
-        key  = words[0].strip()
-        data = os.path.expandvars(words[1].strip())
+########
+        key = words[0].strip()
+
+        data = os.path.expandvars(words[1]).strip()
         par  = data.split();
         npar = len(par)
 #------------------------------------------------------------------------------
@@ -177,9 +196,9 @@ def get_boot_info_base(self, boot_filename):
 
             target                = None
             if (par[6] != "none"): target = par[6]
-#--------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # remember, boardreaders go first
-#-----------v--------------------------------------------------------------------
+############
             p = Procinfo(name               = key      ,
                          label              = label    ,
                          rank               = rank     ,
@@ -200,7 +219,7 @@ def get_boot_info_base(self, boot_filename):
 #          set it to '' 
 #          assume no prepend for others 
 #          assume boardreaders are defined first
-#-------v----------------------------------------------------------------------
+########
         elif (key == "BoardReader"):
             assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
             

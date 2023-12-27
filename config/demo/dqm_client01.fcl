@@ -90,7 +90,7 @@ TransferPluginConfig: {
 # or it is just an FCL line propagated from an OTS-based configuration 
 # and not needed here ?
 #------------------------------------------------------------------------------
-    # unique_label            : "DQMClient01"
+    unique_label            : "DQMClient01"
 }
 
 source: {
@@ -105,7 +105,7 @@ source: {
     dispatcher_config: {
         path         : [dispatcherTransferOutput]
         filter_paths : [ ]
-        unique_label : "DQMClient06"  ## this is the one to be renamed
+        unique_label : "DQMClient01"  ## this is the one to be renamed
         services: {
             ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
                 waiting_time        : 30
