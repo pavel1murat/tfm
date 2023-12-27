@@ -1,16 +1,22 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
-* DQM logic
-- rely on ROOT web-based graphics, no need in anything else
-* ------------------------------------------------------------------------------
-- DQM clients run independent on ARTDAQ and connect to dispatcher at any point in time
-- when a client connects to the dispatcher, it sends to the dispatcher a configuration 
-- FCHICL. The dispatcher forks and spawns an art job : file:../../artdaq/artdaq/DAQrate/SharedMemoryEventManager.cc::/::RunArt/
-- with that FCL and it is the job which provides the transfer
+* TODO [0/2] DQM logic                                                       
+** rely on ROOT web-based graphics, no need in anything else
+** TODO [0/2] DQM clients run independent on ARTDAQ                          
+*** connect to dispatcher at any point in time 
+*** TODO currently, when a dispatcher stops, its clients also stop           
+*** TODO when a client fails to disconnect, the dispatcher 'remembers' about it   
+** when a client connects to the dispatcher,                                 
+ it sends to the dispatcher a configuration FCHICL. 
+ The dispatcher forks and spawns an art job with that FCL - see
 
-- a DQM client fills histograms and tells ROOT where to display them
+  file:../../artdaq/artdaq/DAQrate/SharedMemoryEventManager.cc::/::RunArt/
+
+ and it is the job which provides the transfer
+
+** the DQM client fills histograms and tells ROOT where to display them
 
 * DQM client FCL for the 'demo' example : [[file:../config/demo/dqm_client01.fcl]]
 * ------------------------------------------------------------------------------
-* back to [[file:./tfm.org]]
+* back to [[file:./tfm.org][tfm.org]]
 * ------------------------------------------------------------------------------
