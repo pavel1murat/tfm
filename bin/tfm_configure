@@ -76,7 +76,7 @@ export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`  # 10000 + 1000*partition_nu
 
 export PATH=$TFM_DIR/bin:$PATH
 
-if [ -z $TFM_PROCESS_MANAGEMENT_METHOD ]; then export TFM_PROCESS_MANAGEMENT_METHOD="direct" ; fi
+export TFM_PROCESS_MANAGEMENT_METHOD="direct"
 
 if [[ -z $TFM_FHICL_DIRECTORY ]]; then
     export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
