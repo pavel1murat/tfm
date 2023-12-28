@@ -38,8 +38,10 @@ def get_config_info_base(self):
 
     if (os.path.exists("%s/common_code" % get_config_parentdir()) and 
         ("common_code" not in self.subconfigs_for_run)    ):
-
-        self.subconfigs_for_run.append("common_code")  # For backwards-compatibility with earlier versions of this function
+#------------------------------------------------------------------------------
+# For backwards-compatibility with earlier versions of this function
+#-------v----------------------------------------------------------------------
+        self.subconfigs_for_run.append("common_code")  
 
     for subconfig in self.subconfigs_for_run:
         subconfig_dir = "%s/%s" % (get_config_parentdir(), subconfig)
@@ -84,24 +86,6 @@ def get_boot_info_base(self, boot_filename):
     if not inf: 
         raise Exception("ERROR: TFM unable to locate configuration file "+boot_filename)
 
-#     memberDict = {
-#         "name"              : None,
-#         "label"             : None,
-#         "host"              : None,
-#         "port"              : "not set",
-#         "fhicl"             : None,
-#         "subsystem"         : "not set",
-#         "allowed_processors": "not set",
-#         "target"            : "not set",
-#         "prepend"           : "not set",
-#     }
-#     subsystemDict = {
-#         "id"                : None,
-#         "source"            : "not set",
-#         "destination"       : "not set",
-#         "fragmentMode"      : "not set",
-#     }
-
     num_expected_processes = 0
     num_actual_processes   = 0
 #------------------------------------------------------------------------------
@@ -134,23 +118,6 @@ def get_boot_info_base(self, boot_filename):
 #------------------------------------------------------------------------------
 # some global parameters
 ########
-        elif (key == "daq_setup_script"):
-            self.daq_setup_script = data;
-            self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
-
-        elif (key == "request_address"):
-            self.request_address = data
-
-        elif (key == "debug_level"):
-            self.debug_level = int(data)
-
-        elif (key == "manage_processes"):
-            if (data.upper() == "TRUE"): self.manage_processes = True
-            else                       : self.manage_processes = False
-
-        elif (key == "disable_recovery"):
-            if (data.upper() == "TRUE"): self.disable_recovery = True
-            else                       : self.disable_recovery = False
         elif (key == "Subsystem"):
             
             s = Subsystem();

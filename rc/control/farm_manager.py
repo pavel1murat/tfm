@@ -857,44 +857,48 @@ class FarmManager(Component):
             if "advanced_memory_usage" in line or "advanced memory usage" in line:
                 res = re.search(r"[Tt]rue",data)
                 if res: self.advanced_memory_usage = True
-            elif "log_directory" in line or "log directory" in line:
-                self.log_directory = line.split()[-1].strip()
-            elif "record_directory" in line or "record directory" in line:
-                self.record_directory = line.split()[-1].strip()
-            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
-                self.productsdir = line.split()[-1].strip()
-            elif (
-                "spack_root_for_bash_scripts" in line
-                or "spack root for bash scripts" in line
-            ):
-                self.spackdir = line.split()[-1].strip()
-            elif "package_hashes_to_save" in line or "package hashes to save" in line:
-                res = re.search(r".*\[(.*)\].*", line)
-
-                if not res:
-                    raise Exception(rcu.make_paragraph("Unable to parse package_hashes_to_save from"+fn))
-
-                if res.group(1).strip() == "":
-                    continue
-
-                package_hashes_to_save_unprocessed = res.group(1).split(",")
-
-                for ip, package in enumerate(package_hashes_to_save_unprocessed):
-                    package = package.replace('"', "")
-                    package = package.replace(
-                        " ", ""
-                    )  # strip() doesn't seem to work here
-                    self.package_hashes_to_save.append(package)
             elif "boardreader_timeout" in line or "boardreader timeout" in line:
                 self.boardreader_timeout = int(line.split()[-1].strip())
-            elif "eventbuilder_timeout" in line or "eventbuilder timeout" in line:
-                self.eventbuilder_timeout = int(line.split()[-1].strip())
+
             elif "datalogger_timeout" in line or "datalogger timeout" in line:
                 self.datalogger_timeout = int(line.split()[-1].strip())
+
+            elif (key == "daq_setup_script"):
+                self.daq_setup_script = data;
+                self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
+
+            elif (key == "debug_level"):
+                self.debug_level = int(data)
+
+            elif ("disable_unique_rootfile_labels" in line or "disable unique rootfile labels" in line):
+                token = line.split()[-1].strip()
+                if "true" in token or "True" in token:
+                    self.disable_unique_rootfile_labels = True
+                elif "false" in token or "False" in token:
+                    self.disable_unique_rootfile_labels = False
+                else:
+                    raise Exception(
+                        'disable_unique_rootfile_labels must be set to either [Tt]rue'
+                        ' or [Ff]alse in settings file "%s"' % (fn))
+
+            elif ("disable_private_network_bookkeeping" in line or "disable private network bookkeeping" in line):
+                token = line.split()[-1].strip()
+                if "true" in token or "True" in token:
+                    self.disable_private_network_bookkeeping = True
+                elif "false" in token or "False" in token:
+                    self.disable_private_network_bookkeeping = False
+                else:
+                    raise Exception(
+                        'disable_private_network_bookkeeping must be set '
+                        'to either [Tt]rue or [Ff]alse in settings file "%s"' % (fn))
+
+            elif (key == "disable_recovery"):
+                if (data.upper() == "TRUE"): self.disable_recovery = True
+                else                       : self.disable_recovery = False
+
             elif "dispatcher_timeout" in line or "dispatcher timeout" in line:
                 self.dispatcher_timeout = int(line.split()[-1].strip())
-            elif re.search(r"^\s*routing_?manager[ _]timeout", line):
-                self.routingmanager_timeout = int(line.split()[-1].strip())
+
             elif "boardreader_priorities:" in line or "boardreader priorities:" in line:
                 res = re.search(r"^\s*boardreader[ _]priorities\s*:\s*(.*)", line)
                 if res:
@@ -915,9 +919,7 @@ class FarmManager(Component):
                 else:
                     raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
             elif (
-                "boardreader_priorities_on_start:" in line
-                or "boardreader priorities on start:" in line
-            ):
+                "boardreader_priorities_on_start:" in line or "boardreader priorities on start:" in line):
                 res = re.search(
                     r"^\s*boardreader[ _]priorities[ _]on[ _]start:\s*(.*)", line
                 )
@@ -928,10 +930,8 @@ class FarmManager(Component):
                     # print self.boardreader_priorities_on_start
                 else:
                     raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-            elif (
-                "boardreader_priorities_on_stop:" in line
-                or "boardreader priorities on stop:" in line
-            ):
+
+            elif ("boardreader_priorities_on_stop:" in line or "boardreader priorities on stop:" in line):
                 res = re.search(
                     r"^\s*boardreader[ _]priorities[ _]on[ _]stop:\s*(.*)", line
                 )
@@ -942,6 +942,47 @@ class FarmManager(Component):
                     # print self.boardreader_priorities_on_stop
                 else:
                     raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
+
+            elif "eventbuilder_timeout" in line or "eventbuilder timeout" in line:
+                self.eventbuilder_timeout = int(line.split()[-1].strip())
+
+            elif "log_directory" in line or "log directory" in line:
+                self.log_directory = line.split()[-1].strip()
+
+            elif (key == "manage_processes"):
+                if (data.upper() == "TRUE"): self.manage_processes = True
+                else                       : self.manage_processes = False
+
+            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
+                self.productsdir = line.split()[-1].strip()
+
+            elif "record_directory" in line or "record directory" in line:
+                self.record_directory = line.split()[-1].strip()
+
+            elif (key == "request_address"): self.request_address = data
+
+            elif (key == "routing_manager_timeout"): self.routingmanager_timeout = int(data)
+
+            elif ("spack_root_for_bash_scripts" in line or "spack root for bash scripts" in line):
+                self.spackdir = line.split()[-1].strip()
+
+            elif "package_hashes_to_save" in line or "package hashes to save" in line:
+                res = re.search(r".*\[(.*)\].*", line)
+
+                if not res:
+                    raise Exception(rcu.make_paragraph("Unable to parse package_hashes_to_save from"+fn))
+
+                if res.group(1).strip() == "":
+                    continue
+
+                package_hashes_to_save_unprocessed = res.group(1).split(",")
+
+                for ip, package in enumerate(package_hashes_to_save_unprocessed):
+                    package = package.replace('"', "")
+                    package = package.replace(
+                        " ", ""
+                    )  # strip() doesn't seem to work here
+                    self.package_hashes_to_save.append(package)
 
             elif "max_fragment_size_bytes" in line or "max fragment size bytes" in line:
                 max_fragment_size_bytes_token = line.split()[-1].strip()
@@ -955,37 +996,10 @@ class FarmManager(Component):
 
                 if self.max_fragment_size_bytes % 8 != 0:
                     raise Exception('Value of "max_fragment_size_bytes" in "%s" should be a multiple of 8' % (fn))
-            elif (
-                "max_configurations_to_list" in line
-                or "max configurations to list" in line
-            ):
-                self.max_configurations_to_list = int(line.split()[-1].strip())
-            elif (
-                "disable_unique_rootfile_labels" in line
-                or "disable unique rootfile labels" in line
-            ):
-                token = line.split()[-1].strip()
-                if "true" in token or "True" in token:
-                    self.disable_unique_rootfile_labels = True
-                elif "false" in token or "False" in token:
-                    self.disable_unique_rootfile_labels = False
-                else:
-                    raise Exception(
-                        'disable_unique_rootfile_labels must be set to either [Tt]rue'
-                        ' or [Ff]alse in settings file "%s"' % (fn))
-            elif (
-                "disable_private_network_bookkeeping" in line
-                or "disable private network bookkeeping" in line
-            ):
-                token = line.split()[-1].strip()
-                if "true" in token or "True" in token:
-                    self.disable_private_network_bookkeeping = True
-                elif "false" in token or "False" in token:
-                    self.disable_private_network_bookkeeping = False
-                else:
-                    raise Exception(
-                        'disable_private_network_bookkeeping must be set '
-                        'to either [Tt]rue or [Ff]alse in settings file "%s"' % (fn))
+
+            elif ("max_configurations_to_list" in line or "max configurations to list" in line):
+                self.max_configurations_to_list = int(data)
+
             elif "use_messageviewer" in line or "use messageviewer" in line:
                 token = line.split()[-1].strip()
 
@@ -2769,7 +2783,7 @@ class FarmManager(Component):
         self.print_log("i", "%s: BOOT transition underway" % (rcu.date_and_time()))
         self.print_log("i", "%s: BOOT, self.debug_level=%i" % (rcu.date_and_time(),self.debug_level))
 
-        self.reset_variables()
+#        self.reset_variables()
         self.print_log("i", "%s: BOOT transition 0001 after reset_variables debug_level:%i" 
                        % (rcu.date_and_time(),self.debug_level))
 
@@ -3178,8 +3192,8 @@ class FarmManager(Component):
 
         self.check_run_record_integrity()
 #------------------------------------------------------------------------------
-# make sure run numbers could be encoded into directory names with leading zeroes
-########
+# make sure run numbers could be encoded into the directory names with leading zeroes
+#-------v----------------------------------------------------------------------
         for subdir in glob.glob("%s/[0-9]*" % (self.record_directory)): 
             rn_string = subdir.split("/")[-1]
             rn        = int(rn_string)
@@ -3191,10 +3205,9 @@ class FarmManager(Component):
                         % (self.run_number, subdir)))
 #------------------------------------------------------------------------------
 # Mu2e run numbers take up to 6 digits
-########
+#-------v----------------------------------------------------------------------
         rr_dir = self.run_record_directory();
         if os.path.exists(self.tmp_run_record):
-
             try:
                 shutil.copytree(self.tmp_run_record, rr_dir)
             except:
@@ -3210,7 +3223,7 @@ class FarmManager(Component):
                 return
 #------------------------------------------------------------------------------
 # P.Murat: it looks that the run_record_directory is always local 
-############
+#-----------v------------------------------------------------------------------------------
             pathlib.Path(rr_dir).touch();
             os.chmod(rr_dir, 0o555)
 
@@ -3226,7 +3239,7 @@ class FarmManager(Component):
             return
 #------------------------------------------------------------------------------
 # step X) put_config_info
-########
+#-------v------------------------------------------------------------------------------
         self.print_log("i", "\n%s: START transition 001 Pasha : before put_config_info\n" % (rcu.date_and_time()))
 
         try:
@@ -3257,16 +3270,14 @@ class FarmManager(Component):
                 )
 #------------------------------------------------------------------------------
 # start TRACE ???
-########
-        self.print_log("i", "\n%s: START transition underway 002 Pasha : before execute_trace_script\n" % (rcu.date_and_time()))
+#-------v----------------------------------------------------------------------
+        self.print_log("i", "%s: START transition 002 Pasha : before execute_trace_script\n" % (rcu.date_and_time()))
         self.execute_trace_script("start")
-
-        self.print_log("i", "\n%s: START transition underway 003 Pasha : self.manage_processes=%i\n" 
+        self.print_log("i", "%s: START transition 003 Pasha : self.manage_processes=%i\n" 
                        % (rcu.date_and_time(),self.manage_processes))
+
         if self.manage_processes:
-
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
-
             try:
                 self.do_command("Start")
             except Exception:
@@ -3278,27 +3289,15 @@ class FarmManager(Component):
 
         self.start_datataking()
 #------------------------------------------------------------------------------
-# P.Murat: one more example of how not to program in Python
+# P.Murat: the original gave one more example of how not to program in Python
 #------------------------------------------------------------------------------
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
-        self.print_log("i", "\n%s: START transition underway 003 Pasha :record_directory:%s run_number: %i [%s]\n" 
+        self.print_log("i", "%s: START transition 003 Pasha :record_directory:%s run_number: %i [%s]\n" 
                        % (rcu.date_and_time(),self.record_directory,self.run_number,start_time))
 
         self.save_metadata_value("FarmManager start time",start_time);
-#------------------------------------------------------------------------------
-# run processes have started softlinks to the logfiles of this run
-# this should go away
-########
-##        if self.manage_processes:
-##            starttime = time.time()
-##            self.print_log("i","\nAttempting to provide run-numbered softlinks to the logfiles...",1,False)
-##            self.print_log("d", "", 2)
-##            self.softlink_logfiles()
-##            endtime = time.time()
-##            self.print_log("i", "softlinks done (%.1f seconds)." % (endtime - starttime))
-
-        self.print_log("i", "\nRun info can be found locally at %s\n" % (self.run_record_directory()))
+        self.print_log("i", "Run info can be found locally at %s\n" % (self.run_record_directory()))
 
         self.complete_state_change("starting")
 #------------------------------------------------------------------------------
@@ -3310,14 +3309,12 @@ class FarmManager(Component):
 
         self.print_log("i","\n%s: START transition complete for run %d" % (rcu.date_and_time(), self.run_number))
         return
-
-
 #------------------------------------------------------------------------------
 # STOP the run
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
 
-        self.print_log("i","\n%s: STOP transition underway for run %d"%(rcu.date_and_time(),self.run_number))
+        self.print_log("i","%s: STOP transition underway for run %d"%(rcu.date_and_time(),self.run_number))
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
@@ -3379,7 +3376,7 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","\n%s: STOP transition complete for run %d"%(rcu.date_and_time(),self.run_number))
+        self.print_log("i","%s: STOP transition complete for run %d"%(rcu.date_and_time(),self.run_number))
         return
 
 #------------------------------------------------------------------------------

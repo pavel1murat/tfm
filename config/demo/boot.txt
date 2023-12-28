@@ -1,8 +1,5 @@
 #------------------------------------------------------------------------------
-daq_setup_script: $MRB_TOP/setup_ots.sh
 
-# debug level can range from 0 to 4 (increasing order of verbosity)
-debug_level: 4
 #------------------------------------------------------------------------------
 # subsystems  id    source     destination  fragmentMode   
 #------------------------------------------------------------------------------
