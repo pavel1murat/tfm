@@ -40,7 +40,7 @@ from inspect      import currentframe, getframeinfo
 #------------------------------------------------------------------------------
 # home brew
 #------------------------------------------------------------------------------
-from rc.control                 import subsystem
+from rc.control.subsystem       import Subsystem
 from rc.control.procinfo        import Procinfo
 
 from rc.io.timeoutclient        import TimeoutServerProxy
@@ -92,7 +92,7 @@ try:
 except ImportError:
     pass  # Users shouldn't need to worry if their installations don't yet have python_artdaq available
 
-from rc.control.config_functions_local import get_boot_info_base
+# from rc.control.config_functions_local import get_boot_info_base
 # from rc.control.config_functions_local import listdaqcomps_base
 
 try:
@@ -198,10 +198,10 @@ elif (management_method == "external_run_control"):
     from rc.control.all_functions_noop import process_launch_diagnostics_base
     from rc.control.all_functions_noop import mopup_process_base
 
-    def find_process_manager_variable_base(
-        self, line
-    ):  # Actually used in get_boot_info() despite external_run_control
-        return False
+#    def find_process_manager_variable_base(
+#        self, line
+#    ):  # Actually used in get_boot_info() despite external_run_control
+#        return False
 
 
 # This is the end of if-elifs of process management methods
@@ -344,7 +344,7 @@ class FarmManager(Component):
     def pmt_log_filename_format(self):
         return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
 
-    def boardreader_port_number(self,rank):
+    def component_port_number(self,rank):
         base_port           = int(os.environ["ARTDAQ_BASE_PORT"]);
         ports_per_partition = int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
         port                = base_port+100 + self.partition()*ports_per_partition+rank
@@ -357,8 +357,8 @@ class FarmManager(Component):
 # for now, it is boot.txt, the extension can change, depending on the future 
 # initialization mechanism, likely to become '.py'
 ####
-    def boot_filename(self):
-        return os.path.expandvars(self.config_dir+'/boot.txt')
+#    def boot_filename(self):
+#        return os.path.expandvars(self.config_dir+'/boot.txt')
 
 #------------------------------------------------------------------------------
 # WK 8/31/21
@@ -641,7 +641,7 @@ class FarmManager(Component):
     get_config_info                       = get_config_info_base
     put_config_info                       = put_config_info_base
     put_config_info_on_stop               = put_config_info_on_stop_base
-    get_boot_info                         = get_boot_info_base
+#    get_boot_info                         = get_boot_info_base
     #    listdaqcomps                          = listdaqcomps_base
     listconfigs                           = listconfigs_base
     save_run_record                       = save_run_record_base
@@ -838,7 +838,9 @@ class FarmManager(Component):
 
         if not os.path.exists(fn): raise Exception('Unable to find settings file %s'%fn)
 
-        inf = open(fn)
+        inf                    = open(fn)
+        num_expected_processes = 0
+        num_actual_processes   = 0
 
         for line in inf.readlines():
             line = os.path.expandvars(line).strip()
@@ -853,12 +855,142 @@ class FarmManager(Component):
             words = line.split(':');
             key   = words[0].strip()
             data  = words[1].strip()
+            par   = data.split();
+            npar  = len(par)
 
             if "advanced_memory_usage" in line or "advanced memory usage" in line:
                 res = re.search(r"[Tt]rue",data)
                 if res: self.advanced_memory_usage = True
+
+            elif "allowed_processors" in line or "allowed processors" in line:
+                self.allowed_processors = line.split()[-1].strip()
+
+#------------------------------------------------------------------------------
+# P.Murat: 'BoardReader label host port subsystem allowed_processors prepend'
+#          if the value of 'allowed_processors' is undefined (-1), set it to None
+#          prepend is smth prepenced to the boardreader launch command, looks 
+#          like a debugging tool
+#          set it to '' 
+#          assume no prepend for others 
+#          assume boardreaders are defined first
+#-----------v------------------------------------------------------------------
+            elif (key == "BoardReader"):
+                assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
+            
+                num_actual_processes += 1
+                rank                 = num_actual_processes-1
+            
+                label                = par[0]
+                host                 = par[1];
+                port                 = par[2];
+                if (port == "-1"): 
+                    port = str(self.component_port_number(rank));
+
+                subsystem            = par[3];
+
+                ap                   = None            # None = "allow all processors"
+                if (par[4] != "-1"  ): ap = par[4];
+
+                prepend              = "";
+                if (par[5] != "none"): prepend = par[5];
+            
+                target             = par[6];
+
+                p = Procinfo(name               = key      ,
+                             rank               = rank     ,
+                             host               = host     ,
+                             port               = port     ,
+                             label              = label    ,
+                             subsystem          = subsystem,
+                             allowed_processors = ap       ,
+                             target             = target   ,
+                             prepend            = prepend
+                    )
+                p.print()
+                self.procinfos.append(p);
+
+            elif "boardreader_priorities:" in line or "boardreader priorities:" in line:
+                res = re.search(r"^\s*boardreader[ _]priorities\s*:\s*(.*)", line)
+                if res:
+                    self.boardreader_priorities = [
+                        regexp.strip() for regexp in res.group(1).split()
+                    ]
+                else:
+                    raise Exception('Incorrectly formatted line "%s" in %s'%(line.strip(),fn))
+            elif ("boardreader_priorities_on_config:" in line or "boardreader priorities on config:" in line):
+                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]config:\s*(.*)", line)
+                if res:
+                    self.boardreader_priorities_on_config = [
+                        regexp.strip() for regexp in res.group(1).split()
+                    ]
+                    # print self.boardreader_priorities_on_config
+                else:
+                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
+            elif (
+                "boardreader_priorities_on_start:" in line or "boardreader priorities on start:" in line):
+                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]start:\s*(.*)", line)
+                if res:
+                    self.boardreader_priorities_on_start = [
+                        regexp.strip() for regexp in res.group(1).split()
+                    ]
+                    # print self.boardreader_priorities_on_start
+                else:
+                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
+
+            elif ("boardreader_priorities_on_stop:" in line or "boardreader priorities on stop:" in line):
+                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]stop:\s*(.*)", line)
+                if res:
+                    self.boardreader_priorities_on_stop = [
+                        regexp.strip() for regexp in res.group(1).split()
+                    ]
+                    # print self.boardreader_priorities_on_stop
+                else:
+                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
+
             elif "boardreader_timeout" in line or "boardreader timeout" in line:
                 self.boardreader_timeout = int(line.split()[-1].strip())
+
+            elif ((key == "DataLogger"    ) or 
+                  (key == "Dispatcher"    ) or 
+                  (key == "EventBuilder"  ) or 
+                  (key == "RoutingManager")    ):
+
+                assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
+
+                num_actual_processes += 1
+                rank                  = num_actual_processes - 1
+
+                label                 = par[0]
+                host                  = par[1]
+                port                  = par[2]
+                if (port == "-1"): 
+                    port = str(self.component_port_number(rank));
+                    
+                subsystem             = par[3]
+
+                ap                    = None            # None = "allow all processors"
+                if (par[4] != "-1"): ap = par[4]
+
+                prepend               = "";
+                if (par[5] != "none"): prepend = par[5]
+
+                target                = None
+                if (par[6] != "none"): target = par[6]
+#------------------------------------------------------------------------------
+# remember, boardreaders should be defined in the input file first
+#---------------v--------------------------------------------------------------
+                p = Procinfo(name               = key      ,
+                             label              = label    ,
+                             rank               = rank     ,
+                             host               = host     ,
+                             port               = port     , 
+                             subsystem          = subsystem,
+                             allowed_processors = ap       ,
+                             target             = target   ,
+                             prepend            = prepend
+                    )
+                p.print();
+                self.procinfos.append(p)
 
             elif "datalogger_timeout" in line or "datalogger timeout" in line:
                 self.datalogger_timeout = int(line.split()[-1].strip())
@@ -866,6 +998,11 @@ class FarmManager(Component):
             elif (key == "daq_setup_script"):
                 self.daq_setup_script = data;
                 self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
+
+            elif "data_directory_override" in line or "data directory override" in line:
+                self.data_directory_override = data
+                if self.data_directory_override[-1] != "/":
+                    self.data_directory_override = self.data_directory_override + "/"
 
             elif (key == "debug_level"):
                 self.debug_level = int(data)
@@ -899,52 +1036,12 @@ class FarmManager(Component):
             elif "dispatcher_timeout" in line or "dispatcher timeout" in line:
                 self.dispatcher_timeout = int(line.split()[-1].strip())
 
-            elif "boardreader_priorities:" in line or "boardreader priorities:" in line:
-                res = re.search(r"^\s*boardreader[ _]priorities\s*:\s*(.*)", line)
-                if res:
-                    self.boardreader_priorities = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s'%(line.strip(),fn))
-            elif ("boardreader_priorities_on_config:" in line or "boardreader priorities on config:" in line):
-                res = re.search(
-                    r"^\s*boardreader[ _]priorities[ _]on[ _]config:\s*(.*)", line
-                )
-                if res:
-                    self.boardreader_priorities_on_config = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_config
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-            elif (
-                "boardreader_priorities_on_start:" in line or "boardreader priorities on start:" in line):
-                res = re.search(
-                    r"^\s*boardreader[ _]priorities[ _]on[ _]start:\s*(.*)", line
-                )
-                if res:
-                    self.boardreader_priorities_on_start = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_start
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-
-            elif ("boardreader_priorities_on_stop:" in line or "boardreader priorities on stop:" in line):
-                res = re.search(
-                    r"^\s*boardreader[ _]priorities[ _]on[ _]stop:\s*(.*)", line
-                )
-                if res:
-                    self.boardreader_priorities_on_stop = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_stop
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-
             elif "eventbuilder_timeout" in line or "eventbuilder timeout" in line:
                 self.eventbuilder_timeout = int(line.split()[-1].strip())
+
+            elif "fake_messagefacility" in line or "fake messagefacility" in line:
+                res = re.search(r"[Tt]rue",data)
+                if res: self.fake_messagefacility = True
 
             elif "log_directory" in line or "log directory" in line:
                 self.log_directory = line.split()[-1].strip()
@@ -1021,35 +1118,46 @@ class FarmManager(Component):
 
                 if res:
                     self.strict_fragment_id_mode = True
-            elif "fake_messagefacility" in line or "fake messagefacility" in line:
-                token = line.split()[-1].strip()
 
-                res = re.search(r"[Tt]rue", token)
+            elif (key == "Subsystem"):
+                s           = Subsystem();
+                s.id        = par[0];                        # should always be defined
 
-                if res:
-                    self.fake_messagefacility = True
-            elif "data_directory_override" in line or "data directory override" in line:
-                self.data_directory_override = line.split()[-1].strip()
-                if self.data_directory_override[-1] != "/":
-                    self.data_directory_override = self.data_directory_override + "/"
-            elif "transfer_plugin_to_use" in line or "transfer plugin to use" in line:
-                self.transfer = line.split()[-1].strip()
-            elif "allowed_processors" in line or "allowed processors" in line:
-                self.allowed_processors = line.split()[-1].strip()
+                s.source    = None
+                if (par[1] != "none"): s.source      = par[1];
+
+                s.destination  = None;
+                if (par[2] != "none"): s.destination = par[2];
+
+                s.fragmentMode = par[3];                        # should always be defined
+                
+                # breakpoint()
+                self.subsystems[s.id] = s
+
             elif "max_launch_checks" in line or "max launch checks" in line:
-                self.max_num_launch_procs_checks = int(line.split()[-1].strip())
+                self.max_num_launch_procs_checks = int(data)
+
             elif "launch_procs_wait_time" in line or "launch procs wait time" in line:
-                self.launch_procs_wait_time = int(line.split()[-1].strip())
+                self.launch_procs_wait_time = int(data)
+
             elif "kill_existing_processes" in line or "kill existing processes" in line:
-                token = line.split()[-1].strip()
+                res = re.search(r"[Tt]rue", data)
+                if res: self.attempt_existing_pid_kill = True
 
-                res = re.search(r"[Tt]rue", token)
-
-                if res:
-                    self.attempt_existing_pid_kill = True
+            elif "transfer_plugin_to_use" in line or "transfer plugin to use" in line:
+                self.transfer = data
 
             elif (key == 'validate_setup_script'):
                 self._validate_setup_script = int(data)
+            else:
+#------------------------------------------------------------------------------
+# JCF, Mar-29-2019
+# In light of the experience at ProtoDUNE, it appears necessary to allow experiments 
+# an ability to overwrite FHiCL parameters at will in the boot file. A use case that
+# came up was that a fragment generator had a parameter whose value needed to be a function 
+# of the partition, but the fragment generator had no direct knowledge of what partition it was on
+#---------------v--------------------------------------------------------------
+                self.bootfile_fhicl_overwrites[key] = data
 #------------------------------------------------------------------------------
 # end of the input loop
 # make sure all needed variables were properly initialized
@@ -1120,7 +1228,14 @@ class FarmManager(Component):
             self.boardreader_priorities_on_config = self.boardreader_priorities
             self.boardreader_priorities_on_start = self.boardreader_priorities
             self.boardreader_priorities_on_stop = self.boardreader_priorities
-
+#------------------------------------------------------------------------------
+# after the 'settings' file has been read in, check that everything is in place
+#------------------------------------------------------------------------------
+        self.check_boot_info()
+        return
+#------------------------------------------------------------------------------
+#
+#---v--------------------------------------------------------------------------
     def check_proc_transition(self, target_state):
 
         is_all_ok = True
@@ -1602,13 +1717,13 @@ class FarmManager(Component):
         elif self.debug_level      is None: undefined_var = "debug_level"
 
         if undefined_var :
-            raise Exception(rcu.make_paragraph('Error: "%s" undefined in FarmManager boot file' % (undefined_var)))
+            raise Exception(rcu.make_paragraph('Error: "%s" undefined in FarmManager settings file' % (undefined_var)))
 
         if self.debug_level == 0:
             self.print_log("w",rcu.make_paragraph(
-                ('"debug level" is set to %d in the boot file, %s; while this isn\'t an error '
+                ('"debug_level" is set to 0 in the settings file, %s; while this isn\'t an error '
                  'due to reasons of backwards compatibility, use of this debug level is highly discouraged')
-                % (self.debug_level, self.boot_filename()))
+                % (self.settings_filename()))
             )
 
         if not os.path.exists(self.daq_setup_script):
@@ -1618,7 +1733,7 @@ class FarmManager(Component):
 
         if num_requested_routingmanagers > len(self.subsystems):
             raise Exception(rcu.make_paragraph(
-                ("%d RoutingManager processes defined in the boot file provided; "
+                ("%d RoutingManager processes defined in the settings file provided; "
                  "you can't have more than the number of subsystems (%d)")
                 % (num_requested_routingmanagers, len(self.subsystems)))
             )
@@ -1628,7 +1743,7 @@ class FarmManager(Component):
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
             raise Exception(rcu.make_paragraph(
                     ("At least one of your desired artdaq processes has a duplicate label; "
-                     "please check the boot file to ensure that each process gets a unique label"))
+                     "please check the settings file to ensure that each process gets a unique label"))
             )
 
         for ss in self.subsystems:
@@ -2533,7 +2648,7 @@ class FarmManager(Component):
                     self.print_log("e",
                                    rcu.make_paragraph(
                                     ('In order to investigate what happened, you can try re-running with "debug level"'
-                                     ' in your boot file set to 4. If that doesn\'t help, you can directly recreate'
+                                     ' in your settings file set to 4. If that doesn\'t help, you can directly recreate'
                                      ' what FarmManager did by doing the following:')
                                    ),
                     )
@@ -2791,52 +2906,50 @@ class FarmManager(Component):
         self.fState.set_completed(0);
 
         os.chdir(self.base_dir)
-        boot_fn = self.boot_filename();
 
-        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" 
-                       % (rcu.date_and_time(),boot_fn,self.debug_level))
+#        boot_fn = self.boot_filename();
+#        self.print_log("i", "%s: BOOT transition 0002 boot_fn: %s, debug_level:%i" 
+#                       % (rcu.date_and_time(),boot_fn,self.debug_level))
 
-        if not os.path.exists(boot_fn):
-            raise Exception('ERROR: boot file %s does not exist' % boot_fn)
+#        if not os.path.exists(boot_fn):
+#            raise Exception('ERROR: boot file %s does not exist' % boot_fn)
 #------------------------------------------------------------------------------
 # P.Murat : it looks that a boot file name could have a .fcl extension... wow!
 #           we're not using that ....
 #-------v----------------------------------------------------------------------
-        dummy, file_extension = os.path.splitext(boot_fn)
+#        dummy, file_extension = os.path.splitext(boot_fn)
 
-        if file_extension == ".fcl":
-            try:
-                self.create_setup_fhiclcpp_if_needed()
-                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
-            except:
-                raise
-
-            self.boot_filename = "/tmp/boot_%s_partition%d.txt" % (self.fUser,self.partition())
-
-            if os.path.exists(self.boot_filename):
-                os.unlink(self.boot_filename)
-
-            assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (self.fUser))
-
-            cmd    = "%s/bin/defhiclize_boot_file.sh %s > %s" % (os.environ["TFM_DIR"],boot_filename,self.boot_filename)
-            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
-                                      stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL).wait()
-            if status != 0:
-                raise Exception('Error: the command "%s" returned nonzero' % cmd)
+#        if file_extension == ".fcl":
+#            try:
+#                self.create_setup_fhiclcpp_if_needed()
+#                self.print_log("i", "%s: BOOT transition 00021 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+#            except:
+#                raise
+#
+#            self.boot_filename = "/tmp/boot_%s_partition%d.txt" % (self.fUser,self.partition())
+#
+#            if os.path.exists(self.boot_filename):
+#                os.unlink(self.boot_filename)
+#
+#            assert os.path.exists("%s/bin/defhiclize_boot_file.sh" % (self.fUser))
+#
+#            cmd    = "%s/bin/defhiclize_boot_file.sh %s > %s" % (os.environ["TFM_DIR"],boot_filename,self.boot_filename)
+#            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+#                                      stdout=subprocess.DEVNULL,
+#                                      stderr=subprocess.DEVNULL).wait()
+#            if status != 0:
+#                raise Exception('Error: the command "%s" returned nonzero' % cmd)
 #------------------------------------------------------------------------------
 # P.Murat: here the boot.txt file is being read and parsed
 #-------v----------------------------------------------------------------------
-        try:
-            self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
-            self.get_boot_info(self.boot_filename())
-            self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
-            self.check_boot_info()
-            self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
-        except Exception:
-            revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
-            return
-
+#         try:
+#             self.print_log("i", "%s: BOOT transition 00022 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+#             self.get_boot_info(self.boot_filename())
+#             self.print_log("i", "%s: BOOT transition 0003 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+#             self.print_log("i", "%s: BOOT transition 0004 debug_level:%i" % (rcu.date_and_time(),self.debug_level))
+#         except Exception:
+#             revert_failed_boot('when trying to read the TFM boot file "%s"' % (self.boot_filename()))
+#             return
 #------------------------------------------------------------------------------
 # See the Procinfo.__lt__ function for details on sorting
 #-------v----------------------------------------------------------------------
@@ -3144,12 +3257,12 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # at this point, metadata.txt shall exist in self.tmp_run_record
 #------------------------------------------------------------------------------
-            for filestub in ["metadata", "boot"]:
-                with open("%s/%s.txt" % (self.tmp_run_record, filestub)) as inf:
-                    contents = inf.read()
-                    contents = re.sub("'", '"', contents)
-                    contents = re.sub('"', '"', contents)
-                    labeled_fhicl_documents.append((filestub, 'contents: "\n%s\n"\n' % (contents)))
+#            for filestub in ["metadata", "boot"]:
+#                with open("%s/%s.txt" % (self.tmp_run_record, filestub)) as inf:
+#                    contents = inf.read()
+#                    contents = re.sub("'", '"', contents)
+#                    contents = re.sub('"', '"', contents)
+#                    labeled_fhicl_documents.append((filestub, 'contents: "\n%s\n"\n' % (contents)))
 
             self.archive_documents(labeled_fhicl_documents)
 

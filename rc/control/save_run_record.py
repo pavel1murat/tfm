@@ -41,19 +41,20 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # For good measure, let's also save the TFM configuration file
 # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
+# P.M. no boot.txt file anymore - everything is in 'settings'
 ####
 
-    boot_fn           = self.boot_filename()
-    config_saved_name = os.path.basename(boot_fn);
+#    boot_fn           = self.boot_filename()
+#    config_saved_name = os.path.basename(boot_fn);
 
-    with open("%s/%s" % (outdir, config_saved_name), "w") as outf:
-        with open(boot_fn) as inf:
-            for line in inf.readlines():
-                outf.write(os.path.expandvars(line))
+#    with open("%s/%s" % (outdir, config_saved_name), "w") as outf:
+#        with open(boot_fn) as inf:
+#            for line in inf.readlines():
+#                outf.write(os.path.expandvars(line))
 
-    out_fn = "%s/%s" % (outdir, config_saved_name)
-    if not os.path.exists(out_fn):
-        self.alert_and_recover("Problem creating file "+out_fn)
+#    out_fn = "%s/%s" % (outdir, config_saved_name)
+#    if not os.path.exists(out_fn):
+#        self.alert_and_recover("Problem creating file "+out_fn)
 
     # As well as the DAQ setup script
 
