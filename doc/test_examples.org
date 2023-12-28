@@ -1,4 +1,4 @@
-#
+#+startup:fold
 * ------------------------------------------------------------------------------
 * TFM examples                                                               
 - Each example - a set of files in a subdirectory uner $TFM_DIR/config/$example
@@ -10,19 +10,26 @@ usually partition=11
 - ARTDAQ demo with 6 processess: two boardreaders, two event builders, 
   one dispatcher and one logger, all running on the same machine
 
-- DQM prototype running : check file:../config/demo/dqm_client01.fcl 
-- DQM prototype uses modules from [[file:../../artdaq_demo/artdaq-demo/ArtModules]]
 - ignore boot.py and boot.json - for now, those are just prototypes
+
 - to run ARTDAQ demo example, need artdaq_demo and artdaq_demo_core - 
   the test example configuration assumes saving hash from artdaq_demo
+
+- can also run a DQM prototype with ROOT webGUI: check file:../config/demo/dqm_client01.fcl 
+  here is the checkout sequence:
 #+begin_src 
 git clone https://github.com/pavel1murat/tfm 
-git clone https://github.com/art-daq/artdaq_demo
+git clone https://github.com/pavel1murat/artdaq_demo
+pushd artdaq_demo
+git checkout pasha/rootwebgui
+popd
 git clone https://github.com/art-daq/artdaq_core_demo
 mrb uc
 mrbsetenv
 mrb b
+mu2e -c ./config/demo/dqm_client01.fcl
 #+end_src
+- after the client starts receiving events, point the browser to https://localhost:8877/win1/
 ** file:../config/stm_swtest_001                                             
 - reformat STM file into ART format
 - configuration: [[file:../config/stm_swtest_001/settings]]

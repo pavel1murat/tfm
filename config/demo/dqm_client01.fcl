@@ -2,19 +2,18 @@
 #------------------------------------------------------------------------------
 # P.M.
 # module labels can't have underscores in them....
-# when running 'demo', at any time, in a separate window, can submit a DQM client 
-# (of course, setup the Mu2e online environment first): 
+# when running the ARTDAQ 'demo' example, at any time, can submit in a separate window 
+# a DQM client (of course, setup the Mu2e online environment first): 
 # 
-# mu2e -c config/demo/dqm_client.fcl
+# mu2e -c config/demo/dqm_client01.fcl
 #
-# the job wil be just receiving events, OK for an example
-# there are two parameters called 'unique_label' 
-# should they be unique or they could be the same ? - they could be the same
+# the job will be just receiving events and filling a few histograms shown on two canvases:
+# - http://localhost:8877/win1/
+# - http://localhost:8877/win2/
 #------------------------------------------------------------------------------
 # #include "Offline/fcl/minimalMessageService.fcl"# 
 #include "Offline/fcl/standardProducers.fcl"
 #include "Offline/fcl/standardServices.fcl"
-# #include "Offline/Trigger/fcl/prolog_trigger.fcl"
 #------------------------------------------------------------------------------
 process_name: TrackerDQM
 
@@ -28,8 +27,8 @@ services: {
 
     message :       @local::default_message
     GeometryService :       {
-        inputFile  : "Offline/Mu2eG4/geom/geom_common.txt"
-        bFieldFile : "Offline/Mu2eG4/geom/bfgeom_reco_v01.txt"
+        inputFile         : "Offline/Mu2eG4/geom/geom_common.txt"
+        bFieldFile        : "Offline/Mu2eG4/geom/bfgeom_reco_v01.txt"
         simulatedDetector : {tool_type: "Mu2e"}
     }
     ConditionsService       : { conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
@@ -69,6 +68,7 @@ services.message: {
 }
 #------------------------------------------------------------------------------
 # input
+# rank uniquely identifies the ARTDAQ process
 #------------------------------------------------------------------------------
 TransferPluginConfig: {
     transferPluginType : TCPSocket
@@ -83,14 +83,8 @@ TransferPluginConfig: {
                          ]
     
     max_fragment_size_words : 1048576
-    source_rank             : 5          ## listening to dispatcher
-    destination_rank        : 100
-#------------------------------------------------------------------------------
-# who knows what this is needed for ? 
-# or it is just an FCL line propagated from an OTS-based configuration 
-# and not needed here ?
-#------------------------------------------------------------------------------
-    unique_label            : "DQMClient01"
+    source_rank             : 5          ## dispatcher
+    destination_rank        : 100        ## DQM client
 }
 
 source: {
@@ -185,12 +179,19 @@ physics: {
 #                    file:artdaq_demo/artdaq-demo/ArtModules/WFViewer_module.cc
 # should be able to view its histograms on the web
 #------------------------------------------------------------------------------
-        ra: { module_type: RootApplication
-            web_gui      : true
-            dont_quit    : true
-        }
+#         ra: { module_type: RootApplication
+#             force_new    : true
+#             dont_quit    : true
+#         }
+#  
+#         wf: { module_type: WFViewer
+#             prescale     : 1
+#             num_x_plots  : 2
+#             num_y_plots  : 1
+#             fragment_ids : [0,1,2,3,4,5,6,7,8,9]
+#         }
 
-        wf: { module_type: WFViewer
+        demoViewer: { module_type: DemoViewer
             prescale     : 1
             num_x_plots  : 2
             num_y_plots  : 1
@@ -198,9 +199,10 @@ physics: {
         }
      }
 
-    p1 : [ra, wf]
+#    p1 : [ra, wf]
+    p2 : [ demoViewer ]
 
-    end_paths : [ p1 ]
+    end_paths : [ p2 ]
 
     out : [  ]
 }
