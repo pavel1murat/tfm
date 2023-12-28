@@ -1,19 +1,32 @@
 #------------------------------------------------------------------------------
 # migrated from boot.txt
 #------------------------------------------------------------------------------
-daq_setup_script: $MRB_TOP/setup_ots.sh
-#     location of the ARTDAQ setup script 
-debug_level: 4
-#     debug level can range from 0 to 4 (increasing level of verbosity)
-# disable_recovery: true/false
-#     TO BE EXPLAINED
-# manage_processes: true/false
-#     TO BE EXPLAINED
-# request address : 
-#     TO BE EXPLAINED
-
-
-
+daq_setup_script  : $MRB_TOP/setup_ots.sh  # location of the ARTDAQ setup script 
+debug_level       : 4                      # debug_level ranges from 0 to 4 in increasing level of verbosity
+# disable_recovery: true/false             # TO BE EXPLAINED
+# manage_processes: true/false             # TO BE EXPLAINED
+# request address :                        # TO BE EXPLAINED
+#------------------------------------------------------------------------------
+# processes are organized in subsystems, by default there is only one 
+# need more explanation
+# subsystems  id    source     destination  fragmentMode   
+#------------------------------------------------------------------------------
+Subsystem   :  1     none         none          none
+#------------------------------------------------------------------------------
+# adopt fixed format for boardreaders and friends - and keep it simple
+#
+#              label         host      port subsystem  allowed   prepend target
+#                                                     processors
+#------------------------------------------------------------------------------
+BoardReader : boardreader01  localhost   -1    1          -1       none    none 
+BoardReader : boardreader02  localhost   -1    1          -1       none    none 
+#
+EventBuilder: eventbuilder01 localhost   -1    1          -1       none    none
+EventBuilder: eventbuilder02 localhost   -1    1          -1       none    none
+#
+DataLogger  : datalogger01   localhost   -1    1          -1       none    none
+#
+Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
 #------------------------------------------------------------------------------
 # JCF, Sep-16-2017
 
@@ -61,14 +74,12 @@ advanced_memory_usage       : true ## default "false".
 #
 # use_messagefacility       : true
 #     - dont really know what that does
-# fake_messagefacility      : false
-#     - when set to true, TFM will format its messages to appear like MessageFacility messages
-#
 use_messageviewer           : false
 #     By default, if windowing is supported and artdaq_mfextensions is installed, 
 #     a MessageViewer window will pop up during runs which will print out messages 
 #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
-#
+# fake_messagefacility      : false
+#     - when set to true, TFM will format its messages to appear like MessageFacility messages
 # disable_unique_rootfile_labels: true
 #     TO BE EXPLAINED
 # kill_existing_processes       : 

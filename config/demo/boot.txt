@@ -1,91 +1,91 @@
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# subsystems  id    source     destination  fragmentMode   
-#------------------------------------------------------------------------------
-Subsystem  :  1       none        none          none
-#------------------------------------------------------------------------------
-# adopt fixed format for boardreaders and friends - and keep it simple
-#
-#              label         host      port subsystem  allowed   prepend target
-#                                                     processors
-#------------------------------------------------------------------------------
-BoardReader : boardreader01  localhost   -1    1          -1       none    none 
-BoardReader : boardreader02  localhost   -1    1          -1       none    none 
-#
-EventBuilder: eventbuilder01 localhost   -1    1          -1       none    none
-EventBuilder: eventbuilder02 localhost   -1    1          -1       none    none
-#
-DataLogger  : datalogger01   localhost   -1    1          -1       none    none
-#
-Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
-#------------------------------------------------------------------------------
-# P.M. former settings file
-#
-# JCF, Sep-16-2017
-#
-# This file is an example of a settings file which would work with an
-# artdaq-demo installation, assuming the installation was performed
-# with artdaq-demo's quick-mrb-start.sh script. It is valid as of
-# artdaq-demo v2_10_02; more details on artdaq-demo installation can
-# be found in
-# https://cdcvs.fnal.gov/redmine/projects/artdaq-demo/wiki. Note that
-# the user will need to (A) make sure that a directory called
-# $HOME/run_records has been created and (B) make sure to set the
-# productsdir_for_bash_scripts variable, below, to a products
-# directory containing the xmlrpc_c package (needed for DAQInterface
-# to receive commands)
-#
-# For more information on these variables and what they mean, see the
-# relevant section of the DAQInterface wiki,
-# https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
-#------------------------------------------------------------------------------
-# to be merged with boot.txt
-# P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
-#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
-#------------------------------------------------------------------------------
-# log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
-# data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
-# record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
-# productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
+# P.Murat: contents of boot.txt moved to settings, keep this file for history only
 # 
-# package_hashes_to_save      : [ artdaq-demo, artdaq ]
-# 
-# boardreader timeout         : 60
-# eventbuilder timeout        : 30
-# datalogger timeout          : 30
-# dispatcher timeout          : 30
-# routing_manager timeout     : 30
-# aggregator timeout          : 30
-# 
-# advanced_memory_usage       : true
-# 
-# use_messageviewer           : false
-# #     By default, if windowing is supported and artdaq_mfextensions is installed, 
-# #     a MessageViewer window will pop up during runs which will print out messages 
-# #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
-# 
-# # disable_unique_rootfile_labels: true
-# # max_fragment_size_bytes       : 1024000
-# # max_configurations_to_list    : 
-# # fake_messagefacility 
-# #     When set to true, DAQInterface will format its messages to appear like MessageFacility messages
-# # boardreader_priorities 
-# #     Formatted as a set of regular expressions, e.g.:boardreader_priorities: component01 component.*, 
-# #     this tells DAQInterface how to order the transitions it sends the BoardReader processes. 
-# #     In this example, in the case of "init" (during the config transition) and "start" (during the start transition), 
-# #     DAQInterface would first send the command for component01, wait for a successful response, 
-# #     and then send the commands in no particular order to the remaining components. 
-# #     During stop or terminate, the reverse is true.
-# # transfer_plugin_to_use : "Autodetect"
-# #     The name of the transfer plugin to use to send data between processes; defaults to "Autodetect". 
-# #     Only set this if you're sure you know what you're doing.
-# # advanced_memory_usage : "false". 
-# #     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing 
-# #     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
-# #     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
-# #     Info is provided in the memory management details section.
-# #
-# validate_setup_script              : false
 # #------------------------------------------------------------------------------
-
+# # subsystems  id    source     destination  fragmentMode   
+# #------------------------------------------------------------------------------
+# Subsystem  :  1       none        none          none
+# #------------------------------------------------------------------------------
+# # adopt fixed format for boardreaders and friends - and keep it simple
+# #
+# #              label         host      port subsystem  allowed   prepend target
+# #                                                     processors
+# #------------------------------------------------------------------------------
+# BoardReader : boardreader01  localhost   -1    1          -1       none    none 
+# BoardReader : boardreader02  localhost   -1    1          -1       none    none 
+# #
+# EventBuilder: eventbuilder01 localhost   -1    1          -1       none    none
+# EventBuilder: eventbuilder02 localhost   -1    1          -1       none    none
+# #
+# DataLogger  : datalogger01   localhost   -1    1          -1       none    none
+# #
+# Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
+# #------------------------------------------------------------------------------
+# # P.M. former settings file
+# #
+# # JCF, Sep-16-2017
+# #
+# # This file is an example of a settings file which would work with an
+# # artdaq-demo installation, assuming the installation was performed
+# # with artdaq-demo's quick-mrb-start.sh script. It is valid as of
+# # artdaq-demo v2_10_02; more details on artdaq-demo installation can
+# # be found in
+# # https://cdcvs.fnal.gov/redmine/projects/artdaq-demo/wiki. Note that
+# # the user will need to (A) make sure that a directory called
+# # $HOME/run_records has been created and (B) make sure to set the
+# # productsdir_for_bash_scripts variable, below, to a products
+# # directory containing the xmlrpc_c package (needed for DAQInterface
+# # to receive commands)
+# #
+# # For more information on these variables and what they mean, see the
+# # relevant section of the DAQInterface wiki,
+# # https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
+# #------------------------------------------------------------------------------
+# # to be merged with boot.txt
+# # P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+# #      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
+# #------------------------------------------------------------------------------
+# # log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
+# # data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
+# # record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+# # productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
+# # 
+# # package_hashes_to_save      : [ artdaq-demo, artdaq ]
+# # 
+# # boardreader timeout         : 60
+# # eventbuilder timeout        : 30
+# # datalogger timeout          : 30
+# # dispatcher timeout          : 30
+# # routing_manager timeout     : 30
+# # aggregator timeout          : 30
+# # 
+# # advanced_memory_usage       : true
+# # 
+# # use_messageviewer           : false
+# # #     By default, if windowing is supported and artdaq_mfextensions is installed, 
+# # #     a MessageViewer window will pop up during runs which will print out messages 
+# # #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
+# # 
+# # # disable_unique_rootfile_labels: true
+# # # max_fragment_size_bytes       : 1024000
+# # # max_configurations_to_list    : 
+# # # fake_messagefacility 
+# # #     When set to true, DAQInterface will format its messages to appear like MessageFacility messages
+# # # boardreader_priorities 
+# # #     Formatted as a set of regular expressions, e.g.:boardreader_priorities: component01 component.*, 
+# # #     this tells DAQInterface how to order the transitions it sends the BoardReader processes. 
+# # #     In this example, in the case of "init" (during the config transition) and "start" (during the start transition), 
+# # #     DAQInterface would first send the command for component01, wait for a successful response, 
+# # #     and then send the commands in no particular order to the remaining components. 
+# # #     During stop or terminate, the reverse is true.
+# # # transfer_plugin_to_use : "Autodetect"
+# # #     The name of the transfer plugin to use to send data between processes; defaults to "Autodetect". 
+# # #     Only set this if you're sure you know what you're doing.
+# # # advanced_memory_usage : "false". 
+# # #     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing 
+# # #     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
+# # #     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
+# # #     Info is provided in the memory management details section.
+# # #
+# # validate_setup_script              : false
+# # #------------------------------------------------------------------------------
+# 

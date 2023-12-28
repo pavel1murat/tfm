@@ -1,4 +1,5 @@
 #------------------------------------------------------------------------------
+# P.murat: boot.txt is obsolete, everything moved to settings... keep just in case
 # only one ':' on the line is allowed
 #------------------------------------------------------------------------------
 daq_setup_script   : $MRB_TOP/setup_ots.sh

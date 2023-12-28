@@ -4,15 +4,16 @@
 * TFM : the Trigger Farm Manager                                             
 - forked from artdaq_daqinterface/fc/control/DAQInterface.py
 - goals : 
-  - reduce number of transitions
+  - reduce the number of transitions
+  - reduce the transition times
+  - encode run number in to filenames
   - get rid of symlinks in the logfile naming
   - make sure that the server can provide any diagnostics information needed for 
-  - split configurations from teh farm manager scripts themselves
+  - split configurations from the farm manager scripts themselves
   - provide troubleshooting of the farm performance
   - integrate with MIDAS as a frontend client
 * ------------------------------------------------------------------------------
-* [[file:software_setup.org][software setup]]
-* TODO [0/1]  farm_manager.py: server managing the trigger farm              
+* farm_manager.py: server managing the trigger farm                          
 ** command line parameters                                                   
 - example: 
 #+begin_src
@@ -21,13 +22,13 @@ partition=8
 source tfm_configure $configuration $partition
 $TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
 #+end_src
-** Comments:
-   -- env['ARTDAQ_PARTITION_NUMBER'] is set by [[file:../bin/tfm_configure][tfm_configure]] and used by the farm_manager
+** Comments:                                                                 
+   -- env['ARTDAQ_PARTITION_NUMBER'] is set by [[file:../bin/tfm_configure][tfm_configure]] and used by TFM
 
    -- the TFM port number = 10000+1000*partition_number, no need to improvise
 
-   -- the configuration dir could be anywhere, and TFM should not be making assumptions
-      about it
+   -- the configuration dir could be anywhere, and TFM should not be 
+      making assumptions about it
 
    -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
       (when debugging a given configuration, may want to create a copy)
@@ -45,17 +46,12 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
 |                    |                                 |      |             | on the command line. Last config-dir path component (subdirectory) |
 |                    |                                 |      |             | is the configuration name                                          |
 |--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-- knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
-- at startup, TFM goes directly into a 'booted' state
+*** TFM knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
+*** at startup, TFM goes directly into a 'booted' state
+- 'config' and 'start' are merged into 'start'
 - 'config' step defines new run number and configures the farm for that
-- start 
-- stop actually stops the procecesses, so new 'configure' is needed
-- however, the TFM is in 'ready' state, so cant run 'congig' transition
-- shutdown transitions the farm from 'ready' to 'booted' state
-- not clear, what it actually is doing
-- but after 'shutdown' can do next 'config'
-- need to figure the difference between the 'terminate' and 'shutdown'
-- states  : Ready, Running, Paused, Stopped
+- stop actually stops the processes
+- stable states  : 'initialized', 'running', 'paused', 'stopped'
 - commands: Init , Start, Pause, Resume, Stop, Shutdown
 - transition commands sent by [[file:../bin/tfm_transition][tfm_transition]]
   - boot,
@@ -67,24 +63,26 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
   - disable
   - stop
   - terminate
-** TODO [0/1] internal variables and their quirks                            
-*** TODO debug_level: when set to zero,  the environment gets corrupted      
-    for the moment, set to 1, and work around
 * configuration                                                              
-- the farm configuration consists of the following files:
--   boot.txt : defines components the farm configuration
--   [[file:settings.org][settings]] : defined additional farm configuration parameters               
--              (to be merged with boot.txt)
--   .FCL files : one file per component                                       
--                component 'x' has its FCL file named 'x.fcl'
-- the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
--      directory created in /tmp/`uuidgen` by 
--      [[file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
--      see self.get_config_info() there 
--      after being copied, they are checked for being unique - not sure how one 
--      can make such a mistake
--      also what are multiple subconfigurations ?
+** the TFM configuration is defined in a subdirectory 
+         $TFM_FHICL_DIRECTORY/$config_name. 
+The subdirectory should contain the following files :
+*** [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
+    and additional configuration parameters               
+*** .FCL files : one file per component                                      
+ a component named 'x' has its FCL file named 'x.fcl'
 
+the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
+directory created in /tmp/`uuidgen` by TFM - see 
+[[
+file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
+
+see self.get_config_info() there 
+
+- after being copied, the files are checked for being unique 
+  not sure how one can make such a mistake
+
+- also what are multiple subconfigurations ?
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
@@ -180,9 +178,8 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
 * error codes                                                                
 - 140: 
 * ------------------------------------------------------------------------------
-* [[file:work_in_progress.org][work_in_progress]]
+* [[file:work_in_progress.org][work_in_progress and TODO items]]
 * ------------------------------------------------------------------------------
-* attic
-* ------------------------------------------------------------------------------
+* attic                                                                      
 ** [[file:artdaq_daqinterface.org]]
 * ------------------------------------------------------------------------------

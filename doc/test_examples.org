@@ -7,47 +7,51 @@ usually partition=11
 * ------------------------------------------------------------------------------
 * tested examples                                                            
 ** [[file:../config/demo]]                                                       
-- ARTDAQ demo with 6 processess: two boardreaders, two event builders, dispatcher and logger
-- all running on the same machine
+- ARTDAQ demo with 6 processess: two boardreaders, two event builders, 
+  one dispatcher and one logger, all running on the same machine
+
 - DQM prototype running : check file:../config/demo/dqm_client01.fcl 
 - DQM prototype uses modules from [[file:../../artdaq_demo/artdaq-demo/ArtModules]]
-- ignore boot.py and boot.json - those are just prototypes
-** file:../config/stm_swtest_001 : reformat STM file into ART format
+- ignore boot.py and boot.json - for now, those are just prototypes
+- to run ARTDAQ demo example, need artdaq_demo and artdaq_demo_core - 
+  the test example configuration assumes saving hash from artdaq_demo
+#+begin_src 
+git clone https://github.com/pavel1murat/tfm 
+git clone https://github.com/art-daq/artdaq_demo
+git clone https://github.com/art-daq/artdaq_core_demo
+mrb uc
+mrbsetenv
+mrb b
+#+end_src
+** file:../config/stm_swtest_001                                             
+- reformat STM file into ART format
+- configuration: [[file:../config/stm_swtest_001/settings]]
 ** [[file:../config/vst_000]]                                                    
 - Tracker VST : read the DTC registers and fake data with 1-word segment
 - two processes, board_reader and event_builder, on the same machine
 - event builder is writing the output
+- configuration: [[file:../config/vst_001/settings]]
 ** [[file:../config/vst_001]]                                                    
 - TrackerVST : read digis and the DTC registers
 - the board_reader, event_builder, logger and dispatcher.
+- configuration: [[file:../config/vst_000/settings]]
 * running test example in a manual mode                                      
 - the sequence of steps is as follows:
 ** 1) initialize the TFM environment                                         
 - standard for today's Mu2e DAQ, assume that the current directory is $MRB_TOP
 #+begin_src *command output*                                                 
 cd $MRB_TOP
-mkdir config   # if it didn't exist
-cp -r $TFM_DIR/config/demo   ./config/.
-#------------------------------------------------------------------------------
-# 1) edit daqinterface_settings
-# 2) edit boot.txt to define the setup script
-# 3) define environment variables
-# - use the partition number consistently in ARTDAQ_LOG_FHICL
-#------------------------------------------------------------------------------
-export TFM_PROCESS_MANAGEMENT_METHOD=direct
+mkdir config                               # if it didn't exist
+cp -r $TFM_DIR/config/demo  ./config/.
 source tfm_configure demo 11
 #+end_src
-1.1) make sure that the tfm_test/demo/settings file has everything needed defined
-- most likely, the template has wrong directory names in it
-1.2) edit tfm_test/demo/boot.txt to define the DAQ setup script 
-- the name of the setup script needs to be changed
+  at this poit, TFM is configurd to run configuration defined in $MRB_TOP/config/demo in partition 11
 ** 2) START the TF manager                                                   
-- sourcing defines the env var TFM_PORT everywhere - smth to look at 
 - FarmManager logs its output to $TFM_LOGFILE
 #+begin_src                                                                  
-$TFM_DIR/rc/control/farm_manager.py -p 11 --rpc-port=21000 --config-dir=$MRB_TOP/config/demo
+$TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOP/config/demo
 #+end_src
-** 2.5) in a different shell session, start the "run control shell"
+** 2.5) in a different shell session, start the "run control shell"          
 - don't forget to source tfm_configure
 #+begin_src
 source tfm_configure demo 11
@@ -264,7 +268,7 @@ Success
 Sun Nov 19 14:59:02 CST 2023: SHUTDOWN transition complete
 #+end_src
 --------------------------------------------------------------------------------
-** 8) at this point can issue CONFIG to configure the next run 
+** 8) at this point can issue CONFIG to configure the next run
 ** 9) CTRL-C to exit 
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]

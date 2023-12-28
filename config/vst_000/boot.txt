@@ -1,22 +1,23 @@
-#------------------------------------------------------------------------------
-# only one ':' on the line is allowed
-#------------------------------------------------------------------------------
-daq_setup_script   : $MRB_TOP/setup_ots.sh
-debug_level        : 5
-#
-# request_address  : 
-# manage_processes :   True/False
-# disable_recovery :   True/False
-#------------------------------------------------------------------------------
-#            id    source     destination  fragmentMode   
-Subsystem:    1      none        none          False
-#-------------------------------------------------------------------------------------
-#              label         host    port subsystem       allowed     prepend   target
-#                                                        processors
-#-------------------------------------------------------------------------------------
-BoardReader : tracker_vst  localhost  -1      1              -1         none     none
-EventBuilder: builder0     localhost  -1      1            "0-63"       none     none
-
-# DataLogger  : logger0      localhost  -1      2            "0-63"       none     none
-# Dispatcher  : dispatcher0  localhost  10500   2            "0-33"       none     none
-
+# P.Murat: contents of boot.txt moved to settings
+# #------------------------------------------------------------------------------
+# # only one ':' on the line is allowed
+# #------------------------------------------------------------------------------
+# daq_setup_script   : $MRB_TOP/setup_ots.sh
+# debug_level        : 5
+# #
+# # request_address  : 
+# # manage_processes :   True/False
+# # disable_recovery :   True/False
+# #------------------------------------------------------------------------------
+# #            id    source     destination  fragmentMode   
+# Subsystem:    1      none        none          False
+# #-------------------------------------------------------------------------------------
+# #              label         host    port subsystem       allowed     prepend   target
+# #                                                        processors
+# #-------------------------------------------------------------------------------------
+# BoardReader : tracker_vst  localhost  -1      1              -1         none     none
+# EventBuilder: builder0     localhost  -1      1            "0-63"       none     none
+# 
+# # DataLogger  : logger0      localhost  -1      2            "0-63"       none     none
+# # Dispatcher  : dispatcher0  localhost  10500   2            "0-33"       none     none
+# 

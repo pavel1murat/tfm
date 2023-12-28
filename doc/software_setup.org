@@ -1,11 +1,12 @@
 #+startup:fold
 
-* Software setup
-- need artdaq_demo and artdaq_demo_core - the test example configuration assumes saving hash from artdaq_demo
+* Software setup                                                             
+- to run ARTDAQ demo example, need artdaq_demo and artdaq_demo_core - 
+  the test example configuration assumes saving hash from artdaq_demo
 #+begin_src 
 git clone https://github.com/pavel1murat/tfm 
-git clone https://github.com/pavel1murat/artdaq_demo
-git clone https://github.com/pavel1murat/artdaq_core_demo
+git clone https://github.com/art-daq/artdaq_demo
+git clone https://github.com/art-daq/artdaq_core_demo
 mrb uc
 mrbsetenv
 mrb b
