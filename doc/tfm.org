@@ -15,12 +15,13 @@
 * ------------------------------------------------------------------------------
 * farm_manager.py: server managing the trigger farm                          
 ** command line parameters                                                   
-- example: 
+- example: (before running the farm_manager.py, make sure that $MRB_TOR/config/$configuration
+  directory containes all needed files - see 
 #+begin_src
 configuration=vst_001
 partition=8
 source tfm_configure $configuration $partition
-$TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
+$TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
 #+end_src
 ** Comments:                                                                 
    -- env['ARTDAQ_PARTITION_NUMBER'] is set by [[file:../bin/tfm_configure][tfm_configure]] and used by TFM
@@ -64,16 +65,15 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$PWD/config/$configuration
   - stop
   - terminate
 * configuration                                                              
-** the TFM configuration is defined in a subdirectory 
-         $TFM_FHICL_DIRECTORY/$config_name. 
-The subdirectory should contain the following files :
-*** [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
-    and additional configuration parameters               
-*** .FCL files : one file per component                                      
- a component named 'x' has its FCL file named 'x.fcl'
+** the TFM configuration is defined in a subdirectory which should should contain the following files :
+1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
+   and additional configuration parameters               
 
-the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
-directory created in /tmp/`uuidgen` by TFM - see 
+2) .FCL files : one file per component                                      
+   a component named 'x' has its FCL file named 'x.fcl'
+
+   the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
+   directory created in /tmp/`uuidgen` by TFM - see 
 [[
 file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
 
@@ -83,6 +83,7 @@ see self.get_config_info() there
   not sure how one can make such a mistake
 
 - also what are multiple subconfigurations ?
+*** internally, the configuration dir is $TFM_FHICL_DIRECTORY/$config_name
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
 - commands are translated, and sent to the TF server are the translated commands. 
