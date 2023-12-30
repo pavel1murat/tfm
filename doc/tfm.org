@@ -74,7 +74,7 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
   - stop
   - terminate
 * configuration                                                              
-** the TFM configuration is defined in a subdirectory which should should contain the following files :
+** the TFM configuration is defined in a subdirectory containing the following files :
 1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
    and additional configuration parameters               
 

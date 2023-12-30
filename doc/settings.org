@@ -2,38 +2,43 @@
 * ------------------------------------------------------------------------------
 * parameters stored in the 'settings' file
 * ------------------------------------------------------------------------------
-* log_directory : directory with log files
-* record_directory : directory containing book-keeping run records
-* spack_root_for_bash_scripts :
-* package_hashes_to_save :
-* boardreader_timeout :
-* eventbuilder_timeout :
-* data_directory_override                                                    
+** log_directory : directory with log files
+** record_directory : directory containing book-keeping run records
+** spack_root_for_bash_scripts :
+** package_hashes_to_save :
+** boardreader_timeout :
+** eventbuilder_timeout :
+** data_directory_override                                                    
 - directory name. 
 - If specified, redirects the data output into the specified directory
 - by default, output goes to /tmp
-* datalogger_timeout :
-* dispatcher_timeout : 
-* routing_manager_timeout :
-* boardreader_priorities : 
-* boardreader_priorities_on_config : 
-* boardreader_priorities_on_start :
-* boardreader_priorities_on_stop
-* max_fragment_size_bytes :
-* max_configurations_to_list :
-* disable_unique_rootfile_labels : 
-* disable_private_network_bookkeeping : 
-* use_messageviewer   : default 'true'                                       
+** datalogger_timeout :
+** dispatcher_timeout : 
+** routing_manager_timeout :
+** boardreader_priorities : 
+** boardreader_priorities_on_config : 
+** boardreader_priorities_on_start :
+** boardreader_priorities_on_stop
+** max_fragment_size_bytes :
+** max_configurations_to_list :
+** disable_unique_rootfile_labels : 
+** disable_private_network_bookkeeping : 
+** use_messageviewer   : default 'true'                                       
 - set to 'false' not to waste time
-* use_messagefacility :
-* advanced_memory_usage :
-* strict_fragment_id_mode :
-* fake_messagefacility :
-* transfer_plugin_to_use : 
-* allowed_processors : 
-* max_launch_checks : 
-* launch_procs_wait_time : 
-* kill_existing_processes : 
-* validate_setup_script: if != 0, run validation of the setup [default=1]    
-- adds extra time to the initial transition
+** use_messagefacility :
+** advanced_memory_usage :
+** strict_fragment_id_mode :
+** fake_messagefacility :
+** transfer_plugin_to_use : 
+** allowed_processors : 
+** max_launch_checks : 
+** launch_procs_wait_time : 
+** kill_existing_processes : 
+** validate_setup_script: default=1
+- if != 0, run the setup script and make sure that its return code is zero
+- this adds extra time to the initial transition, and in most cases is not needed
+  for commissioning
+- need to think what is the best way to implement this check during the data taking
+* ------------------------------------------------------------------------------
+* back to [[file:tfm.org]]
 * ------------------------------------------------------------------------------
