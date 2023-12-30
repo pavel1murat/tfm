@@ -1,6 +1,4 @@
 #+startup:fold
-#
-* ------------------------------------------------------------------------------
 * TFM : the Trigger Farm Manager                                             
 - forked from artdaq_daqinterface/fc/control/DAQInterface.py
 - goals : 
@@ -12,6 +10,10 @@
   - split configurations from the farm manager scripts themselves
   - provide troubleshooting of the farm performance
   - integrate with MIDAS as a frontend client
+
+- NOTE: at this point, significant part of the documentation below is in a "core dump" state, 
+  feel free to improve and commit back
+
 * ------------------------------------------------------------------------------
 * [[file:../rc/control/farm_manager.py][farm_manager.py]]: server managing the trigger farm                          
 ** command line parameters                                                   
