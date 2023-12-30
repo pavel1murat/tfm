@@ -50,14 +50,14 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
 
    -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
       (when debugging a given configuration, may want to create a copy)
-*** TFM knows about the following types of artdaq components: 
+* TFM knows about the following types of artdaq components: 
     BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
     - as follows from the names, an artdaq component is a job with a given functionality
     - components can run on the same or different nodes
     - components can talk to each other via XML-RPC 
     - components can be combined into subsystems, by default there is only one subsystem
 
-*** at startup, TFM goes directly into a 'booted' state
+** at startup, TFM goes directly into a 'booted' state
 - 'config' and 'start' are merged into 'start'
 - 'config' step defines new run number and configures the farm for that
 - stop actually stops the processes
