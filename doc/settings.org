@@ -1,9 +1,9 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
-* parameters stored in the 'settings' file
+* parameters stored in the 'settings' file (in alhabetic order)
 * ------------------------------------------------------------------------------
-** log_directory : directory with log files
-** record_directory : directory containing book-keeping run records
+- *log_directory* : top directory of the log file directory tree
+- *record_directory* : directory containing book-keeping run records
 ** spack_root_for_bash_scripts :
 ** package_hashes_to_save :
 ** boardreader_timeout :
