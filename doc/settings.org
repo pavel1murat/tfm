@@ -2,13 +2,15 @@
 * ------------------------------------------------------------------------------
 * parameters stored in the 'settings' file (in alhabetic order)
 * ------------------------------------------------------------------------------
+see [[file:../rc/control/farm_manager.py::/read_settings(self):/]] for the full list
+
 - *log_directory* : top directory of the log file directory tree
 - *record_directory* : directory containing book-keeping run records
-** spack_root_for_bash_scripts :
-** package_hashes_to_save :
-** boardreader_timeout :
-** eventbuilder_timeout :
-** data_directory_override                                                    
+- *spack_root_for_bash_scripts* :
+- *package_hashes_to_save* :
+- *boardreader_timeout* :
+- *eventbuilder_timeout* :
+- *data_directory_override* :                                                    
 - directory name. 
 - If specified, redirects the data output into the specified directory
 - by default, output goes to /tmp
