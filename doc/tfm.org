@@ -13,8 +13,23 @@
   - provide troubleshooting of the farm performance
   - integrate with MIDAS as a frontend client
 * ------------------------------------------------------------------------------
-* farm_manager.py: server managing the trigger farm                          
+* [[file:../rc/control/farm_manager.py][farm_manager.py]]: server managing the trigger farm                          
 ** command line parameters                                                   
+
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| flag               | description                     | Type | default     | comment                                                            |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -n, --name         | component name (what is that ?) | str  | "daqint"    |                                                                    |
+| -H, --rpc-host     | This hostname/IP addr           | str  | "localhost" |                                                                    |
+| -c, --control-host | Control host                    | str  | "localhost" |                                                                    |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -d, --debug-level  | debug level                     | int  | -1          | if specified, overrides settings in boot.txt                       |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+| -D, --config-dir   | config directory                | str  | None        | contains all configuration files, has to be defined                |
+|                    |                                 |      |             | on the command line. Last config-dir path component (subdirectory) |
+|                    |                                 |      |             | is the configuration name                                          |
+|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+
 - example: (before running the farm_manager.py, make sure that $MRB_TOR/config/$configuration
   directory containes all needed files - see 
 #+begin_src
@@ -33,20 +48,6 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
 
    -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
       (when debugging a given configuration, may want to create a copy)
-
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| flag               | description                     | Type | default     | comment                                                            |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -n, --name         | component name (what is that ?) | str  | "daqint"    |                                                                    |
-| -H, --rpc-host     | This hostname/IP addr           | str  | "localhost" |                                                                    |
-| -c, --control-host | Control host                    | str  | "localhost" |                                                                    |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -d, --debug-level  | debug level                     | int  | -1          | if specified, overrides settings in boot.txt                       |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -D, --config-dir   | config directory                | str  | None        | contains all configuration files, has to be defined                |
-|                    |                                 |      |             | on the command line. Last config-dir path component (subdirectory) |
-|                    |                                 |      |             | is the configuration name                                          |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
 *** TFM knows about: BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
 *** at startup, TFM goes directly into a 'booted' state
 - 'config' and 'start' are merged into 'start'
