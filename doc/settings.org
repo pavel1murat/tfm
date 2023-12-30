@@ -2,8 +2,8 @@
 * ------------------------------------------------------------------------------
 * parameters stored in the 'settings' file (in alhabetic order)
 * ------------------------------------------------------------------------------
-see [[file:../rc/control/farm_manager.py::/read_settings(self):/]] and search 
-for *read_settings(self)* to see the full list of parameters
+NOTE: search [[file:../rc/control/farm_manager.py::/read_settings(self):/]] for *read_settings(self)* 
+to see the full list of parameters
 
 - *log_directory* : top directory of the log file directory tree
 - *record_directory* : directory containing book-keeping run records
