@@ -35,7 +35,11 @@ String: 'Running'
 - report on something, this needs to be added to all - boardreaders, eventbuilders, 
 dataloggers, dispatchers, and routing managers
 **** stats                                                                   
-- so far, added to BoardReaderCore
+- added to BoardReaderCore::report a "stats" subcommand
+
+- also added "stats" to the DataReceiverCore (that required making a public version 
+of DataReceiverCore::buildStatisticsString_
+
 - see [[file:../../artdaq/artdaq/Application/BoardReaderCore.cc::/else if (which == "stats")/]]
 #+begin_src
   else if (which == "stats") {
