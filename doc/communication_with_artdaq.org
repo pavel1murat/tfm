@@ -31,8 +31,52 @@ Result:
 
 String: 'Running'
 #+end_src
-*** report
-*** legal_commands
+*** report                                                                   
+- report on something, this needs to be added to all - boardreaders, eventbuilders, 
+dataloggers, dispatchers, and routing managers
+**** stats                                                                   
+- so far, added to BoardReaderCore
+- see [[file:../../artdaq/artdaq/Application/BoardReaderCore.cc::/else if (which == "stats")/]]
+#+begin_src
+  else if (which == "stats") {
+    auto non_const_this =  (artdaq::BoardReaderCore*) this;
+    std::string s = non_const_this->buildStatisticsString_();
+    tmpString += " "+s;
+  }
+#+end_src
+- the result is as follows: 
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21100/RPC2 daq.report stats
+Result:
+
+String: 
+  boardreader01 run number = 55, Sent Fragment count = 2308, boardreader01 statistics:\n
+    Fragments read: 599 fragments generated at 9.98229 getNext calls/sec, fragment rate = 9.98229 fragments/sec, monitor window = 60.0063 sec, min::max read size = 1::1 fragments  Average times per fragment:  elapsed time = 0.100177 sec\n
+    Fragment output statistics: 599 fragments sent at 9.98229 fragments/sec, effective data rate = 0.00121854 MB/sec, monitor window = 60.0063 sec, min::max event size = 0.00012207::0.00012207 MB\n
+    Input wait time = 0.100128 s/fragment, buffer wait time = 3.90003e-05 s/fragment, request wait time = 0.100101 s/fragment, output wait time = 5.47901e-05 s/fragment
+#+end_src
+**** transition_status                                                       
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21101/RPC2 daq.report transition_status
+Result:
+
+String: 'Success'
+#+end_src
+**** illegal command                                                         
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21101/RPC2 daq.report statistics
+Result:
+
+String: 'boardreader02 run number = 54, Sent Fragment count = 10400. Command="statistics" is not currently supported.'
+#+end_src
+*** legal_commands                                                           
+- returns a list of commands the component is ready to execute
+#+begin_src
+mu2etrk@mu2edaq09:~/test_stand/pasha_020>xmlrpc http://localhost:21101/RPC2 daq.legal_commands
+Result:
+
+String: 'pause stop '
+#+end_src
 *** register_monitor
 *** unregister_monitor
 *** trace_get                                                                
