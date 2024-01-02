@@ -201,23 +201,15 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
 #------------------------------------------------------------------------------------
 # last step before starting a run
 # get next run number from the run info DB. 
-# the shell script is supposed to register the next run and print its number (and only the run number) 
-# then it propagates to MIDAS
-# need to protect things so the new run could not be started w/o registering,
+# get_next_run_number is an executable which gets the run number from Postgresql and updates 
+# the run number in ODB
 # for example, the end_run would write into the ODB some flag, w/o which one couldn't start the run 
 #------------------------------------------------------------------------------------
-
-script ./get_next_run_number.sh
-
-#------------------------------------------------------------------------------------
-# MIDAS increments the run number, so subtract one from it....
-#------------------------------------------------------------------------------------
-
-odbset /Runinfo/Run number, $SCRIPT_RESULT-1
+script get_next_run_number
 #+end_src
 
 - [[file:../../frontends/tfm_frontend/get_next_run_number.cc]] gets compiled into 
-  the executable interacting with the DB (via a clone of Antonio's code - 
+  the executable interacting with the DB via a clone of Antonio's code - 
   see [[file:../../frontends/tfm_frontend/db_runinfo.hh]]
 
 - comment: this is the first iteration, the code should be cleaned up
