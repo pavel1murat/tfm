@@ -132,8 +132,7 @@ class Component(ContextObject):
     def partition(self):
         return self.__partition
 
-    def state(self, name):
-        # if name != self.name: return "unknown"
+    def state(self):
         return self.__state
 
     def get_state(self,name):
@@ -198,7 +197,8 @@ class Component(ContextObject):
 #---v--------------------------------------------------------------------------
     def state_change(self, name, requested, state_args):
         #breakpoint()
-        print("component::state_change name=",name, "requested:",requested,"args:",state_args);
+
+        self.print_log("d","component::state_change name=%s requested:%s state_args:%s" % (name,requested,state_args),2);
 
         if (requested in self.dict_state_from.keys() and (self.__state not in self.dict_state_from[requested])):
             self.print_log("w","\nWARNING: Unable to accept transition request "

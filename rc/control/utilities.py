@@ -639,24 +639,23 @@ def get_commit_info_filename(pkgname):
 def get_build_info(pkgnames, setup_script):
     def parse_buildinfo_file(buildinfo_filename):
 
-        buildinfo_version = '"version from BuildInfo undetermined"'
-        buildinfo_time = '"time from BuildInfo undetermined"'
-
+        buildinfo_version       = '"version from BuildInfo undetermined"'
+        buildinfo_time          = '"time from BuildInfo undetermined"'
         found_buildinfo_version = False
-        found_buildinfo_time = False
+        found_buildinfo_time    = False
 
         with open(buildinfo_filename) as inf:
             for line in inf.readlines():
 
                 res = re.search(r"setPackageVersion\s*\(\s*(\".*\")\s*\)", line)
                 if res:
-                    buildinfo_version = res.group(1)
+                    buildinfo_version       = res.group(1)
                     found_buildinfo_version = True
                     continue
 
                 res = re.search(r"setBuildTimestamp\s*\(\s*(\".*\")\s*\)", line)
                 if res:
-                    buildinfo_time = res.group(1)
+                    buildinfo_time       = res.group(1)
                     found_buildinfo_time = True
                     continue
 
@@ -669,7 +668,7 @@ def get_build_info(pkgnames, setup_script):
         return "%s %s" % (buildinfo_time, buildinfo_version)
 
     pkg_build_infos = {}
-    cmds = []
+    cmds            = []
     cmds.append(bash_unsetup_command)
     cmds.append(". %s" % (setup_script))
 
@@ -684,23 +683,23 @@ def get_build_info(pkgnames, setup_script):
 
     for pkgname in pkgnames:
 
-        buildinfo_time = '"time from BuildInfo undetermined"'
-        buildinfo_version = '"version from BuildInfo undetermined"'
+        buildinfo_time           = '"time from BuildInfo undetermined"'
+        buildinfo_version        = '"version from BuildInfo undetermined"'
         pkg_build_infos[pkgname] = "%s %s" % (buildinfo_time, buildinfo_version)
 
         ups_pkgname = pkgname.replace("-", "_")
 
-        found_ups_package = False
+        found_ups_package   = False
         package_line_number = -1
         for i_l, line in enumerate(stdoutlines):
             if re.search(r"^%s\s+" % (ups_pkgname), line):
-                found_ups_package = True
+                found_ups_package   = True
                 package_line_number = i_l
                 break
 
         if found_ups_package:
             version = stdoutlines[package_line_number].split()[1]
-            upsdir = stdoutlines[package_line_number].split()[-1]
+            upsdir  = stdoutlines[package_line_number].split()[-1]
 
             ups_sourcedir = "%s/%s/%s/source" % (upsdir, ups_pkgname, version)
 
@@ -708,14 +707,9 @@ def get_build_info(pkgnames, setup_script):
                 # print "Unable to find expected ups source file directory %s, will not be able to save build info for %s in the run record" % (ups_sourcedir, pkgname)
                 continue
 
-            buildinfo_file1 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (
-                ups_sourcedir,
-                pkgname,
-            )
-            buildinfo_file2 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (
-                ups_sourcedir,
-                pkgname.replace("_", "-"),
-            )
+            buildinfo_file1 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (ups_sourcedir,pkgname)
+            buildinfo_file2 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (ups_sourcedir,pkgname.replace("_", "-"))
+
             if os.path.exists(buildinfo_file1):
                 buildinfo_file = buildinfo_file1
             elif os.path.exists(buildinfo_file2):

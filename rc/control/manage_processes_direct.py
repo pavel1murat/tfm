@@ -44,13 +44,12 @@ def launch_procs_on_host(self,host,
                          launch_commands_to_run_on_host_background,
                          launch_commands_on_host_to_show_user):
     # breakpoint()
-    debug_level = 2
-    self.print_log("i", "Executing commands to launch processes on %s" % (host))
+    self.print_log("i", "Executing commands to launch processes on %s" % (host),2)
 
     # Before we try launching the processes, let's make sure there
     # aren't any pre-existing processes listening on the same ports
 
-    self.print_log("d","Before check for existing processes on %s" % host,debug_level)
+    self.print_log("d","Before check for existing processes on %s" % host,2)
     grepped_lines    = []
     preexisting_pids = rcu.get_pids("\|".join(
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
@@ -61,7 +60,7 @@ def launch_procs_on_host(self,host,
 
         kill_procs_on_host(self, host, kill_art=True, use_force=True)
 
-        self.print_log("d","Before re-check for existing processes on %s" % (host),debug_level)
+        self.print_log("d","Before re-check for existing processes on %s" % (host),2)
         grepped_lines    = []
         preexisting_pids = rcu.get_pids(
             "\|".join(
@@ -91,7 +90,7 @@ def launch_procs_on_host(self,host,
                  " see error message above for details"))
         )
 
-    self.print_log("d","After check for existing processes on %s" % host,debug_level)
+    self.print_log("d","After check for existing processes on %s" % host,2)
 #------------------------------------------------------------------------------
 #   Each command already terminated by ampersand
 ####
@@ -104,7 +103,7 @@ def launch_procs_on_host(self,host,
 
     self.print_log("d", "\nartdaq process launch commands to execute on %s (output will be in %s:%s):\n%s\n"
                    % (host,host,self.launch_attempt_files[host],"\n".join(launch_commands_on_host_to_show_user)),
-                   debug_level)
+                   2)
 
     proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
@@ -123,10 +122,10 @@ def launch_procs_on_host(self,host,
              ' to %s, source-ing the DAQInterface environment and executing the following:') % host)
         )
         self.print_log("i","\n" + "\n".join(launch_commands_on_host_to_show_user)+"\n")
-        self.print_log("d","Output from failed command:\n" + out,debug_level)
+        self.print_log("d","Output from failed command:\n" + out,2)
         raise Exception("ERROR to launch processes on %s; status=%s" % (host,status))
     else:
-        self.print_log("d", "...host %s done." % host,debug_level)
+        self.print_log("d", "...host %s done." % host,2)
 
     return status  # end of launch_procs_on_host
 #------------------------------------------------------------------------------
@@ -665,7 +664,7 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
                     mopup_process_base(self, procinfo)
 
     if not is_all_ok and requireSuccess:
-        if self.state(self.name) == "running":
+        if self.state() == "running":
             for procinfo in procinfos_to_remove:
                 self.procinfos.remove(procinfo)
                 self.throw_exception_if_losing_process_violates_requirements(procinfo)
@@ -699,10 +698,10 @@ def main():
 
     class Procinfo(object):
         def __init__(self, name, rank, host, port, label):
-            self.name = name
-            self.rank = rank
-            self.port = port
-            self.host = host
+            self.name  = name
+            self.rank  = rank
+            self.port  = port
+            self.host  = host
             self.label = label
 
     launch_procs_test = True
@@ -710,7 +709,6 @@ def main():
     if launch_procs_test:
 
         class MockDAQInterface:
-            debug_level = 3
             productsdir = "/mu2e/ups"
             daq_setup_script = "/home/jcfree/artdaq-demo_multiple_fragments_per_boardreader/setupARTDAQDEMO"
 

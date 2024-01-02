@@ -1,8 +1,15 @@
 #------------------------------------------------------------------------------
 # migrated from boot.txt
+# don't set debug_level to zero - smth is going on
 #------------------------------------------------------------------------------
-daq_setup_script  : $MRB_TOP/setup_ots.sh  # location of the ARTDAQ setup script 
-debug_level       : 4                      # debug_level ranges from 0 to 4 in increasing level of verbosity
+debug_level                  : 1  # debug_level ranges from 1 to 4 in increasing level of verbosity
+
+daq_setup_script             : $MRB_TOP/setup_ots.sh  # location of the ARTDAQ setup script 
+log_directory                : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
+data_directory_override      : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
+record_directory             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
+
 # disable_recovery: true/false             # TO BE EXPLAINED
 # manage_processes: true/false             # TO BE EXPLAINED
 # request address :                        # TO BE EXPLAINED
@@ -52,33 +59,28 @@ Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
 # P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
 #      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 #------------------------------------------------------------------------------
-log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
-data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
-record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
-productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
+package_hashes_to_save       : [] # no need to save hashes in a so intensive way [ artdaq-demo, artdaq ]
 
-package_hashes_to_save      : [ artdaq-demo, artdaq ]
+boardreader timeout          : 60
+eventbuilder timeout         : 30
+datalogger timeout           : 30
+dispatcher timeout           : 30
+routing_manager timeout      : 30
+aggregator timeout           : 30
 
-boardreader timeout         : 60
-eventbuilder timeout        : 30
-datalogger timeout          : 30
-dispatcher timeout          : 30
-routing_manager timeout     : 30
-aggregator timeout          : 30
-
-advanced_memory_usage       : true ## default "false". 
+advanced_memory_usage        : true ## default "false". 
 #     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing 
 #     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
 #     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
 #     Info is provided in the memory management details section.
 #
-# use_messagefacility       : true
+# use_messagefacility        : true
 #     - dont really know what that does
-use_messageviewer           : false
+use_messageviewer            : false
 #     By default, if windowing is supported and artdaq_mfextensions is installed, 
 #     a MessageViewer window will pop up during runs which will print out messages 
 #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
-# fake_messagefacility      : false
+# fake_messagefacility       : false
 #     - when set to true, TFM will format its messages to appear like MessageFacility messages
 # disable_unique_rootfile_labels: true
 #     TO BE EXPLAINED

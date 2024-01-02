@@ -16,13 +16,6 @@ from rc.control.procinfo  import Procinfo
 import rc.control.utilities as rcu; # import make_paragraph
 
 #------------------------------------------------------------------------------
-def get_config_parentdir():
-    print("config_funclions_local::get_config_parent_dir: WHY IS IT CALLED ????")
-    parentdir = os.environ["TFM_FHICL_DIRECTORY"]
-    assert os.path.exists(parentdir), "Expected configuration directory "+parentdir+" doesn't exist"
-    return parentdir
-
-#------------------------------------------------------------------------------
 def get_config_info_base(self):
 
     uuidgen = (
@@ -36,7 +29,7 @@ def get_config_info_base(self):
 
     ffp = []
 
-    if (os.path.exists("%s/common_code" % get_config_parentdir()) and 
+    if (os.path.exists("%s/common_code" % self.get_config_parentdir()) and 
         ("common_code" not in self.subconfigs_for_run)    ):
 #------------------------------------------------------------------------------
 # For backwards-compatibility with earlier versions of this function
@@ -44,7 +37,7 @@ def get_config_info_base(self):
         self.subconfigs_for_run.append("common_code")  
 
     for subconfig in self.subconfigs_for_run:
-        subconfig_dir = "%s/%s" % (get_config_parentdir(), subconfig)
+        subconfig_dir = "%s/%s" % (self.get_config_parentdir(), subconfig)
 
         if os.path.exists(subconfig_dir):
             tmp_subconfig_dir = "%s/%s" % (tmpdir, subconfig)
@@ -85,7 +78,7 @@ def put_config_info_on_stop_base(self):
 
 #------------------------------------------------------------------------------
 def listconfigs_base(self):
-    subdirs = next(os.walk(get_config_parentdir()))[1]
+    subdirs = next(os.walk(self.get_config_parentdir()))[1]
     configs = [subdir for subdir in subdirs if subdir != "common_code"]
 
     listconfigs_file = "/tmp/listconfigs_" + os.environ["USER"] + ".txt"
@@ -111,9 +104,8 @@ def listconfigs_base(self):
 
 
 def main():
-    print("Calling listdaqcomps_base: ")
-    listdaqcomps_base("ignored_argument")
-
+#    print("Calling listdaqcomps_base: ")
+    return
 
 if __name__ == "__main__":
     main()

@@ -7,133 +7,129 @@ from subprocess import Popen
 import traceback
 import shutil
 import string
+from   inspect import currentframe, getframeinfo
 
 from rc.control.utilities import make_paragraph
 from rc.control.utilities import get_commit_info
 from rc.control.utilities import get_commit_info_filename
 from rc.control.utilities import get_build_info
-
+#------------------------------------------------------------------------------
+# Save the FHiCL documents which were used to initialize the artdaq processes
+#------------------------------------------------------------------------------
 def save_run_record_base(self):
+#------------------------------------------------------------------------------
+# Step 1: save them into a temporary directory - no need - can write directly to the permanent position
+#------------------------------------------------------------------------------
+    self.print_log("d", "%s:save_record_base 001" % (__file__),2)
 
-    # Save the FHiCL documents which were used to initialize the
-    # artdaq processes
-
-    outdir = self.tmp_run_record
+    outdir = self.record_directory+'/%06d'%self.run_number # self.tmp_run_record
 
     try:
         os.makedirs(outdir)
     except Exception:
-        raise Exception(
-            make_paragraph("Exception raised during creation of %s" % (outdir))
-        )
+        raise Exception("%s::save_run_record_base:%d Exception raised during creation of %s" 
+                        % (__file__,getframeinfo(currentframe()).lineno,outdir))
         return
 
-    if not os.path.exists(outdir):
-        raise Exception("Problem creating output directory %s" % (outdir))
-        return
+#    if not os.path.exists(outdir):
+#        raise Exception("Problem creating output directory %s" % (outdir))
+#        return
+#------------------------------------------------------------------------------
+# P.M. assume the directory has been created
+#---v--------------------------------------------------------------------------
+    self.print_log("d", "%s:save_record_base 002" % (__file__),2)
 
     for procinfo in self.procinfos:
-
         outf = open(outdir + "/" + procinfo.label + ".fcl", "w")
-
         outf.write(procinfo.fhicl_used)
         outf.close()
 #------------------------------------------------------------------------------
-# For good measure, let's also save the TFM configuration file
+# For good measure, let's also save the DAQ setup script
 # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
 # P.M. no boot.txt file anymore - everything is in 'settings'
-####
+# - why on earth using Popen when there is copy2 ?
+#---v--------------------------------------------------------------------------
+    new_fn = outdir + "/setup.txt";
+    try:
+        shutil.copy2(self.daq_setup_script,new_fn);
+    except Exception:
+        raise Exception("%s::save_run_record_base:%d problem creating %s" 
+                        % (__file__,getframeinfo(currentframe()).lineno,new_fn))
+        return
 
-#    boot_fn           = self.boot_filename()
-#    config_saved_name = os.path.basename(boot_fn);
+#    Popen(
+#        "cp -p " + self.daq_setup_script + " " + outdir + "/setup.txt",
+#        shell=True,
+#        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+#    ).wait()
 
-#    with open("%s/%s" % (outdir, config_saved_name), "w") as outf:
-#        with open(boot_fn) as inf:
-#            for line in inf.readlines():
-#                outf.write(os.path.expandvars(line))
+#    if not os.path.exists(outdir + "/setup.txt"):
+#        self.alert_and_recover("Problem creating file %s/setup.txt" % (outdir))
 
-#    out_fn = "%s/%s" % (outdir, config_saved_name)
-#    if not os.path.exists(out_fn):
-#        self.alert_and_recover("Problem creating file "+out_fn)
-
-    # As well as the DAQ setup script
-
-    Popen(
-        "cp -p " + self.daq_setup_script + " " + outdir + "/setup.txt",
-        shell=True,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    ).wait()
-
-    if not os.path.exists(outdir + "/setup.txt"):
-        self.alert_and_recover("Problem creating file %s/setup.txt" % (outdir))
+    self.print_log("d", "%s:save_record_base 003" % (__file__),2)
 
     settings_fn = self.settings_filename();
-    assert os.path.exists(settings_fn)
+    # assert os.path.exists(settings_fn)
 
-    Popen(
-        "cp -p " + settings_fn + " " + outdir + "/settings.txt",
-        shell=True,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    ).wait()
+    new_settings_fn = outdir + "/settings";
+    try:
+        shutil.copy2(settings_fn,new_settings_fn);
+    except Exception:
+        raise Exception("%s::save_run_record_base:%d problem creating %s" 
+                        % (__file__,getframeinfo(currentframe()).lineno,new_settingsfn))
+        return
 
-    if not os.path.exists(outdir + "/settings.txt"):
-        self.alert_and_recover("Problem creating file " + outdir + "/settings.txt")
+#    Popen(
+#        "cp -p " + settings_fn + " " + outdir + "/settings.txt",
+#        shell=True,
+#        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+#    ).wait()
+#
+#    if not os.path.exists(outdir + "/settings.txt"):
+#        self.alert_and_recover("Problem creating file " + outdir + "/settings.txt")
 
+#------------------------------------------------------------------------------
+# save information about ARTDAQ processes, ordered by rank 
+# P.M. better to ahve it first ordered by the host
+#------------------------------------------------------------------------------
+    self.print_log("d", "%s:save_record_base 004" % (__file__),2)
     ranksfilename = "%s/ranks.txt" % (outdir)
 
     with open(ranksfilename, "w") as ranksfile:
-        ranksfile.write(
-            "%-30s%-10s%-20s%-15s%-10s\n"
-            % ("host", "port", "label", "subsystem", "rank")
-        )
+        ranksfile.write("%-30s%-10s%-20s%-15s%-10s\n"  % ("host", "port", "label", "subsystem", "rank"))
         ranksfile.write("\n")
 
-        procinfos_sorted_by_rank = sorted(
-            self.procinfos, key=lambda procinfo: procinfo.rank
-        )
+        procinfos_sorted_by_rank = sorted(self.procinfos, key=lambda procinfo: procinfo.rank)
+
         for procinfo in procinfos_sorted_by_rank:
             host = procinfo.host
             if host == "localhost":
                 host = os.environ["HOSTNAME"]
-            ranksfile.write(
-                "%-29s %-9s %-19s %-14s %-9d\n"
-                % (
-                    host,
-                    procinfo.port,
-                    procinfo.label,
-                    procinfo.subsystem,
-                    procinfo.rank,
-                )
-            )
-    environfilename = "%s/environment.txt" % (outdir)
+            ranksfile.write("%-29s %-9s %-19s %-14s %-9d\n"
+                            % (host,procinfo.port,procinfo.label,procinfo.subsystem,procinfo.rank))
+#------------------------------------------------------------------------------
+# P.M. why this one is needed at all ? - why not the full environment ?
+#------------------------------------------------------------------------------
+    self.print_log("d", "%s:save_record_base 005" % (__file__),2)
 
+    environfilename = "%s/environment.txt" % (outdir)
     with open(environfilename, "w") as environfile:
         for var in sorted([varname for varname in os.environ if re.search(r"^TFM_", varname)]):
             environfile.write("export %s=%s\n"% (var,os.environ[var]))
-
-    # JCF, 11/20/14
-
-    # Now save "metadata" about the run in the
-    # "metadata_r<run #>.txt" file. This includes the
-    # selected configuration, selected components, and commit
-    # hashes of lbne-artdaq and lbnerc
-
-    # JCF, Dec-4-2016: changed to metadata.txt, as this is executed
-    # before the start transition
+#------------------------------------------------------------------------------
+# JCF, 11/20/14
+#                  Now save "metadata" about the run in the "metadata_r<run #>.txt" file. This includes the
+#                  selected configuration, selected components, and commit hashes of lbne-artdaq and lbnerc
+# JCF, Dec-4-2016: 
+#                  changed to metadata.txt, as this is executed before the start transition
+#------------------------------------------------------------------------------
+    self.print_log("d", "%s:save_record_base 006" % (__file__),2)
 
     outf = open(outdir + "/metadata.txt", "w")
 
     outf.write("Config name: %s\n" % (" ".join(self.subconfigs_for_run)))
-
-#    for i_comp, component in enumerate(sorted(self.daq_comp_list)):
-#        outf.write("Component #%d: %s\n" % (i_comp, component))
-
-    outf.write(
-        "TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd())
-    )
-    outf.write(
-        "DAQInterface logfile: %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"])
-    )
+    outf.write("TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd()))
+    outf.write("DAQInterface logfile: %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"]))
 
     # Now save the commit hashes / versions of the packages listed in
     # self.settings_filename() = $TFM_SETTINGS, along with the commit hash for
@@ -155,38 +151,50 @@ def save_run_record_base(self):
         "\n# <package version> <BuildInfo build time (if available)> <BuildInfo version (if available)>\n\n"
     )
 
-    assert "TFM_DIR" in os.environ and os.path.exists(os.environ["TFM_DIR"])
+    # assert "TFM_DIR" in os.environ and os.path.exists(os.environ["TFM_DIR"])
 
-    buildinfo_packages = [
-        pkg for pkg in self.package_hashes_to_save
-    ]  # Directly assigning would make buildinfo_packages a reference, not a copy
-    buildinfo_packages.append("tfm")
+    buildinfo_packages = [pkg for pkg in self.package_hashes_to_save]  
+#     buildinfo_packages.append("tfm")
 
-    package_buildinfo_dict = get_build_info(buildinfo_packages, self.daq_setup_script)
+    self.print_log("d", "%s:save_record_base 0061" % (__file__),2)
+#------------------------------------------------------------------------------
+# this is the step which takes 12 seconds, mostly useless
+# for the demo example it returns 
+# {
+#   'artdaq-demo': '"01-Jan-2024 22:14:44 UTC" "v3_12_07-4-g0f6d3df"', 
+#   'artdaq'     : '"01-Jan-2024 22:14:33 UTC" "v3_12_07-1-g67026501"', 
+#   'tfm'        : '"time from BuildInfo undetermined" "version from BuildInfo undetermined"'
+# }
+# P.M. it takes 12 sec even for an empty list of buildinfo_packages, which is nuts
+#------------------------------------------------------------------------------
+    package_buildinfo_dict = {} # get_build_info(buildinfo_packages, self.daq_setup_script)
     
-    try:
-        commit_info_fullpathname = "%s/%s" % (
-            os.path.dirname(self.daq_setup_script),get_commit_info_filename("tfm_start")
-        )
-        if os.path.exists(commit_info_fullpathname):
-            with open(commit_info_fullpathname) as commitfile:
-                outf.write("%s" % (commitfile.read()))
-        else:
-            outf.write("%s" % (get_commit_info("tfm_start",os.environ["TFM_DIR"])))
-    except Exception:
-        # Not an exception in a bad sense as the throw just means we're using DAQInterface as a ups product
-        self.fill_package_versions(["tfm"])
-        outf.write(
-            "tfm commit/version: %s"
-            % (self.package_versions["tfm"])
-        )
+    self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
 
-    outf.write(" %s\n\n" % (package_buildinfo_dict["tfm"]))
+    print("package_buildinfo_dict:\n",package_buildinfo_dict)
 
-    package_commit_dict = {}
+#     try:
+#         commit_info_fullpathname = "%s/%s" % (
+#             os.path.dirname(self.daq_setup_script),get_commit_info_filename("tfm_start")
+#         )
+#         if os.path.exists(commit_info_fullpathname):
+#             with open(commit_info_fullpathname) as commitfile:
+#                 outf.write("%s" % (commitfile.read()))
+#         else:
+#             outf.write("%s" % (get_commit_info("tfm_start",os.environ["TFM_DIR"])))
+#     except Exception:
+#         # Not an exception in a bad sense as the throw just means we're using DAQInterface as a ups product
+#         self.fill_package_versions(["tfm"])
+#         outf.write("tfm commit/version: %s" % (self.package_versions["tfm"]))
+# 
+#    outf.write(" %s\n\n" % (package_buildinfo_dict["tfm"]))
+
+    package_commit_dict             = {}
     packages_whose_versions_we_need = []
 
     for pkgname in self.package_hashes_to_save:
+
+        self.print_log("d", "%s:save_record_base 0062 pkgname:%s" % (__file__,pkgname),2)
 
         pkg_full_path = "%s/srcs/%s" % (self.daq_dir, pkgname.replace("-", "_"))
         commit_info_fullpathname = "%s/%s" % (
@@ -215,6 +223,8 @@ def save_run_record_base(self):
         [pkg.replace("-", "_") for pkg in packages_whose_versions_we_need]
     )
 
+    self.print_log("d", "%s:save_record_base 0063" % (__file__),2)
+
     for pkgname in packages_whose_versions_we_need:
         package_commit_dict[pkgname] = "%s commit/version: %s" % (
             pkgname,
@@ -229,6 +239,8 @@ def save_run_record_base(self):
         "\nprocess management method: %s\n"
         % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"])
     )
+
+    self.print_log("d", "%s:save_record_base 0064" % (__file__),2)
 
     if self.manage_processes:
 
@@ -252,36 +264,35 @@ def save_run_record_base(self):
     outf.write("\n")
     outf.close()
 
-    for (recorddir, dummy, recordfiles) in os.walk(self.tmp_run_record):
-        for recordfile in recordfiles:
-            os.chmod("%s/%s" % (recorddir, recordfile), 0o444)
+    self.print_log("d", "%s:save_record_base 007" % (__file__),2)
 
-    try:
-        shutil.copytree(self.tmp_run_record, self.semipermanent_run_record)
-    except:
-        self.print_log("w", traceback.format_exc())
-        self.print_log(
-            "w",
-            make_paragraph(
-                ('Attempt to copy temporary run record "%s" into "%s" didn\'t work; '
-                 'keep in mind that %s will be clobbered next time you run on this partition')
-                % (
-                    self.tmp_run_record,
-                    self.semipermanent_run_record,
-                    self.tmp_run_record,
-                )
-            ),
-        )
+#     for (recorddir, dummy, recordfiles) in os.walk(self.tmp_run_record):
+#         for recordfile in recordfiles:
+#             os.chmod("%s/%s" % (recorddir, recordfile), 0o444)
+# 
+#     try:
+#         shutil.copytree(self.tmp_run_record, self.semipermanent_run_record)
+#     except:
+#         self.print_log("w", traceback.format_exc())
+#         self.print_log(
+#             "w",
+#             make_paragraph(
+#                 ('Attempt to copy temporary run record "%s" into "%s" didn\'t work; '
+#                  'keep in mind that %s will be clobbered next time you run on this partition')
+#                 % (
+#                     self.tmp_run_record,
+#                     self.semipermanent_run_record,
+#                     self.tmp_run_record,
+#                 )
+#             ),
+#         )
+#------------------------------------------------------------------------------
+# make the directory read-only
+#------------------------------------------------------------------------------
+    os.chmod(outdir, 0o555)
+    self.print_log("d","%s: Saved run record in %s"%(__file__,outdir),2)
 
-    self.print_log(
-        "d",
-        make_paragraph(
-            ("Saved run record in %s, will copy over to yet-to-be-created "
-             "directory %s/<value of run number> on the start transition")
-            % (outdir, self.record_directory)
-        ),
-        2,
-    )
+    return
 
 def save_metadata_value_base(self, key, value):
 

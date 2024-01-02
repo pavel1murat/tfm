@@ -7,11 +7,14 @@
 
 - *TFM_DISABLE_BOOKKEEPING*                                                  
   defined in [[file:../rc/control/farm_manager.py::/TFM_DISABLE_BOOKKEEPING/]]
+
 - *TFM_FHICL_DIRECTORY*                                                      
   the name of the directory containing the configurations you can pass 
   on the config transition. If set to "IGNORED", this means the database is used. 
+
 - *TFM_LOGDIR*                                                               
   the directory in which the file which logs TFM output to screen is located.
+
 - *TFM_LOGFILE*                                                              
   the name of the file which logs TFM output to screen. 
   Default: /tmp/tfm_${USER}/tfm_partition\$ARTDAQ_PARTITION_NUMBER}.log 
@@ -19,38 +22,38 @@
   Notice that since the variable name itself includes a reference to the
   partition variable, you can't directly use it (e.g., "less $TFM_LOGFILE" 
   wouldn't do what you'd think it would do)
+
 - *TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR*                                  
   defined in [[file:../rc/control/farm_manager.py::/TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR/]]
+
 - *ARTDAQ_PARTITION_NUMBER*                                                     
   The partition TFM (and ARTDAQ) will run on. Defaults to 0.
   I guess, both should be the same
+
 - *TFM_PROCESS_MANAGEMENT_METHOD*                                            
   The method used to control processes. 
   Options are "direct", "pmt", and "external_run_control". 
+
+  We are using only "direct"
+
 - *TFM_PROCESS_REQUIREMENTS_LIST*                                            
   an (optional) file users can edit to control which processes are 
   run-critical, assuming the process management method is in "direct" mode
   P.M. calling a file 'a list' doesn't make much sense
+
 - *TFM_SETTINGS* replaced by $TFM_CONFIG_DIR/settings                                                            
+
 - *TFM_SETUP_FHICLCPP*                                                       
   defined in [[file:../rc/control/farm_manager.py::/TFM_SETUP_FHICLCPP/]]
-- *TFM_STANDARD_SOURCE_FILE_SOURCED*                                         
-  - set to "true" by sourcing file:../source_me::/TFM_STANDARD_SOURCEFILE_SOURCED/
-  which defines other TFM environment variables
-  - required by all shell scripts
+
 - *TFM_TRACE_SCRIPT*                                                         
   defined in [[file:../rc/control/farm_manager.py::/TFM_TRACE_SCRIPT/]]
-- *TFM_USER_SOURCEFILE*                                                      
-  The name of the experiment-defined script which the generic TFM source_me 
-  script will in turn source when you set up the environment
 - ------------------------------------------------------------------------------
 * example of the environment printout                                        
 #+begin_src                                                                  
 mu2etrk@mu2edaq09:~/test_stand/pasha_019>env | grep TFM
 TFM_KNOWN_BOARDREADERS_LIST=/home/mu2etrk/test_stand/pasha_019/tfm_test/known_boardreaders_list
 TFM_PROCESS_MANAGEMENT_METHOD=direct
-TFM_STANDARD_SOURCEFILE_SOURCED=true
-TFM_USER_SOURCEFILE_ERRNO=0
 TFM_VERSION=v0_0_1
 TFM_TTY=pts/2
 TFM_SETTINGS=/home/mu2etrk/test_stand/pasha_019/tfm_test/settings
@@ -67,4 +70,14 @@ TFM_LOGFILE=/tmp/tfm_mu2etrk/partition_08.log
 #+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]
+* ------------------------------------------------------------------------------
+* *Attic*                                                                    
+*** *TFM_STANDARD_SOURCE_FILE_SOURCED* : GONE                                
+  - set to "true" by sourcing file:../source_me::/TFM_STANDARD_SOURCEFILE_SOURCED/
+  which defines other TFM environment variables
+  - required by all shell scripts
+
+*** *TFM_USER_SOURCEFILE*              : GONE                                
+  The name of the experiment-defined script which the generic TFM source_me 
+  script will in turn source when you set up the environment
 * ------------------------------------------------------------------------------
