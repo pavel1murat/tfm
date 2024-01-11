@@ -2,11 +2,10 @@
 #------------------------------------------------------------------------------
 # setup active artdaq configuration : config name and partition
 # a "configuration" is a subdirectory with config files in it   
-# available configurations are searched for in $MRB_TOP/config area
 #
 # defines env vars - has to be sourced...
 #
-# call: source tfm_configure config_name partition
+# call: source tfm_configure config_dir partition [ debug ]
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 
@@ -22,10 +21,19 @@ function cleanup() {
 
 cleanup
 
-export         TFM_CONFIG_NAME=$1
+debug=0; 
+
+export          TFM_CONFIG_DIR=`dirname  $1`
+export         TFM_CONFIG_NAME=`basename $1`
 export ARTDAQ_PARTITION_NUMBER=$2
+if [ ".$3" != "." ] ; then debug=$3 ; fi
+ 
+export     TFM_FHICL_DIRECTORY=$TFM_CONFIG_DIR
+
+if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : TFM_CONFIG_DIR=$TFM_CONFIG_DIR ; fi
+
 if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
-    echo call: tfm_configure config_name partition
+    echo call: tfm_configure config_dir partition
     return
 fi
 #------------------------------------------------------------------------------
@@ -48,20 +56,24 @@ fi
 # this is the directory where the FCL files of all configurations reside 
 # with the subdirectory per configuration
 #------------------------------------------------------------------------------
-export         TFM_FHICL_DIRECTORY=$MRB_TOP/config
 export          TFM_SETUP_FHICLCPP=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/.setup_fhiclcpp
 export                TFM_SETTINGS=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/settings
 #------------------------------------------------------------------------------
 # create output directories
 #------------------------------------------------------------------------------
-mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
-export ARTDAQ_LOG_FHICL=$OTS_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
+if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : TFM_SETTINGS=$TFM_SETTINGS ; fi
 
-top_output_dir=$OTS_SCRATCH/$TFM_CONFIG_NAME
+top_output_dir=`cat $TFM_SETTINGS | grep top_output_dir | awk -F : '{ gsub(" ","",$2) ; print $2}' | envsubst`
+
+if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : top_output_dir=`echo $top_output_dir` ; fi
+
 for subdir in logs data run_records ; do
     dir=$top_output_dir/$subdir
     if [ ! -d $dir ] ; then mkdir -p $dir ; fi
 done
+
+mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
+export ARTDAQ_LOG_FHICL=$DAQ_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
 #------------------------------------------------------------------------------
 # TFM is supposed to have its own logfile
 #------------------------------------------------------------------------------
