@@ -208,7 +208,7 @@ class FarmManager(Component):
                         sys.stdout.write("%s %s" % (date_time, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s " % (date_time), printstr, flush=True)
+                        print("%s" % (date_time), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
@@ -2225,7 +2225,7 @@ class FarmManager(Component):
 
             self.print_log("i","Longest individual transition was %s, which took %.1f seconds."
                            % (slowest_process, max_time))
-            self.print_log("i", 'All artdaq processes returned "Success".\n')
+            self.print_log("i",'All artdaq processes returned "Success".')
 
         try:
             self.check_proc_transition(self.target_states[command])
@@ -2621,7 +2621,7 @@ class FarmManager(Component):
 #       everything is fine
 #-------v----------------------------------------------------------------------
         endtime = time.time()
-        self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
+        self.print_log("i", "create_time_server_proxy done (%.1f seconds)" % (endtime - starttime))
         return 0
 
 #------------------------------------------------------------------------------
@@ -3041,12 +3041,12 @@ class FarmManager(Component):
         rc = self.check_launch_results();
         if (rc != 0): return;
 
-        self.print_log("i", "CONFIG transition 012 Pasha : before create_time_server_proxy\n")
+        self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
 
         rc = self.create_time_server_proxy();
         if (rc != 0): return;
 
-        self.print_log("i", "CONFIG transition 013 Pasha : before self.manage_processes\n")
+        self.print_log("i", "CONFIG transition 013: before self.manage_processes")
 #------------------------------------------------------------------------------
 # define names of all logfiles 
 #-------v----------------------------------------------------------------------
@@ -3121,8 +3121,7 @@ class FarmManager(Component):
 
             starttime = time.time()
 
-            self.print_log("i","Ensuring FHiCL documents will be archived in the output *.root files",1,False)
-            self.print_log("d", "\n", 3)
+            self.print_log("i","Ensuring FHiCL documents will be archived in the output *.root files",2)
 
             labeled_fhicl_documents = []
 
@@ -3256,10 +3255,12 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start TRACE ???
 #-------v----------------------------------------------------------------------
-        self.print_log("i", "%s: START transition 002 Pasha : before execute_trace_script" % (rcu.date_and_time()))
+        self.print_log("i","[%s::do_start_running] START transition 002: before execute_trace_script" % (__file__))
+
         self.execute_trace_script("start")
-        self.print_log("i", "%s: START transition 003 Pasha : self.manage_processes=%i" 
-                       % (rcu.date_and_time(),self.manage_processes))
+
+        self.print_log("i","[%s::do_start_running] START transition 003: self.manage_processes=%i" % 
+                       (__file__,self.manage_processes))
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
@@ -3278,8 +3279,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
-        self.print_log("i", "%s: START transition 004 Pasha :record_directory:%s run_number: %i [%s]" 
-                       % (rcu.date_and_time(),self.record_directory,self.run_number,start_time))
+        self.print_log("i", "[%s::do_start_running] START transition 004: record_directory:%s run_number: %06d" 
+                       % (__file__,self.record_directory,self.run_number))
 
         self.save_metadata_value("FarmManager start time",start_time);
         self.print_log("i", "Run info can be found locally at %s" % (self.run_record_directory()))
@@ -3292,7 +3293,7 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("running")
 
-        self.print_log("i","%s: START transition 005: complete, run=%d" % (rcu.date_and_time(), self.run_number))
+        self.print_log("i","START transition 005: complete, run=%d" % (self.run_number))
         return
 #------------------------------------------------------------------------------
 # STOP the run
