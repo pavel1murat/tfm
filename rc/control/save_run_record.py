@@ -171,7 +171,7 @@ def save_run_record_base(self):
     
     self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
 
-    print("package_buildinfo_dict:\n",package_buildinfo_dict)
+#    print("package_buildinfo_dict:\n",package_buildinfo_dict)
 
 #     try:
 #         commit_info_fullpathname = "%s/%s" % (
