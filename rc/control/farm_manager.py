@@ -178,8 +178,8 @@ class FarmManager(Component):
         printstr = str(printstr)
 
         date_time = rcu.date_and_time()
-        dummy, month, day, time, timezone, year = date_time.split()
-        formatted_day = "%s-%s-%s" % (day, month, year)
+        # dummy, month, day, time, timezone, year = date_time.split()
+        formatted_day = date_time.split()[0] # "%s-%s-%s" % (day, month, year)
 
         if self.use_messagefacility and self.messageviewer_sender is not None:
             if severity == "e":
@@ -208,7 +208,7 @@ class FarmManager(Component):
                         sys.stdout.write("%s %s" % (date_time, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s" % (date_time), printstr, flush=True)
+                        print("%s " % (date_time), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
@@ -269,7 +269,7 @@ class FarmManager(Component):
 # want run number to be always printed with 6 digits
 #---v--------------------------------------------------------------------------
     def get_config_parentdir(self):
-        self.print_log("w","%s::get_config_parentdir: WHY IS IT CALLED ????" %(__file__),2)
+        self.print_log("w","%s::get_config_parentdir: WHY IS IT CALLED ????" %(sys.modules[__name__]),2)
         return os.environ["TFM_FHICL_DIRECTORY"]
 
 
@@ -2125,7 +2125,7 @@ class FarmManager(Component):
     def do_command(self, command):
 
         if command != "Start" and command != "Init" and command != "Stop":
-            self.print_log("i", "\n%s: %s transition underway" % (rcu.date_and_time(), command.upper()))
+            self.print_log("i", "%s transition underway" % (command.upper()))
 #------------------------------------------------------------------------------
 # JCF, Nov-8-2015
 
@@ -2135,7 +2135,7 @@ class FarmManager(Component):
 
 # ELF, Jul-17-2020
 # I've modified this code to do what John says above, but also in subsystem order
-########
+#-------v----------------------------------------------------------------------
         proctypes_in_order = [
             "RoutingManager",
             "Dispatcher"    ,
@@ -2165,11 +2165,12 @@ class FarmManager(Component):
         if command != "Stop" and command != "Pause" and command != "Shutdown":
 #------------------------------------------------------------------------------
 # which leaves 'Init', 'Start', 
+#-----------v------------------------------------------------------------------
             subsystems_in_order.reverse()
 
         starttime = time.time()
 
-        self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" % (command.lower()),1,False)
+        self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" % (command.upper()),1)
         self.print_log("d", "", 3)
 
         proc_starttimes = {}
@@ -2223,9 +2224,8 @@ class FarmManager(Component):
                     max_time        = proc_endtimes[p.label] - proc_starttimes[p.label]
                     slowest_process = p.label
 
-            self.print_log("i","Longest individual transition was %s, which took %.1f seconds."
-                           % (slowest_process, max_time))
-            self.print_log("i",'All artdaq processes returned "Success".')
+            self.print_log("i","Longest individual transition: %s, %.1f seconds." % (slowest_process, max_time))
+            self.print_log("i",'All artdaq processes returned SUCCESS.')
 
         try:
             self.check_proc_transition(self.target_states[command])
@@ -2245,7 +2245,7 @@ class FarmManager(Component):
             else                      : assert False
 
             self.complete_state_change(verbing)
-            self.print_log("i", "\n%s: %s transition complete" % (rcu.date_and_time(), command.upper()))
+            self.print_log("i", "farm_manager::do_command: %s transition complete" % (command.upper()))
 
         return
 #-------^----------------------------------------------------------------------
@@ -2531,8 +2531,7 @@ class FarmManager(Component):
             num_launch_procs_checks += 1
 
             self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
-                % (num_launch_procs_checks, self.max_num_launch_procs_checks),
-                1,False)
+                % (num_launch_procs_checks, self.max_num_launch_procs_checks),1)
 
             # "False" here means "don't consider it an error if all
             # processes aren't found"
@@ -2621,7 +2620,7 @@ class FarmManager(Component):
 #       everything is fine
 #-------v----------------------------------------------------------------------
         endtime = time.time()
-        self.print_log("i", "create_time_server_proxy done (%.1f seconds)" % (endtime - starttime))
+        self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
         return 0
 
 #------------------------------------------------------------------------------
@@ -2629,8 +2628,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def get_lognames(self):
         starttime = time.time()
-        self.print_log("i","\n%s Determining logfiles associated with the artdaq processes..." 
-                       % rcu.date_and_time(),1,False)
+        self.print_log("i","[farm_manager::get_lognames]: determining logfiles associated with the artdaq processes",1) 
         try:
             self.process_manager_log_filenames = self.get_process_manager_log_filenames()
             self.get_artdaq_log_filenames()
@@ -2641,7 +2639,7 @@ class FarmManager(Component):
             return -1;
 
         endtime = time.time()
-        self.print_log("i", "get_lognames done (%.1f seconds)." % (endtime - starttime))
+        self.print_log("i", "[farm_manager::get_lognames]: done (%.1f seconds)." % (endtime - starttime))
         return 0;  # end of get_lognames
 
 #------------------------------------------------------------------------------
@@ -2947,7 +2945,14 @@ class FarmManager(Component):
 
         self.fState = run_control_state.transition("configure")
 
-        self.print_log("i", "CONFIG transition underway")
+        if not run_number: self.run_number = self.run_params["run_number"]
+        else             : self.run_number = run_number
+
+        self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
+                       (self.run_number," ".join(self.subconfigs_for_run)))
+#------------------------------------------------------------------------------
+# what this is needed for ?
+#------------------------------------------------------------------------------
         os.chdir(self.base_dir)
 #------------------------------------------------------------------------------
 # check subconfigs for this run - what they are? 
@@ -2962,17 +2967,14 @@ class FarmManager(Component):
         self.subconfigs_for_run.sort()
 
 #        self.print_log("d", "Config name: %s" % (" ".join(self.subconfigs_for_run)),1)
-
-        if not run_number: self.run_number = self.run_params["run_number"]
-        else             : self.run_number = run_number
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
 # See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
 # refer to the same thing P.Murat: checks in check_hw_fcl look like nonsense - it costs nothing to keel the fcl files unique
 #-------v------------------------------------------------------------------------------
-        self.print_log("i", "CONFIG transition 001 run_number:%06d config name: %s" % 
-                       (self.run_number," ".join(self.subconfigs_for_run)))
+#        self.print_log("i", "CONFIG transition 001 run_number:%06d config name: %s" % 
+#                       (self.run_number," ".join(self.subconfigs_for_run)))
 
         rc = self.check_hw_fcls();
         if (rc != 0): return 
@@ -2992,7 +2994,7 @@ class FarmManager(Component):
         # breakpoint()
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
-        self.print_log("i", "CONFIG transition 007: done (%.1f seconds)." % (time.time() - starttime))
+        self.print_log("i", "CONFIG transition 007: reformatting FHICL done (%.1f seconds)." % (time.time() - starttime),2)
 
         starttime = time.time()
         self.print_log("i", "CONFIG transition 008: bookkeeping the FHiCL documents...", 2)
@@ -3017,6 +3019,7 @@ class FarmManager(Component):
         self.called_launch_procs = True
         self.launch_procs_time   = time.time()  # Will be used when checking logfile's timestamps
 
+        start_time = time.time();
         try:
 #------------------------------------------------------------------------------
 # this is where the processes are launched - 
@@ -3033,7 +3036,8 @@ class FarmManager(Component):
             self.alert_and_recover("An exception was thrown in launch_procs(), see traceback above for more info")
             return
 
-        self.print_log("i", "CONFIG transition 011 Pasha : done launching\n")
+        self.print_log("i", "CONFIG transition 011 : done, launching processes took %f sec" % 
+                       (time.time()-start_time))
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 #-------v----------------------------------------------------------------------
@@ -3064,17 +3068,9 @@ class FarmManager(Component):
 
         self.print_log("i", "CONFIG transition 014 Pasha")
 
-        self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (
-            self.fUser,
-            subprocess.Popen("date +%a_%b_%d_%H:%M:%S.%N",
-                             executable="/bin/bash",
-                             shell=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             encoding="utf8",
-                         ).stdout.readlines()[0].strip(),
-        )
-
+        # breakpoint()
+        self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,
+                                                                             datetime.now().strftime("%Y-%m-%d-%H:%M:%S.%f"))
         assert not os.path.exists(self.semipermanent_run_record)
 
         if os.path.exists(self.tmp_run_record): shutil.rmtree(self.tmp_run_record)
@@ -3140,7 +3136,7 @@ class FarmManager(Component):
             self.archive_documents(labeled_fhicl_documents)
 
             endtime = time.time()
-            self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
+            self.print_log("i", "CONFIG transition: archiving documents done (%.1f seconds)." % (endtime - starttime))
 
         self.complete_state_change("configuring")
         self.fState.set_completed(90);
@@ -3300,7 +3296,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
 
-        self.print_log("i","%s: STOP transition underway for run %d"%(rcu.date_and_time(),self.run_number))
+        self.print_log("i","STOP transition underway for run %d"%(self.run_number))
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
