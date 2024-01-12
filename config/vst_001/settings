@@ -18,7 +18,6 @@ Subsystem:    2      none        none          False
 BoardReader : boardreader01  localhost     -1   2         -1         none    none
 EventBuilder: eventbuilder01 localhost     -1   2       "0-63"       none    none
 DataLogger  : datalogger01   localhost     -1   2       "0-63"       none    none
-# Dispatcher  : dispatcher01   localhost     -1   2       "0-63"       none    none
 Dispatcher  : dispatcher01   localhost  10500   2       "0-63"       none    none
 #--------------------------------------------------------------------------------
 # P.M. DAQ_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
