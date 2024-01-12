@@ -1,0 +1,210 @@
+# -*- mode:tcl -*- 
+#------------------------------------------------------------------------------
+# P.M.
+# module labels can't have underscores in them....
+# when running the ARTDAQ 'demo' example, at any time, can submit in a separate window 
+# a DQM client (of course, setup the Mu2e online environment first): 
+# 
+# mu2e -c config/demo/dqm_client01.fcl
+#
+# the job will be just receiving events and filling a few histograms shown on two canvases:
+# - http://localhost:8877/win1/
+# - http://localhost:8877/win2/
+#------------------------------------------------------------------------------
+# #include "Offline/fcl/minimalMessageService.fcl"# 
+#include "Offline/fcl/standardProducers.fcl"
+#include "Offline/fcl/standardServices.fcl"
+#------------------------------------------------------------------------------
+process_name: TrackerDQM
+
+services: {
+    ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
+        waiting_time        : 1
+        resume_after_timeout: true
+    }
+
+    ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e}
+
+    message :       @local::default_message
+    GeometryService :       {
+        inputFile         : "Offline/Mu2eG4/geom/geom_common.txt"
+        bFieldFile        : "Offline/Mu2eG4/geom/bfgeom_reco_v01.txt"
+        simulatedDetector : {tool_type: "Mu2e"}
+    }
+    ConditionsService       : { conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
+    GlobalConstantsService  : { inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
+    DbService               : @local::DbEmpty
+#    ProditionsService       : @local::Proditions
+    ArtdaqSharedMemoryServiceInterface      :       {service_provider : ArtdaqGlobalsService}
+}
+
+services.message: {
+    destinations:{
+        console:{
+            filename_delimit : "/src"
+            format_string    : "|%L:%N:%f [%u]\t%m"
+            threshold        : "DEBUG"
+            type             : "OTS"
+        }
+
+        file       : {
+            type              : "GenFile"
+            threshold         : "INFO"
+            seperator         : "-"
+            pattern           : "dqm_test-%?H%t-%p.log"
+            timestamp_pattern : "%Y%m%d%H%M%S"
+            directory         : "/scratch/mu2e/mu2etrk_pasha_020/demo/logs/dqm"
+            append            : false
+        }
+
+#         otsConsole : {
+#             filename_delimit : "/src"
+#             host             : "127.0.0.1"
+#             port             : 33045
+#             threshold        : "DEBUG"
+#             type             : "UDP"
+#         }
+    }
+}
+#------------------------------------------------------------------------------
+# input
+# rank uniquely identifies the ARTDAQ process
+#------------------------------------------------------------------------------
+TransferPluginConfig: {
+    transferPluginType : TCPSocket
+    host_map           : [
+                          { rank:100 host: "localhost"},   ## tracker DQM - doesn't matter ?
+                          { rank:  3 host: "localhost"},   ## dispatcher01
+                          { rank:  2 host: "localhost"},   ## datalogger01
+                          { rank:  1 host: "localhost"},   ## eventbuilder01
+                          { rank:  0 host: "localhost"}    ## boardreader01
+                         ]
+    
+    max_fragment_size_words : 1048576
+    source_rank             : 3          ## dispatcher
+    destination_rank        : 100        ## DQM client
+}
+
+source: {
+    module_type         : TransferInput
+    dispatcherHost      : "localhost"
+    dispatcherPort      : 10500   ## 18103, 18500 was OK         ## dispatcher01 port number is declared explicitly
+    commanderPluginType : xmlrpc
+    transfer_plugin     : @local::TransferPluginConfig 
+#------------------------------------------------------------------------------
+# dispatcher_config seems to be the part sent to the server
+#------------------------------------------------------------------------------
+    dispatcher_config: {
+        path         : [dispatcherTransferOutput]
+        filter_paths : [ ]
+        unique_label : "DQMClient01"  ## this is the one to be renamed
+        services: {
+            ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
+                waiting_time        : 100
+                resume_after_timeout: false
+            }
+
+            ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService
+                helper_plugin: Mu2e
+            }
+
+            ArtdaqSharedMemoryServiceInterface : { service_provider : ArtdaqSharedMemoryService }
+        }
+
+        outputs: {
+            dumpOutput: { module_type : FileDumperOutput
+                wantProductFriendlyClassName : true
+            }
+
+            dispatcherTransferOutput: { module_type: TransferOutput
+                transfer_plugin: @local::TransferPluginConfig 
+            }
+        }
+
+        physics: {
+            filters: {
+                prescaler: {
+                    module_type    : Prescaler
+                    prescaleFactor : 100
+                    prescaleOffset :   0
+                }
+            }
+
+            dispatcher_path        : [ prescaler ]
+            out                    : [ dispatcherTransferOutput, dumpOutput ]
+        }
+
+        source: {
+            module_type: ArtdaqInput
+        }
+
+        process_name: DispatcherArtJob
+    }
+}
+#------------------------------------------------------------------------------
+# overriding crap
+#------------------------------------------------------------------------------
+# source: { module_type : RootInput
+#     fileNames: [ "/scratch/mu2e/mu2etrk_pasha_020/demo/data/artdaqdemo_r000018_sr01_20231225T162134_1_dl1.root" ]
+#    # maxEvents : 1000
+# }
+#------------------------------------------------------------------------------
+# output
+#------------------------------------------------------------------------------
+outputs: {
+    dumpOutput: { module_type : FileDumperOutput
+        wantProductFriendlyClassName : true
+    }
+}
+#------------------------------------------------------------------------------
+# job configuration
+#------------------------------------------------------------------------------
+physics: {
+    producers: {}
+
+    analyzers: {
+        trackerDQM : { module_type:TrackerDQM
+            analyzeFragments    : 1           ## set to 0 to print only
+#------------------------------------------------------------------------------
+#	    diagLevel           : 2           # print one line per event
+#	    diagLevel           : 3           # print the whole event in hex
+#------------------------------------------------------------------------------
+            diagLevel           : 0           # print nothing
+            minNBytes           : -1
+            maxNBytes           : 1000000
+            maxFragmentSize     : 20000       ## to catch obvious errors
+#------------------------------------------------------------------------------
+# old format: offset 0x00 :  0  (16 bytes = (0x00 + 0x08) in 2-byte words)
+# new format: offset 0x20 : 40  (80 bytes = (0x20 + 0x08) in 2-byte words)
+# currently redefined in beginRun
+#------------------------------------------------------------------------------
+            dataHeaderOffset    : 32
+            dumpDTCRegisters    :  0
+#------------------------------------------------------------------------------
+# reference channel to calculate dt(i) = T(0,i)-T(0,referenceChannel)
+# reference channel number is run-dependent
+#------------------------------------------------------------------------------
+            activeLinks         : [ 1 ]
+            refChCal            : [ 0 , 91, 91, 91, 91, 91 ]
+            refChHV             : [ 0 , 94, 94, 94, 94, 94 ]
+#------------------------------------------------------------------------------
+# if rootMacro is non-empty, it defines the name of a ROOT macro to be executed 
+# in interpreted mode in the art event loop
+# see https://github.com/Mu2e/Stntuple/blob/muse/doc/event_display.org#plugins
+#------------------------------------------------------------------------------
+            timeWindow          : 2000
+            pulserFrequency     :  250
+            port                : 8877
+        }
+     }
+
+    p1 : [ trackerDQM ]
+
+    end_paths : [ p1 ]
+
+    out : [  ]
+}
+
+#------------------------------------------------------------------------------
+services.TFileService.fileName : "/scratch/mu2e/mu2etrk_pasha_020/vst_001/mu2e_trackerDQM_%#.root"
+services.scheduler.wantSummary : true
