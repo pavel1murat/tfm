@@ -7,18 +7,16 @@ packagename=$1
 # Spack packages use - where UPS uses _
 packagename=`echo ${packagename} | tr _ -`
 
+settings=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings
+
 if [[ -z $packagename ]]; then
     echo "An argument with the desired packagename is required" >&2
     return 70
 fi
 
-if [[ ! -e $TFM_SETTINGS ]]; then
-    echo "Unable to find TFM settings file \"$TFM_SETTINGS\"" >&2
-    return 30
-fi
 test -z "${TFM_DIR-}" && { echo "Error: TFM not setup"; return 40; }
 
-spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $TFM_SETTINGS )
+spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $settings )
 
 if [[ -n $spackdir ]]; then
 
@@ -47,6 +45,6 @@ if [[ -n $spackdir ]]; then
 
     return $?
 else
-    echo "Unable to find valid products/ directory from tfm settings file \"$TFM_SETTINGS\"" >&2
+    echo "Unable to find valid products/ directory from tfm settings file \"$settings\"" >&2
     return 40
 fi

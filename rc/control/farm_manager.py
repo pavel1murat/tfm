@@ -974,12 +974,22 @@ class FarmManager(Component):
             elif "log_directory" in line or "log directory" in line:
                 self.log_directory = line.split()[-1].strip()
 
+            elif (key == "top_output_dir"):  
+#------------------------------------------------------------------------------
+# make sure output directories exist
+#------------------------------------------------------------------------------
+                self.top_output_dir = data
+                for subdir in ['logs','data','run_records']:
+                    path = self.top_output_dir+'/'+subdir
+                    if (not os.path.exists(path)):
+                        os.mkdirs(path)
+
             elif (key == "manage_processes"):
                 if (data.upper() == "TRUE"): self.manage_processes = True
                 else                       : self.manage_processes = False
 
             elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
-                self.productsdir = line.split()[-1].strip()
+                self.productsdir = data
 
             elif "record_directory" in line or "record directory" in line:
                 self.record_directory = line.split()[-1].strip()
@@ -3358,7 +3368,7 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","%s: STOP transition complete for run %d"%(rcu.date_and_time(),self.run_number))
+        self.print_log("i","STOP transition complete, run=%06d" % (self.run_number))
         return
 
 #------------------------------------------------------------------------------

@@ -530,9 +530,8 @@ def get_commit_hash(gitrepo):
     if len(proclines) != 1 or len(proclines[0].strip()) != 40:
         raise Exception(
             make_paragraph(
-                'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list found in %s'
-                % (gitrepo, os.environ["TFM_SETTINGS"])
-            )
+                'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list'
+                % gitrepo )
         )
 
     commit_hash = proclines[0].strip()

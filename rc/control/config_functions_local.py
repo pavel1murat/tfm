@@ -91,12 +91,9 @@ def listconfigs_base(self):
         outf.write("%s\n" % config)
 
     print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
-    print(
-        rcu.make_paragraph(
-            "Please note that for the time being, the optional max_configurations_to_list variable "
-            "which may be set in %s is only applicable when working with the database\n"
-            % os.environ["TFM_SETTINGS"]
-        )
+    print(rcu.make_paragraph(
+        "Please note that for the time being, the optional max_configurations_to_list variable "
+        "which may be set in the settings file is only applicable when working with the database")
     )
 
     # print(flush=True)

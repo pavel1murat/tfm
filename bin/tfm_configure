@@ -9,7 +9,12 @@
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 
-function cleanup() {
+function tfm_configure_() {
+    local name="tfm_configure"
+    local debug=0; 
+#------------------------------------------------------------------------------
+# do cleanup
+#------------------------------------------------------------------------------
     export PATH=$(echo $PATH | sed -r 's!'${TFM_DIR}/bin':*!!')
 
     unset TFM_LOGDIR
@@ -17,36 +22,34 @@ function cleanup() {
     unset TFM_USER_SOURCE_ME_ERRNO
     unset TFM_TTY
     unset TFM_PORT
-}
+#------------------------------------------------------------------------------
+# proceed 
+#------------------------------------------------------------------------------
+    export       TFM_CONFIGURATION=$1
+    export          TFM_CONFIG_DIR=`dirname  $1`
+    export         TFM_CONFIG_NAME=`basename $1`
+    export ARTDAQ_PARTITION_NUMBER=$2
+    if [ ".$3" != "." ] ; then debug=$3 ; fi
+    
+    export     TFM_FHICL_DIRECTORY=$TFM_CONFIG_DIR
+    
+    if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_CONFIG_DIR=$TFM_CONFIG_DIR ; fi
 
-cleanup
-
-debug=0; 
-
-export          TFM_CONFIG_DIR=`dirname  $1`
-export         TFM_CONFIG_NAME=`basename $1`
-export ARTDAQ_PARTITION_NUMBER=$2
-if [ ".$3" != "." ] ; then debug=$3 ; fi
- 
-export     TFM_FHICL_DIRECTORY=$TFM_CONFIG_DIR
-
-if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : TFM_CONFIG_DIR=$TFM_CONFIG_DIR ; fi
-
-if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
-    echo call: tfm_configure config_dir partition
-    return
-fi
+    if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
+        echo call: tfm_configure config_dir partition
+        return
+    fi
 #------------------------------------------------------------------------------
 # all parameters present
 #------------------------------------------------------------------------------
-if [ -n $TFM_VERSION ] ; then echo TFM_VERSION=$TFM_VERSION
-                         else echo "TFM not setup, bail out" ; return 1
-fi
+    if [ -n $TFM_VERSION ] ; then echo TFM_VERSION=$TFM_VERSION
+                             else echo "TFM not setup, bail out" ; return 1
+    fi
 
-export TFM_TTY=$(tty | sed -r 's!/dev/!!')
+    export TFM_TTY=$(tty | sed -r 's!/dev/!!')
 
-if ! [[ "$TFM_TTY" =~ pts/[0-9]+ ]]; then
-    cat<<EOF >&2
+    if ! [[ "$TFM_TTY" =~ pts/[0-9]+ ]]; then
+        cat<<EOF >&2
 WARNING: unable to determine tty. While this will not affect
 actual datataking, any DAQInterface launched in this environment
 may have problems with sending output to a MessageViewer instance
@@ -56,66 +59,53 @@ fi
 # this is the directory where the FCL files of all configurations reside 
 # with the subdirectory per configuration
 #------------------------------------------------------------------------------
-export          TFM_SETUP_FHICLCPP=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/.setup_fhiclcpp
-export                TFM_SETTINGS=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/settings
-#------------------------------------------------------------------------------
-# create output directories
-#------------------------------------------------------------------------------
-if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : TFM_SETTINGS=$TFM_SETTINGS ; fi
+    export          TFM_SETUP_FHICLCPP=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/.setup_fhiclcpp
 
-top_output_dir=`cat $TFM_SETTINGS | grep top_output_dir | awk -F : '{ gsub(" ","",$2) ; print $2}' | envsubst`
-
-if [ $debug != 0 ] ; then echo [tfm_configure:$LINENO] : top_output_dir=`echo $top_output_dir` ; fi
-
-for subdir in logs data run_records ; do
-    dir=$top_output_dir/$subdir
-    if [ ! -d $dir ] ; then mkdir -p $dir ; fi
-done
-
-mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
-export ARTDAQ_LOG_FHICL=$DAQ_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
+    mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
+    export ARTDAQ_LOG_FHICL=$DAQ_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
 #------------------------------------------------------------------------------
 # TFM is supposed to have its own logfile
 #------------------------------------------------------------------------------
-export     TFM_LOGDIR=$top_output_dir/logs
+    local x=`cat $TFM_CONFIGURATION/settings | grep top_output_dir | sed 's/ //g' | awk -F : '{print $2}'`
+    export  TFM_TOP_OUTPUT_DIR=`eval echo $x`
+    export          TFM_LOGDIR=$TFM_TOP_OUTPUT_DIR/logs
+
+    if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_LOGDIR=$TFM_LOGDIR ; fi
+    mkdir -p $TFM_LOGDIR
 #------------------------------------------------------------------------------
 # P.M. ARTDAQ_PARTITION_NUMBER is already defined
 #------------------------------------------------------------------------------
-if [[ -z $ARTDAQ_BASE_PORT           ]]; then export           ARTDAQ_BASE_PORT=10000 ; fi
-if [[ -z $ARTDAQ_PORTS_PER_PARTITION ]]; then export ARTDAQ_PORTS_PER_PARTITION=1000  ; fi
+    if [[ -z $ARTDAQ_BASE_PORT           ]]; then export           ARTDAQ_BASE_PORT=10000 ; fi
+    if [[ -z $ARTDAQ_PORTS_PER_PARTITION ]]; then export ARTDAQ_PORTS_PER_PARTITION=1000  ; fi
 
-export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`  # 10000 + 1000*partition_number
+    export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`  # 10000 + 1000*partition_number
 
-export PATH=$TFM_DIR/bin:$PATH
+    export PATH=$TFM_DIR/bin:$PATH
 
-export TFM_PROCESS_MANAGEMENT_METHOD="direct"
-
-if [[ -z $TFM_FHICL_DIRECTORY ]]; then
-    export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
-    cat<<EOF
+    export TFM_PROCESS_MANAGEMENT_METHOD="direct"
+    
+    if [[ -z $TFM_FHICL_DIRECTORY ]]; then
+        export TFM_FHICL_DIRECTORY="$PWD/simple_test_config"
+        cat<<EOF
 WARNING: the environment variable TFM_FHICL_DIRECTORY hasn't
 been defined in $TFM_USER_SOURCE_ME, so we're going to
 assume the default configuration area is $TFM_FHICL_DIRECTORY
 EOF
 fi
 
-if [[ ! -e "$TFM_FHICL_DIRECTORY" && "$TFM_FHICL_DIRECTORY" != "IGNORED" ]]; then cat<<EOF
+    if [[ ! -e $TFM_FHICL_DIRECTORY && $TFM_FHICL_DIRECTORY != "IGNORED" ]]; then cat<<EOF
 ERROR: unable to find the FHiCL directory referred to by the
 TFM_FHICL_DIRECTORY environment variable,
 $TFM_FHICL_DIRECTORY
 EOF
-    cleanup
-    return 1
-fi
-
-if [[ -z $TFM_LOGDIR ]]; then export TFM_LOGDIR=/tmp/tfm_${USER} ; fi
-
-mkdir -p $TFM_LOGDIR
+        cleanup
+        return 1
+    fi
 #------------------------------------------------------------------------------
 # assume 100 partitions is enough
 #------------------------------------------------------------------------------
-export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $ARTDAQ_PARTITION_NUMBER`.log
-cat<<EOF
+    export TFM_LOGFILE=$TFM_LOGDIR/partition_`printf "%02i" $ARTDAQ_PARTITION_NUMBER`.log
+    cat<<EOF
 
 * The TFM environment setup for configuration $TFM_CONFIG_NAME successful. 
 * To launch TFM: tfm_start.sh &
@@ -125,3 +115,8 @@ cat<<EOF
 * data will be logged in ... TO BE DEFINED
 
 EOF
+}
+#------------------------------------------------------------------------------
+# call function
+#------------------------------------------------------------------------------
+tfm_configure_ $*
