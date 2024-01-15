@@ -982,7 +982,7 @@ class FarmManager(Component):
                 for subdir in ['logs','data','run_records']:
                     path = self.top_output_dir+'/'+subdir
                     if (not os.path.exists(path)):
-                        os.mkdirs(path)
+                        os.makedirs(path)
 
             elif (key == "manage_processes"):
                 if (data.upper() == "TRUE"): self.manage_processes = True
