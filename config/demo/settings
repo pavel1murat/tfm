@@ -5,6 +5,7 @@
 debug_level                  : 1  # debug_level ranges from 1 to 4 in increasing level of verbosity
 
 daq_setup_script             : $MRB_TOP/setup_ots.sh  # location of the ARTDAQ setup script 
+top_output_dir               : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME
 log_directory                : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
 data_directory_override      : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
 record_directory             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
