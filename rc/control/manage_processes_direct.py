@@ -44,12 +44,12 @@ def launch_procs_on_host(self,host,
                          launch_commands_to_run_on_host_background,
                          launch_commands_on_host_to_show_user):
     # breakpoint()
-    self.print_log("i", "Executing commands to launch processes on %s" % (host),2)
+    self.print_log("d", "[manage_processes_direct::launch_procs_on_host]: executing commands to launch processes on %s" % (host),2)
 
     # Before we try launching the processes, let's make sure there
     # aren't any pre-existing processes listening on the same ports
 
-    self.print_log("d","Before check for existing processes on %s" % host,2)
+    # self.print_log("d","Before check for existing processes on %s" % host,2)
     grepped_lines    = []
     preexisting_pids = rcu.get_pids("\|".join(
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
@@ -90,10 +90,10 @@ def launch_procs_on_host(self,host,
                  " see error message above for details"))
         )
 
-    self.print_log("d","After check for existing processes on %s" % host,2)
+    self.print_log("d","[manage_processes_direct::launch_procs_on_host]: after check for existing processes on %s" % host,2)
 #------------------------------------------------------------------------------
 #   Each command already terminated by ampersand
-####
+#---v--------------------------------------------------------------------------
     launchcmd = rcu.construct_checked_command(launch_commands_to_run_on_host)
     launchcmd += "; "
     launchcmd += " ".join(launch_commands_to_run_on_host_background)
@@ -101,7 +101,7 @@ def launch_procs_on_host(self,host,
     if not rcu.host_is_local(host):
         launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
 
-    self.print_log("d", "\nartdaq process launch commands to execute on %s (output will be in %s:%s):\n%s\n"
+    self.print_log("d", "artdaq process launch commands to execute on %s (output will be in %s:%s):\n%s"
                    % (host,host,self.launch_attempt_files[host],"\n".join(launch_commands_on_host_to_show_user)),
                    2)
 
@@ -149,9 +149,15 @@ def launch_procs_base(self):
     cmds.append("fhicl-dump -l $dump_arg -c %s" % (rcu.get_messagefacility_template_filename()))
 
     cmd = "; ".join(cmds)
+
+    self.print_log("d","manage_processes_direct::launch_procs_base 001: executing \n%s" % (cmd),2)
+    start_time = time.time()
     proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
     proc.wait();
+
+    self.print_log("d","manage_processes_direct::launch_procs_base: command executed in %f sec, rc=%d" % 
+                   (time.time()-start_time,proc.returncode),2)
 
     if proc.returncode != 0:
         self.print_log("e","\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
@@ -185,7 +191,7 @@ def launch_procs_base(self):
 #------------------------------------------------------------------------------
 # Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
 # Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
-####
+#---v--------------------------------------------------------------------------
     launch_commands_to_run_on_host            = {} # a dict of pairs {host:list_of_commands}
     launch_commands_to_run_on_host_background = {}
     launch_commands_on_host_to_show_user      = {}
@@ -221,7 +227,7 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
 #------------------------------------------------------------------------------
 # Assume if this works, eventbuilder, etc. are also there
-############
+#-----------v------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append(
                 "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition(),self.launch_attempt_files[p.host])
             )

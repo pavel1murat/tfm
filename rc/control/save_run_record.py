@@ -131,10 +131,7 @@ def save_run_record_base(self):
     outf.write("TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd()))
     outf.write("DAQInterface logfile: %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"]))
 
-    # Now save the commit hashes / versions of the packages listed in
-    # self.settings_filename() = $TFM_SETTINGS, along with the commit hash for
-    # DAQInterface(if using DAQInterface from the repo) or version (if
-    # using DAQInterface as a ups product)
+    # Now save the commit hashes / versions of the packages listed in the settings file
 
     # JCF, Jul-9-2019
     # Add additional info along with that described above, as per Redmine Issue #22777
@@ -171,7 +168,7 @@ def save_run_record_base(self):
     
     self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
 
-    print("package_buildinfo_dict:\n",package_buildinfo_dict)
+#    print("package_buildinfo_dict:\n",package_buildinfo_dict)
 
 #     try:
 #         commit_info_fullpathname = "%s/%s" % (

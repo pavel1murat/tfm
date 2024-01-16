@@ -4,6 +4,8 @@
 
 packagename=$1
 
+settings=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings
+
 if [[ -z $packagename ]]; then
     echo "An argument with the desired packagename is required" >&2
     return 70
@@ -19,14 +21,9 @@ if [[ -n "${!prodDirEnvVar}" ]]; then
     return
 fi
 
-
-if [[ ! -e $TFM_SETTINGS ]]; then
-    echo "Unable to find tfm settings file \"$TFM_SETTINGS\"" >&2
-    return 30
-fi
 test -z "${TFM_DIR-}" && { echo "Error: tfm not setup"; return 40; }
 
-proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $TFM_SETTINGS )
+proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $settings )
 export PRODUCTS
 eval "PRODUCTS=\"$proddir\"" # Expand environ variables in string
 proddir=`$TFM_DIR/rc/control/utilities.py upsproddir_from_productsdir "$PRODUCTS"`
@@ -99,6 +96,6 @@ EOF
     
     return 0
 else
-    echo "Unable to find valid products/ directory from TFM settings file \"$TFM_SETTINGS\"" >&2
+    echo "Unable to find valid products/ directory from TFM settings file \"$settings\"" >&2
     return 40
 fi

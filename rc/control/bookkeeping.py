@@ -129,15 +129,17 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     raise Exception(
                         make_paragraph(
                             ('Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; '
-                             'this is needed since "advanced_memory_usage" is set to true in the settings file, %s')
-                            % (procinfo.label, os.environ["TFM_SETTINGS"])
+                             'this is needed since "advanced_memory_usage" is set to true in the settings file')
+                            % (procinfo.label)
                         )
                     )
             else:
                 if len(res) > 0:
-                    raise Exception(make_paragraph(
-                        "max_fragment_size_bytes is found in the FHiCL document for " +procinfo.label
-                        + "; this parameter must not appear in FHiCL documents for non-BoardReader artdaq processes") 
+                    raise Exception(
+                        make_paragraph(
+                            ("max_fragment_size_bytes is found in the FHiCL document for %s ;" 
+                             "this parameter must not appear in FHiCL documents for non-BoardReader artdaq processes"
+                             % procinfo.label))
                     )
 
             if "max_event_size_bytes" in procinfo.fhicl_used:
@@ -145,10 +147,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     make_paragraph(
                         ('max_event_size_bytes is found in the FHiCL document for %s; '
                          'this parameter must not appear in FHiCL documents when "advanced_memory_usage" '
-                         'is set to true in the settings file %s. This is because TFM calculates '
+                         'is set to true. This is because TFM calculates '
                          'and then adds this parameter during bookkeeping.')
-                        % (procinfo.label, os.environ["TFM_SETTINGS"])
-                    )
+                        % (procinfo.label))
                 )
 
     # Now loop over the boardreaders again to determine
@@ -935,16 +936,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                     self.procinfos[i_proc].fhicl_used,
                                 )
                 else:
-                    self.print_log(
-                        "w",
-                        make_paragraph(
-                            'Warning: disable_private_network_bookkeeping isn\'t set to true in the TFM settings file "%s" -- it defaults to false if unset -- but no private network was found visible to all the processes involved in data requests for subsystem %s: %s'
-                            % (
-                                os.environ["TFM_SETTINGS"],
-                                str(subsystem_id),
-                                ", ".join(processes_involved_in_requests),
-                            )
-                        ),
+                    self.print_log("w",make_paragraph
+                                   ('Warning: disable_private_network_bookkeeping isn\'t set to true '
+                                    'in the TFM settings file -- it defaults to false if unset -- '
+                                    'but no private network was found visible to all the processes involved '
+                                    'in data requests for subsystem %s: %s'
+                                    % (str(subsystem_id),", ".join(processes_involved_in_requests)))
                     )
 
     # JCF, Apr-18-2019

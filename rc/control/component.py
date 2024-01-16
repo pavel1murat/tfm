@@ -190,7 +190,7 @@ class Component(ContextObject):
     def complete_shutdown(self,name):
         print(" >>> complete_shutdown Requested");
         self.shutdown()
-        return;
+        return "farm_manager: performing complete shutdown";
 
 #------------------------------------------------------------------------------
 # request to change state comes from the outside

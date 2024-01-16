@@ -1,0 +1,57 @@
+{
+  "/MIDAS version" : "2.1",
+  "/MIDAS git revision" : "Mon Dec 4 12:29:25 2023 +0100 - midas-2022-05-c-754-g97fc7b89-dirty on branch develop",
+  "/filename" : "ArtdaqConfiguratons.json",
+  "/ODB path" : "/ArtdaqConfigurations",
+
+  "vst_001" : {
+    "NNodes/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768180 },
+    "NNodes" : 1,
+    "Node_01" : {
+      "Host/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704767951 },
+      "Host" : "mu2edaq09.fnal.gov",
+      "NBoardReaders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768093 },
+      "NBoardReaders" : 1,
+      "NEventBuilders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768107 },
+      "NEventBuilders" : 1,
+      "NDataLoggers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768119 },
+      "NDataLoggers" : 1,
+      "NDispatchers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768130 },
+      "NDispatchers" : 1,
+      "BoardReader_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768293 },
+        "Name" : "boardreader01",
+        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771353 },
+        "XmlrpcPort" : "18100",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034148 },
+        "Rank" : 0
+      },
+      "EventBuilder_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768353 },
+        "Name" : "eventbuilder01",
+        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771357 },
+        "XmlrpcPort" : "18101",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034163 },
+        "Rank" : 1
+      },
+      "DataLogger_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768384 },
+        "Name" : "datalogger01",
+        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771362 },
+        "XmlrpcPort" : "18102",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034188 },
+        "Rank" : 2
+      },
+      "Dispatcher_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768431 },
+        "Name" : "dispatcher01",
+        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705034206 },
+        "XmlrpcPort" : "10500",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034226 },
+        "Rank" : 3
+      }
+    },
+    "Partition/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704771443 },
+    "Partition" : 8
+  }
+}

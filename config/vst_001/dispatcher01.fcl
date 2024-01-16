@@ -1,13 +1,11 @@
+# -*- mode:tcl -*-
 ###########################################################
 #
 # artdaq dispatcher fcl configuration file produced by otsdaq.
 # 	Creation time:                  	Thu Nov 16 17:10:27 2023 CST
 # dispatcher0.fcl
 #	otsdaq-ARTDAQ dispatcher UID:	dispatcher0
-#
 ###########################################################
-
-
 daq: {
     aggregator: {
         is_dispatcher             : true
@@ -17,9 +15,8 @@ daq: {
         event_queue_depth         :    2
         event_queue_wait_time     :    1
         onmon_event_prescale      :    1
-        is_dispatcher             : true
         overwrite_mode            : true
-        max_fragment_size_bytes   : 65338168
+        max_fragment_size_bytes   : 0x100000
         auto_suppression_enabled  : false
         sources: {
         }

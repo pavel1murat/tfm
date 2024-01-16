@@ -4,17 +4,15 @@
 ###########################################################
 daq: {
     aggregator: {
-        is_datalogger: true
-        buffer_count    :   10
-        expected_fragments_per_event    :   1
-        max_fragment_size_bytes   :   65338168
-        init_fragment_count   :   1
-        broadcast_buffer_size   :   0x6400000
-        sources: {
-        }
+        is_datalogger                : true
+        buffer_count                 : 10
+        expected_fragments_per_event :  2
+        max_fragment_size_bytes      : 0x100000
+        init_fragment_count          :   1
+        broadcast_buffer_size        : 0x6400000
+        sources: { }
     }
-    metrics: {
-    }
+    metrics: {}
 }
 
 art: {
@@ -52,8 +50,8 @@ art: {
                                        "keep mu2e::CaloHits_CaloHitMakerFast_caphri_*"
                                       ]
             fileProperties : { 
-                maxSize     : 500000 
-                granularity : SubRun 
+                maxSize     : 1500000 
+                granularity :  SubRun 
             }
             checkFileName  :     false
         }

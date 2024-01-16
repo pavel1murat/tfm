@@ -10,6 +10,8 @@ import stat
 
 import subprocess
 from   subprocess import Popen
+from   datetime   import datetime
+from   zoneinfo   import ZoneInfo
 
 from   time       import sleep
 from   time       import time
@@ -355,42 +357,47 @@ def execute_command_in_xterm(home, cmd):
     ).wait()
 
 
+#------------------------------------------------------------------------------
+# return date and time in Chicago with 0.1 sec precision
+#------------------------------------------------------------------------------
 def date_and_time():
-    return (
-        Popen(
-            'date +"%a %b %e %H:%M:%S %Z %Y"',
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
-    )
+#     return (
+#         Popen(
+#             'date +"%a %b %e %H:%M:%S %Z %Y"',
+#             shell=True,
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.STDOUT, encoding="UTF-8"
+#         )
+#         .stdout.readlines()[0]
+#         .strip()
+#     )
 
+    return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S.%f")[:-5]
 
 def date_and_time_more_precision():
-    return (
-        Popen(
-            "date +%a_%b_%d_%H:%M:%S.%N | sed -r 's/_/ /g'",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
-    )
+#     return (
+#         Popen(
+#             "date +%a_%b_%d_%H:%M:%S.%N | sed -r 's/_/ /g'",
+#             shell=True,
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.STDOUT, encoding="UTF-8"
+#         )
+#         .stdout.readlines()[0]
+#         .strip()
+#     )
 
+    return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]
 
 def date_and_time_filename():
-    return (Popen('date +%Y%m%d%H%M%S',
-                  shell=True,
-                  stdout=subprocess.PIPE,
-                  stderr=subprocess.STDOUT, encoding="UTF-8"
-              )
-            .stdout.readlines()[0]
-            .strip()
-    )
-
+#     return (Popen('date +%Y%m%d%H%M%S',
+#                   shell=True,
+#                   stdout=subprocess.PIPE,
+#                   stderr=subprocess.STDOUT, encoding="UTF-8"
+#               )
+#             .stdout.readlines()[0]
+#             .strip()
+#     )
+    return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y%m%d%H%M%S")
 
 def construct_checked_command(cmds):
 
@@ -523,9 +530,8 @@ def get_commit_hash(gitrepo):
     if len(proclines) != 1 or len(proclines[0].strip()) != 40:
         raise Exception(
             make_paragraph(
-                'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list found in %s'
-                % (gitrepo, os.environ["TFM_SETTINGS"])
-            )
+                'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list'
+                % gitrepo )
         )
 
     commit_hash = proclines[0].strip()

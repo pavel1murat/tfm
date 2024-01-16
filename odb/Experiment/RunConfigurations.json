@@ -1,0 +1,55 @@
+{
+  "/MIDAS version" : "2.1",
+  "/MIDAS git revision" : "Mon Dec 4 12:29:25 2023 +0100 - midas-2022-05-c-754-g97fc7b89-dirty on branch develop",
+  "/filename" : "RunConfigurations.json",
+  "/ODB path" : "/Experiment/RunConfigurations",
+
+  "demo" : {
+    "ARTDAQ_PARTITION_NUMBER/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1703130069 },
+    "ARTDAQ_PARTITION_NUMBER" : 11,
+    "ArtdaqConfiguration/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704127261 },
+    "ArtdaqConfiguration" : "demo",
+    "RunType/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704144429 },
+    "RunType" : 4,
+    "TriggerTable/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704127255 },
+    "TriggerTable" : "demo_tt_v00",
+    "UseRunInfoDB/key" : { "type" : 8, "access_mode" : 7, "last_written" : 0 },
+    "UseRunInfoDB" : false
+  },
+  "stm_swtest_001" : {
+    "ARTDAQ_PARTITION_NUMBER/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1703130035 },
+    "ARTDAQ_PARTITION_NUMBER" : 5,
+    "ArtdaqConfiguration/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704144461 },
+    "ArtdaqConfiguration" : "stm_swtest_001",
+    "RunType/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704144460 },
+    "RunType" : 5,
+    "TriggerTable/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704127246 },
+    "TriggerTable" : "stm_swtest_tt_v01",
+    "UseRunInfoDB/key" : { "type" : 8, "access_mode" : 7, "last_written" : 0 },
+    "UseRunInfoDB" : false
+  },
+  "trkvst_v00" : {
+    "ARTDAQ_PARTITION_NUMBER/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1703130051 },
+    "ARTDAQ_PARTITION_NUMBER" : 8,
+    "ArtdaqConfiguration/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704067461 },
+    "ArtdaqConfiguration" : "vst_000",
+    "RunType/key" : { "type" : 7, "access_mode" : 7, "last_written" : 0 },
+    "RunType" : 0,
+    "TriggerTable/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704127141 },
+    "TriggerTable" : "trkvst_tt_v00",
+    "UseRunInfoDB/key" : { "type" : 8, "access_mode" : 7, "last_written" : 0 },
+    "UseRunInfoDB" : false
+  },
+  "trkvst_v01" : {
+    "ARTDAQ_PARTITION_NUMBER/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1703130085 },
+    "ARTDAQ_PARTITION_NUMBER" : 8,
+    "ArtdaqConfiguration/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704126578 },
+    "ArtdaqConfiguration" : "vst_001",
+    "RunType/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704061928 },
+    "RunType" : 1,
+    "TriggerTable/key" : { "type" : 12, "item_size" : 64, "access_mode" : 7, "last_written" : 1704127042 },
+    "TriggerTable" : "trkvst_tt_v01",
+    "UseRunInfoDB/key" : { "type" : 8, "access_mode" : 7, "last_written" : 1703129877 },
+    "UseRunInfoDB" : true
+  }
+}

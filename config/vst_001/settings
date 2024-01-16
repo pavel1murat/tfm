@@ -12,23 +12,24 @@ debug_level        : 1
 #--------------------------------------------------------------------------------
 Subsystem:    2      none        none          False
 #--------------------------------------------------------------------------------
-#                label       host    port subsystem   allowed     prepend  target
-#                                                    processors
+#                label         host      port subsystem  allowed  prepend  target
+#                                                     processors
 #--------------------------------------------------------------------------------
-BoardReader : boardreader  localhost  -1      2          -1         none     none
-EventBuilder: eventbuilder localhost  -1      2        "0-63"       none     none
-DataLogger  : datalogger   localhost  -1      2        "0-63"       none     none
-Dispatcher  : dispatcher   localhost  10500   2        "0-99"       none     none
+BoardReader : boardreader01  localhost     -1   2         -1         none    none
+EventBuilder: eventbuilder01 localhost     -1   2       "0-63"       none    none
+DataLogger  : datalogger01   localhost     -1   2       "0-63"       none    none
+Dispatcher  : dispatcher01   localhost  10500   2       "0-63"       none    none
 #--------------------------------------------------------------------------------
-# P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+# P.M. DAQ_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
 #      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 #------------------------------------------------------------------------------
-log_directory                       : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
-data_directory_override             : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
-record_directory                    : /scratch/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+top_output_dir                      : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME
+log_directory                       : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/logs
+data_directory_override             : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/data
+record_directory                    : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/run_records
 productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
 #
-package_hashes_to_save              : [artdaq]
+# package_hashes_to_save              : [artdaq]   # useless
 boardreader timeout                 : 600
 eventbuilder timeout                : 600
 datalogger timeout                  : 600
@@ -46,3 +47,5 @@ advanced_memory_usage               : false
 strict_fragment_id_mode             : false
 disable_private_network_bookkeeping : false
 allowed_processors                  : "0-63"
+validate_setup_script               : 0      # default=1
+#     Info is provided in the memory management details section.

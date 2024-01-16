@@ -12,6 +12,12 @@
   the name of the directory containing the configurations you can pass 
   on the config transition. If set to "IGNORED", this means the database is used. 
 
+- *TFM_TOP_OUTPUT_DIR*                                                               
+  - the top output directory
+  - data files : $TFM_TOP_OUTPUT_DIR/data
+  - logfiles   : $TFM_TOP_OUTPUT_DIR/logs
+  - run records: $TFM_TOP_OUTPUT_DIR/run_records
+
 - *TFM_LOGDIR*                                                               
   the directory in which the file which logs TFM output to screen is located.
 
@@ -41,8 +47,6 @@
   run-critical, assuming the process management method is in "direct" mode
   P.M. calling a file 'a list' doesn't make much sense
 
-- *TFM_SETTINGS* replaced by $TFM_CONFIG_DIR/settings                                                            
-
 - *TFM_SETUP_FHICLCPP*                                                       
   defined in [[file:../rc/control/farm_manager.py::/TFM_SETUP_FHICLCPP/]]
 
@@ -56,7 +60,6 @@ TFM_KNOWN_BOARDREADERS_LIST=/home/mu2etrk/test_stand/pasha_019/tfm_test/known_bo
 TFM_PROCESS_MANAGEMENT_METHOD=direct
 TFM_VERSION=v0_0_1
 TFM_TTY=pts/2
-TFM_SETTINGS=/home/mu2etrk/test_stand/pasha_019/tfm_test/settings
 TFM_PORT=18000
 TFM_TEST_DIR=/home/mu2etrk/test_stand/pasha_019/tfm_test
 TFM_LOGDIR=/tmp/tfm_mu2etrk
