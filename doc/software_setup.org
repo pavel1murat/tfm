@@ -5,6 +5,9 @@
   the test example configuration assumes saving hash from artdaq_demo
 #+begin_src 
 git clone https://github.com/pavel1murat/tfm 
+git clone https://github.com/pavel1murat/frontends
+git clone https://github.com/pavel1murat/artdaq
+git clone https://github.com/pavel1murat/artdaq_corex
 git clone https://github.com/art-daq/artdaq_demo
 git clone https://github.com/art-daq/artdaq_core_demo
 mrb uc

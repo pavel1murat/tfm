@@ -2180,8 +2180,8 @@ class FarmManager(Component):
 
         starttime = time.time()
 
-        self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" % (command.upper()),1)
-        self.print_log("d", "", 3)
+        self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" 
+                       % (command.upper()),1)
 
         proc_starttimes = {}
         proc_endtimes   = {}
@@ -2217,7 +2217,8 @@ class FarmManager(Component):
         time.sleep(1)
 
         endtime = time.time()
-        self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." % (command,endtime - starttime))
+        self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." 
+                       % (command.upper(),endtime - starttime))
 
         nfailed = len([p for p in self.procinfos if p.lastreturned != "Success" ])
 
@@ -2803,8 +2804,7 @@ class FarmManager(Component):
                     rootfile_cntr += 1
 
         endtime = time.time()
-        self.print_log("i", "done (%.1f seconds)." % (endtime - starttime))
-        self.print_log("i", "\n%s: CONFIG transition 002 Pasha" % (rcu.date_and_time()))
+        self.print_log("i", "CONFIG transition 002: step lasted (%.1f seconds)." % (endtime - starttime))
 
         for p in self.procinfos:
             assert not p.fhicl is None and not p.fhicl_used is None
@@ -2925,9 +2925,9 @@ class FarmManager(Component):
 # deal with message facility. 
 # -- also OK to do just once
 #-----------v------------------------------------------------------------------
-            self.print_log("i", "BOOT transition 004 Pasha: before init_process_requirements",2)
+            self.print_log("i", "BOOT transition 004: before init_process_requirements",2)
             self.init_process_requirements()
-            self.print_log("i", "BOOT transition 005 Pasha: after init_process_requirements" ,2)
+            self.print_log("i", "BOOT transition 005: after init_process_requirements" ,2)
             self.fState.set_completed(60);
 #------------------------------------------------------------------------------
 # now do something with fhiclcpp - need to figure out what it is. OK to do just once
@@ -3076,7 +3076,7 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition())
 
-        self.print_log("i", "CONFIG transition 014 Pasha")
+        self.print_log("i", "CONFIG transition 014")
 
         # breakpoint()
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,
@@ -3108,7 +3108,7 @@ class FarmManager(Component):
             self.revert_failed_transition("calling experiment-defined function check_config()")
             return
 
-        self.print_log("i", "CONFIG transition 016 Pasha")
+        self.print_log("i", "CONFIG transition 016")
 #------------------------------------------------------------------------------
 # sending 'Init' command to artdaq processes - at this point they should be already submitted
 # insert the last part of former do_boot right above
@@ -3230,7 +3230,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # step X) put_config_info
 #-------v------------------------------------------------------------------------------
-        self.print_log("i", "START transition 001 Pasha : before put_config_info")
+        self.print_log("i", "START transition 001: before put_config_info")
 
         try:
             self.put_config_info()
@@ -3259,14 +3259,14 @@ class FarmManager(Component):
                     )
                 )
 #------------------------------------------------------------------------------
-# start TRACE ???
+# start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
-        self.print_log("i","[%s::do_start_running] START transition 002: before execute_trace_script" % (__file__))
+        self.print_log("i","START transition 002: [farm_manager::do_start_running]: before execute_trace_script")   
 
         self.execute_trace_script("start")
 
-        self.print_log("i","[%s::do_start_running] START transition 003: self.manage_processes=%i" % 
-                       (__file__,self.manage_processes))
+        self.print_log("i","START transition 003: [farm_manager::do_start_running] self.manage_processes=%i" % 
+                       (self.manage_processes))
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
@@ -3285,8 +3285,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
-        self.print_log("i", "[%s::do_start_running] START transition 004: record_directory:%s run_number: %06d" 
-                       % (__file__,self.record_directory,self.run_number))
+        self.print_log("i", "START transition 004: [farm_manager::do_start_running] record_directory:%s run_number: %06d" 
+                       % (self.record_directory,self.run_number))
 
         self.save_metadata_value("FarmManager start time",start_time);
         self.print_log("i", "Run info can be found locally at %s" % (self.run_record_directory()))

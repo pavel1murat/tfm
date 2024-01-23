@@ -1,0 +1,47 @@
+{
+   "/MIDAS version": "2.1",
+   "/filename": "/custom.json",
+   "/ODB path": "/Custom",
+   "Path/key": {
+      "type": 12,
+      "item_size": 57,
+      "access_mode": 7,
+      "last_written": 1705979082
+   },
+   "Path": "/home/mu2etrk/test_stand/pasha_020/srcs/frontends/custom",
+   "Wideband/key": {
+      "type": 12,
+      "item_size": 32,
+      "access_mode": 7,
+      "last_written": 1705979153
+   },
+   "Wideband": "crv_wideband.html",
+   "Tracker/key": {
+      "type": 12,
+      "item_size": 32,
+      "access_mode": 7,
+      "last_written": 1705979511
+   },
+   "Tracker": "tracker.html",
+   "Calorimeter/key": {
+      "type": 12,
+      "item_size": 32,
+      "access_mode": 7,
+      "last_written": 1705979721
+   },
+   "Calorimeter": "calorimeter.html",
+   "STM/key": {
+      "type": 12,
+      "item_size": 32,
+      "access_mode": 7,
+      "last_written": 1705979726
+   },
+   "STM": "stm.html",
+   "EXM/key": {
+      "type": 12,
+      "item_size": 32,
+      "access_mode": 7,
+      "last_written": 1705979745
+   },
+   "EXM": "exm.html"
+}

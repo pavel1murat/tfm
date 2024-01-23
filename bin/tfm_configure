@@ -5,7 +5,10 @@
 #
 # defines env vars - has to be sourced...
 #
-# call: source tfm_configure config_dir partition [ debug ]
+# TFM_CONFIG_DIR : directory containing all configurations 
+#                  has to be set in the overall setup (i.e, $MRB_TOP/config)
+#
+# call: source tfm_configure config_name partition [ debug ]
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 
@@ -25,9 +28,7 @@ function tfm_configure_() {
 #------------------------------------------------------------------------------
 # proceed 
 #------------------------------------------------------------------------------
-    export       TFM_CONFIGURATION=$1
-    export          TFM_CONFIG_DIR=`dirname  $1`
-    export         TFM_CONFIG_NAME=`basename $1`
+    export         TFM_CONFIG_NAME=$1
     export ARTDAQ_PARTITION_NUMBER=$2
     if [ ".$3" != "." ] ; then debug=$3 ; fi
     
@@ -36,7 +37,7 @@ function tfm_configure_() {
     if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_CONFIG_DIR=$TFM_CONFIG_DIR ; fi
 
     if [ -z $ARTDAQ_PARTITION_NUMBER ] ; then
-        echo call: tfm_configure config_dir partition
+        echo call: tfm_configure config_name partition
         return
     fi
 #------------------------------------------------------------------------------
@@ -59,17 +60,19 @@ fi
 # this is the directory where the FCL files of all configurations reside 
 # with the subdirectory per configuration
 #------------------------------------------------------------------------------
-    export          TFM_SETUP_FHICLCPP=$TFM_FHICL_DIRECTORY/$TFM_CONFIG_NAME/.setup_fhiclcpp
+    export          TFM_SETUP_FHICLCPP=$TFM_CONFIG_DIR/$TFM_CONFIG_NAME/.setup_fhiclcpp
 
     mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
     export ARTDAQ_LOG_FHICL=$DAQ_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
 #------------------------------------------------------------------------------
 # TFM is supposed to have its own logfile
 #------------------------------------------------------------------------------
-    local x=`cat $TFM_CONFIGURATION/settings | grep top_output_dir | sed 's/ //g' | awk -F : '{print $2}'`
+    local x=`cat $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings | grep top_output_dir | sed 's/ //g' | awk -F : '{print $2}'`
+    if [ $debug != 0 ] ; then echo [$name:$LINENO] x=$x ; fi
     export  TFM_TOP_OUTPUT_DIR=`eval echo $x`
     export          TFM_LOGDIR=$TFM_TOP_OUTPUT_DIR/logs
 
+    if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_TOP_OUTPUT_DIR=$TFM_TOP_OUTPUT_DIR ; fi
     if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_LOGDIR=$TFM_LOGDIR ; fi
     mkdir -p $TFM_LOGDIR
 #------------------------------------------------------------------------------
