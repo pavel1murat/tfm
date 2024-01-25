@@ -1,15 +1,107 @@
 {
   "/MIDAS version" : "2.1",
-  "/MIDAS git revision" : "Mon Dec 4 12:29:25 2023 +0100 - midas-2022-05-c-754-g97fc7b89-dirty on branch develop",
-  "/filename" : "ArtdaqConfiguratons.json",
+  "/MIDAS git revision" : "Sun Jan 14 13:18:48 2024 +0100 - midas-2022-05-c-980-gc19b4e69-dirty on branch develop",
+  "/filename" : "srcs/tfm/odb/ArtdaqConfiguratons.json",
   "/ODB path" : "/ArtdaqConfigurations",
 
+  "demo" : {
+    "NNodes/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776723 },
+    "NNodes" : 1,
+    "Node_01" : {
+      "Hostname/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776723 },
+      "Hostname" : "mu2edaq09.fnal.gov",
+      "NBoardReaders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776877 },
+      "NBoardReaders" : 2,
+      "NEventBuilders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776880 },
+      "NEventBuilders" : 2,
+      "NDataLoggers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776723 },
+      "NDataLoggers" : 1,
+      "NDispatchers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776723 },
+      "NDispatchers" : 1,
+      "BoardReader_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776909 },
+        "Name" : "boardreader01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776723 },
+        "Rank" : 0
+      },
+      "BoardReader_02" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776918 },
+        "Name" : "boardreader02",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776939 },
+        "Rank" : 1
+      },
+      "EventBuilder_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776928 },
+        "Name" : "eventbuilder01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776932 },
+        "Rank" : 2
+      },
+      "EventBuilder_02" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776949 },
+        "Name" : "eventbuilder02",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776955 },
+        "Rank" : 3
+      },
+      "DataLogger_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776963 },
+        "Name" : "datalogger01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776966 },
+        "Rank" : 4
+      },
+      "Dispatcher_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705776974 },
+        "Name" : "dispatcher01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705776977 },
+        "Rank" : 5
+      }
+    }
+  },
+  "demo_001" : {
+    "NNodes/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+    "NNodes" : 1,
+    "Node_01" : {
+      "Hostname/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705773443 },
+      "Hostname" : "mu2edaq09.fnal.gov",
+      "NBoardReaders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+      "NBoardReaders" : 1,
+      "NEventBuilders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+      "NEventBuilders" : 1,
+      "NDataLoggers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+      "NDataLoggers" : 1,
+      "NDispatchers/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+      "NDispatchers" : 1,
+      "BoardReader_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705773479 },
+        "Name" : "br01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+        "Rank" : 0
+      },
+      "EventBuilder_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705773499 },
+        "Name" : "eb01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+        "Rank" : 1
+      },
+      "DataLogger_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705773516 },
+        "Name" : "dl01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+        "Rank" : 2
+      },
+      "Dispatcher_01" : {
+        "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705773531 },
+        "Name" : "dp01",
+        "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705773443 },
+        "Rank" : 3
+      }
+    }
+  },
   "vst_001" : {
     "NNodes/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768180 },
     "NNodes" : 1,
     "Node_01" : {
-      "Host/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704767951 },
-      "Host" : "mu2edaq09.fnal.gov",
+      "Hostname/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704767951 },
+      "Hostname" : "mu2edaq09.fnal.gov",
       "NBoardReaders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768093 },
       "NBoardReaders" : 1,
       "NEventBuilders/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704768107 },
@@ -21,37 +113,31 @@
       "BoardReader_01" : {
         "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768293 },
         "Name" : "boardreader01",
-        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771353 },
-        "XmlrpcPort" : "18100",
         "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034148 },
         "Rank" : 0
       },
       "EventBuilder_01" : {
         "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768353 },
         "Name" : "eventbuilder01",
-        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771357 },
-        "XmlrpcPort" : "18101",
         "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034163 },
-        "Rank" : 1
+        "Rank" : 1,
+        "XmlrpcPort/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705951212 },
+        "XmlrpcPort" : 18101
       },
       "DataLogger_01" : {
         "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768384 },
         "Name" : "datalogger01",
-        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704771362 },
-        "XmlrpcPort" : "18102",
         "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034188 },
         "Rank" : 2
       },
       "Dispatcher_01" : {
         "Name/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1704768431 },
         "Name" : "dispatcher01",
-        "XmlrpcPort/key" : { "type" : 12, "item_size" : 32, "access_mode" : 7, "last_written" : 1705034206 },
-        "XmlrpcPort" : "10500",
         "Rank/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705034226 },
-        "Rank" : 3
+        "Rank" : 3,
+        "XmlrpcPort/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1705951255 },
+        "XmlrpcPort" : 10500
       }
-    },
-    "Partition/key" : { "type" : 7, "access_mode" : 7, "last_written" : 1704771443 },
-    "Partition" : 8
+    }
   }
 }
