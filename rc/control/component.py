@@ -42,6 +42,7 @@ class Component(ContextObject):
         self.__dummy_val = 0
         self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
         self.__rpc_port  = 10000+1000*self.__partition;
+        self.__messages  = [];
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
 # two contexts corresponding to two threads
@@ -56,6 +57,8 @@ class Component(ContextObject):
                                                 "listconfigs"        : self.listconfigs,
                                                 "trace_get"          : self.trace_get,
                                                 "trace_set"          : self.trace_set,
+                                                "message"            : self.message,
+                                                "get_messages"       : self.get_messages
                                             })),
             ("runner"    , threadable(func=self.runner))
         ]
@@ -191,6 +194,17 @@ class Component(ContextObject):
         print(" >>> complete_shutdown Requested");
         self.shutdown()
         return "farm_manager: performing complete shutdown";
+
+
+    def message(self, msg_type, message):
+        self.print_log("i","rpc message type:%s message:'%s'" % (msg_type, message));
+        self.__messages.append([msg_type, message])
+        return "return"
+
+    def get_messages(self, dummy):
+        out_str = "\n".join([f"{item[0]}:{item[1]}" for item in self.__messages])
+        self.__messages = []
+        return out_str
 
 #------------------------------------------------------------------------------
 # request to change state comes from the outside
