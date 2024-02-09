@@ -21,13 +21,16 @@
 1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
    and additional configuration parameters               
 
-2) .FCL files : one file per component                                      
-   a component named 'x' has its FCL file named 'x.fcl'
+2) .FCL files : 
 
-   the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
-   directory created in /tmp/`uuidgen` by TFM - see 
-[[
-file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
+- long term: created starting from ODB
+- one FCL file ber component
+  - boardreaders  : brXX.fcl, for example br01.fcl
+  - event builders: ebXX.fcl, for example eb01.fcl
+  - data loggers  : dlXX.fcl, for example dl01.fcl
+  - dispatchers   : dsXX.fcl, for example ds01.fcl
+
+[[file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
 
 see self.get_config_info() there 
 
@@ -35,35 +38,28 @@ see self.get_config_info() there
   not sure how one can make such a mistake
 
 - also what are multiple subconfigurations ?
-*** internally, the configuration dir is $TFM_FHICL_DIRECTORY/$config_name
+*** internally, the configuration dir is $TFM_CONF/$config_name
 * [[file:./dqm.org][DQM]]
 * [[file:environment_variables.org][environment variables]]                                                      
 * error codes                                                                
 - 140: 
 * [[file:../rc/control/farm_manager.py][farm_manager.py]]: server managing the trigger farm                          
 ** command line parameters                                                   
-
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| flag               | description                     | Type | default     | comment                                                            |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -n, --name         | component name (what is that ?) | str  | "daqint"    |                                                                    |
-| -H, --rpc-host     | This hostname/IP addr           | str  | "localhost" |                                                                    |
-| -c, --control-host | Control host                    | str  | "localhost" |                                                                    |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -d, --debug-level  | debug level                     | int  | -1          | if specified, overrides settings in boot.txt                       |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
-| -D, --config-dir   | config directory                | str  | None        | contains all configuration files, has to be defined                |
-|                    |                                 |      |             | on the command line. Last config-dir path component (subdirectory) |
-|                    |                                 |      |             | is the configuration name                                          |
-|--------------------+---------------------------------+------+-------------+--------------------------------------------------------------------|
+|------------------+--------------------------+------+---------+--------------------------------------------------------------------|
+| flag             | description              | Type | default | comment                                                            |
+|------------------+--------------------------+------+---------+--------------------------------------------------------------------|
+| -c, --config-dir | defined config directory | str  | None    | contains all configuration files, has to be defined                |
+|                  |                          |      |         | on the command line. Last config-dir path component (subdirectory) |
+|                  |                          |      |         | is the configuration name                                          |
+|------------------+--------------------------+------+---------+--------------------------------------------------------------------|
 
 - example: (before running the farm_manager.py, make sure that $MRB_TOR/config/$configuration
   directory containes all needed files - see 
-#+begin_src
-configuration=vst_001
+#+begin_src                                                                  
+runconf=vst_001
 partition=8
-source tfm_configure $configuration $partition
-$TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
+source tfm_configure $runconf $partition
+$TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$runconf
 #+end_src
 ** farm management methods                                                   
   management methods ("direct", "pmt", "external_run_control") are defined in 
@@ -79,15 +75,12 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
    -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
       (when debugging a given configuration, may want to create a copy)
 * interaction with the Postgres DB                                           
-- if /Experiment/RunConfigurations/$config_name/UseDBRunInfo is set to "yes" 
-  the [[file:../../frontends/tfm_frontend/tfm_frontend.cc][tfm_frontend]] requests the next run number from Posstgres DB and stores 
-  there the RUN_CONFIGURATION and RUN_TRANSITION records
+- if /Mu2e/RunConfigurations/$config_name/UseDBRunInfo is set to "yes" , 
+  the MIDAS sequencer requests the new run number from the PG and stores it in ODB
+  the [[file:../../frontends/tfm_frontend/tfm_launch_fe.cc][tfm_launch_fe]] then passes that to ARTDAQ and records all transitions
 
 - MIDAS, via MSL, executes script [[file:../../frontends/tfm_frontend/get_next_run_number.sh]] 
   which returns the next run number to /Sequencer/Variables/SCRIPT_RESULT 
-
-- Note: get_next_run_number.sh should be accessible to MIDAS. Currently - it is in the work dir, 
-  which is not the best, store it in bin?
 
 - here is the MSL script
 #+begin_src
@@ -160,9 +153,6 @@ Nil
 
 ** tfm_status (obsolete)                                                     
 - returns old state w/o completion                            
-#+begin_src
-
-#+end_src 
 ** [[file:../bin/tfm_get_status][tfm_get_status]]                                                            
 - returns status of the farm (with completion percentage for transisitons)
 - stable states always report completion at 100%, i.e. 'running:100'
@@ -171,7 +161,6 @@ Nil
 mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
 'configured:100'
 #+end_src
-** [[file:../bin/tfm_start][tfm_start]] : start the farm manager, the script needs more debugging
 ** [[file:../bin/tfm_shutdown][tfm_shutdown]] : stops all processes, shuts down the farm, stops the TFM    
 * TFM transitions                                                            
 - defined in [[file:../bin/tfm_transition]]                                      
