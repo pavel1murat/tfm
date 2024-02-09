@@ -28,7 +28,7 @@ Subsystem   :  1     none         none          none
 BoardReader :   br01         localhost    -1    1          -1       none   none 
 EventBuilder:   eb01         localhost    -1    1          -1       none   none
 DataLogger  :   dl01         localhost    -1    1          -1       none   none
-Dispatcher  :   dp01         localhost 10500    1          -1       none   none
+Dispatcher  :   ds01         localhost 10500    1          -1       none   none
 #------------------------------------------------------------------------------
 # default values are commented out
 # to be merged with boot.txt

@@ -26,15 +26,15 @@ Subsystem   :  1     none         none          none
 #              label         host      port subsystem  allowed   prepend target
 #                                                     processors
 #------------------------------------------------------------------------------
-BoardReader : boardreader01  localhost   -1    1          -1       none    none 
-BoardReader : boardreader02  localhost   -1    1          -1       none    none 
+BoardReader : br01           localhost   -1    1          -1       none    none 
+BoardReader : br02           localhost   -1    1          -1       none    none 
 #
-EventBuilder: eventbuilder01 localhost   -1    1          -1       none    none
-EventBuilder: eventbuilder02 localhost   -1    1          -1       none    none
+EventBuilder: eb01           localhost   -1    1          -1       none    none
+EventBuilder: eb02           localhost   -1    1          -1       none    none
 #
-DataLogger  : datalogger01   localhost   -1    1          -1       none    none
+DataLogger  : dl01           localhost   -1    1          -1       none    none
 #
-Dispatcher  : dispatcher01   localhost   -1    1          -1       none    none
+Dispatcher  : ds01           localhost   -1    1          -1       none    none
 #------------------------------------------------------------------------------
 # JCF, Sep-16-2017
 
