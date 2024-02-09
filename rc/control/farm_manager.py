@@ -3871,10 +3871,6 @@ def get_args():  # no-coverage
 #------------------------------------------------------------------------------
 def main():  # no-coverage
 
-#    if "TFM_STANDARD_SOURCEFILE_SOURCED" not in os.environ.keys():
-#        print(rcu.make_paragraph('Won\'t launch FarmManager; first run "source $TFM_DIR/source_me\n"'))
-#        return
-
     process_management_methods = ["direct", "pmt", "external_run_control"]
     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
         raise Exception(rcu.make_paragraph(
