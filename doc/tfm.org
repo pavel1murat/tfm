@@ -15,6 +15,31 @@
   feel free to improve and commit back
 
 * ------------------------------------------------------------------------------
+* [[file:./communication_with_artdaq.org][communication with artdaq]]
+* configuration                                                              
+** the TFM configuration is defined in a subdirectory containing the following files :
+1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
+   and additional configuration parameters               
+
+2) .FCL files : one file per component                                      
+   a component named 'x' has its FCL file named 'x.fcl'
+
+   the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
+   directory created in /tmp/`uuidgen` by TFM - see 
+[[
+file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
+
+see self.get_config_info() there 
+
+- after being copied, the files are checked for being unique 
+  not sure how one can make such a mistake
+
+- also what are multiple subconfigurations ?
+*** internally, the configuration dir is $TFM_FHICL_DIRECTORY/$config_name
+* [[file:./dqm.org][DQM]]
+* [[file:environment_variables.org][environment variables]]                                                      
+* error codes                                                                
+- 140: 
 * [[file:../rc/control/farm_manager.py][farm_manager.py]]: server managing the trigger farm                          
 ** command line parameters                                                   
 
@@ -40,7 +65,10 @@ partition=8
 source tfm_configure $configuration $partition
 $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
 #+end_src
-** Comments:                                                                 
+** farm management methods                                                   
+  management methods ("direct", "pmt", "external_run_control") are defined in 
+   [[file:../rc/control/farm_manager.py::/process_management_methods/]]
+** Comments                                                                  
    -- env['ARTDAQ_PARTITION_NUMBER'] is set by [[file:../bin/tfm_configure][tfm_configure]] and used by TFM
 
    -- the TFM port number = 10000+1000*partition_number, no need to improvise
@@ -50,83 +78,36 @@ $TFM_DIR/rc/control/farm_manager.py --config-dir=$MRB_TOR/config/$configuration
 
    -- after sourcing the [[file:../bin/tfm_configure][tfm_configure]] script, only need to specify the configuration directory 
       (when debugging a given configuration, may want to create a copy)
-* TFM knows about the following types of artdaq components: 
-    BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
-    - as follows from the names, an artdaq component is a job with a given functionality
-    - components can run on the same or different nodes
-    - components can talk to each other via XML-RPC 
-    - components can be combined into subsystems, by default there is only one subsystem
+* interaction with the Postgres DB                                           
+- if /Experiment/RunConfigurations/$config_name/UseDBRunInfo is set to "yes" 
+  the [[file:../../frontends/tfm_frontend/tfm_frontend.cc][tfm_frontend]] requests the next run number from Posstgres DB and stores 
+  there the RUN_CONFIGURATION and RUN_TRANSITION records
 
-** at startup, TFM goes directly into a 'booted' state
-- 'config' and 'start' are merged into 'start'
-- 'config' step defines new run number and configures the farm for that
-- stop actually stops the processes
-- stable states  : 'initialized', 'running', 'paused', 'stopped'
-- commands: Init , Start, Pause, Resume, Stop, Shutdown
-- transition commands sent by [[file:../bin/tfm_transition][tfm_transition]]
-  - boot,
-  - config
-  - start :
-    - if run number is not defined, use next one to the last found
-    - if run number is defined, use that, send "starting struct/{run_number:i/$rn}"
-  - enable
-  - disable
-  - stop
-  - terminate
-* configuration                                                              
-** the TFM configuration is defined in a subdirectory containing the following files :
-1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
-   and additional configuration parameters               
+- MIDAS, via MSL, executes script [[file:../../frontends/tfm_frontend/get_next_run_number.sh]] 
+  which returns the next run number to /Sequencer/Variables/SCRIPT_RESULT 
 
-2) .FCL files : one file per component                                      
-   a component named 'x' has its FCL file named 'x.fcl'
+- Note: get_next_run_number.sh should be accessible to MIDAS. Currently - it is in the work dir, 
+  which is not the best, store it in bin?
 
-   the FCL files are copied from $TFM_FHICL_DIRECTORY/$config_name to a temp 
-   directory created in /tmp/`uuidgen` by TFM - see 
-[[
-file:../rc/control/farm_manager.py::/def check_hw_fcls/]]
+- here is the MSL script
+#+begin_src
+# -*- mode:text -*-
+#------------------------------------------------------------------------------------
+# last step before starting a run
+# get next run number from the run info DB. 
+# get_next_run_number is an executable which gets the run number from Postgresql and updates 
+# the run number in ODB
+# for example, the end_run would write into the ODB some flag, w/o which one couldn't start the run 
+#------------------------------------------------------------------------------------
+script get_next_run_number
+#+end_src
 
-see self.get_config_info() there 
+- [[file:../../frontends/tfm_frontend/get_next_run_number.cc]] gets compiled into 
+  the executable interacting with the DB via a clone of Antonio's code - 
+  see [[file:../../frontends/tfm_frontend/db_runinfo.hh]]
 
-- after being copied, the files are checked for being unique 
-  not sure how one can make such a mistake
+- comment: this is the first iteration, the code should be cleaned up
 
-- also what are multiple subconfigurations ?
-*** internally, the configuration dir is $TFM_FHICL_DIRECTORY/$config_name
-* TFM transitions                                                            
-- defined in [[file:../bin/tfm_transition]]                                      
-- commands are translated, and sent to the TF server are the translated commands. 
-- "translated" commands are different from the original ones by "ing" 
-- what is it? a linquistic exersize of defining gerunds ?
-|-----------+--------------------+---------------+----------------------------------|
-| command   | translated command | XMLRPC string | comment                          |
-|-----------+--------------------+---------------+----------------------------------|
-| boot      | booting            |               | obsolete, performed upon startup |
-| config    | configuring        |               |                                  |
-| start     | starting           |               |                                  |
-| enable    | enabling           |               | obsolete                         |
-| disable   | disabling          |               | obsolete                         |
-| stop      | stopping           |               |                                  |
-| shutdown  | shutting           |               | included into stop               |
-| terminate | terminating        |               | obsolete                         |
-|-----------+--------------------+---------------+----------------------------------|
-
-1) TFM assumes that all config files , including FCLs are located in a directory 
-provided to it at a startup , so the rest transitions do not really need a configuration
-parameter
-2) startup executed old boot
-3) run number is specified at old config
-4) new start doesn't execute old config - config should be a separate step , 
-   as there are multiple subsystems, and at 'configured' all shoudl be ready to run
-5) stop is stop, after stop - either configure or shutdown
-6) at 'shutdown', the farm manager exits, requiring a new start
-* [[file:test_examples.org][test examples]]                                                               
-* [[file:environment_variables.org][environment variables]]                                                      
-* farm management methods                                                    
-  management methods ("direct", "pmt", "external_run_control") are defined in 
-   [[file:../rc/control/farm_manager.py::/process_management_methods/]]
-* [[file:xmlrpc.org][XMLRPC]]                                                                     
-* [[file:./communication_with_artdaq.org][communication with artdaq]]
 * log file naming                                                            
   [[file:../rc/control/farm_manager.py::/def determine_logfilename/]]
 
@@ -148,6 +129,14 @@ parameter
 
 - however, messages by message_facility go into individual log files, one per 
 art process
+* open port map                                                              
+  - from daq13, can use port 18000 to talk to daq09                          
+  mu2etrk@mu2edaq13:~/test_stand/pasha_020>xmlrpc http://mu2edaq09.fnal.gov:18000/RPC2 get_state daqint
+Result:
+
+String: 'stopped:100'
+
+* [[file:test_examples.org][test examples]]                                                               
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            
@@ -184,39 +173,57 @@ mu2etrk@mu2edaq09:~/test_stand/pasha_020>tfm_get_status
 #+end_src
 ** [[file:../bin/tfm_start][tfm_start]] : start the farm manager, the script needs more debugging
 ** [[file:../bin/tfm_shutdown][tfm_shutdown]] : stops all processes, shuts down the farm, stops the TFM    
-* interaction with the Postgres DB                                           
-- if /Experiment/RunConfigurations/$config_name/UseDBRunInfo is set to "yes" 
-  the [[file:../../frontends/tfm_frontend/tfm_frontend.cc][tfm_frontend]] requests the next run number from Posstgres DB and stores 
-  there the RUN_CONFIGURATION and RUN_TRANSITION records
+* TFM transitions                                                            
+- defined in [[file:../bin/tfm_transition]]                                      
+- commands are translated, and sent to the TF server are the translated commands. 
+- "translated" commands are different from the original ones by "ing" 
+- what is it? a linquistic exersize of defining gerunds ?
+|-----------+--------------------+---------------+----------------------------------|
+| command   | translated command | XMLRPC string | comment                          |
+|-----------+--------------------+---------------+----------------------------------|
+| boot      | booting            |               | obsolete, performed upon startup |
+| config    | configuring        |               |                                  |
+| start     | starting           |               |                                  |
+| enable    | enabling           |               | obsolete                         |
+| disable   | disabling          |               | obsolete                         |
+| stop      | stopping           |               |                                  |
+| shutdown  | shutting           |               | included into stop               |
+| terminate | terminating        |               | obsolete                         |
+|-----------+--------------------+---------------+----------------------------------|
 
-- MIDAS, via MSL, executes script [[file:../../frontends/tfm_frontend/get_next_run_number.sh]] 
-  which returns the next run number to /Sequencer/Variables/SCRIPT_RESULT 
+1) TFM assumes that all config files , including FCLs are located in a directory 
+provided to it at a startup , so the rest transitions do not really need a configuration
+parameter
+2) startup executed old boot
+3) run number is specified at old config
+4) new start doesn't execute old config - config should be a separate step , 
+   as there are multiple subsystems, and at 'configured' all shoudl be ready to run
+5) stop is stop, after stop - either configure or shutdown
+6) at 'shutdown', the farm manager exits, requiring a new start
+* types of artdaq components                                                 
+  BoardReader, EventBuilder, DataLogger, Dispatcher, RoutingManager
+  - as follows from the names, an artdaq component is a job with a given functionality
+  - components can run on the same or different nodes
+  - components can talk to each other via XML-RPC 
+  - components can be combined into subsystems, by default there is only one subsystem
 
-- Note: get_next_run_number.sh should be accessible to MIDAS. Currently - it is in the work dir, 
-  which is not the best, store it in bin?
-
-- here is the MSL script
-#+begin_src
-# -*- mode:text -*-
-#------------------------------------------------------------------------------------
-# last step before starting a run
-# get next run number from the run info DB. 
-# get_next_run_number is an executable which gets the run number from Postgresql and updates 
-# the run number in ODB
-# for example, the end_run would write into the ODB some flag, w/o which one couldn't start the run 
-#------------------------------------------------------------------------------------
-script get_next_run_number
-#+end_src
-
-- [[file:../../frontends/tfm_frontend/get_next_run_number.cc]] gets compiled into 
-  the executable interacting with the DB via a clone of Antonio's code - 
-  see [[file:../../frontends/tfm_frontend/db_runinfo.hh]]
-
-- comment: this is the first iteration, the code should be cleaned up
-
-* [[file:./dqm.org][DQM]]
-* error codes                                                                
-- 140: 
+** at startup, TFM goes directly into a 'booted' state                       
+- 'config' and 'start' are merged into 'start'
+- 'config' step defines new run number and configures the farm for that
+- stop actually stops the processes
+- stable states  : 'initialized', 'running', 'paused', 'stopped'
+- commands: Init , Start, Pause, Resume, Stop, Shutdown
+- transition commands sent by [[file:../bin/tfm_transition][tfm_transition]]
+  - boot,
+  - config
+  - start :
+    - if run number is not defined, use next one to the last found
+    - if run number is defined, use that, send "starting struct/{run_number:i/$rn}"
+  - enable
+  - disable
+  - stop
+  - terminate
+* [[file:xmlrpc.org][XMLRPC]]                                                                     
 * ------------------------------------------------------------------------------
 * [[file:work_in_progress.org][work_in_progress and TODO items]]
 * ------------------------------------------------------------------------------
