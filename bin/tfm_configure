@@ -3,12 +3,12 @@
 # setup active artdaq configuration : config name and partition
 # a "configuration" is a subdirectory with config files in it   
 #
-# defines env vars - has to be sourced...
+# defines env vars, therefore has to be sourced
 #
-# TFM_CONFIG_DIR : directory containing all configurations 
-#                  has to be set in the overall setup (i.e, $MRB_TOP/config)
+# TFM_CONFIG_DIR : directory containing all configurations (i.e, $MRB_TOP/config)
+#                  has to be set in the overall setup script
 #
-# call: source tfm_configure config_name partition [ debug ]
+# call signature : source tfm_configure config_name partition [ debug ]
 #------------------------------------------------------------------------------
 source $TFM_DIR/bin/tfm_utils.sh
 

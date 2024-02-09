@@ -13,8 +13,9 @@
 source $TFM_DIR/bin/tfm_utils.sh
 tfm_preamble
 
-    port=`tfm_port $ARTDAQ_PARTITION_NUMBER`
-full_cmd="xmlrpc http://localhost:$port/RPC2 get_state daqint "
+partition=$ARTDAQ_PARTITION_NUMBER ; if [[ -n $1 ]] ; then partition=$1 ; fi
+     port=`tfm_port $partition`
+ full_cmd="xmlrpc http://localhost:$port/RPC2 get_state daqint "
 
 if [ ".$1" == ".-v" ] ; then echo $full_cmd ; fi
 #------------------------------------------------------------------------------
