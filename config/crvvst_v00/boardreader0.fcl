@@ -1,0 +1,57 @@
+# -*- mode:tcl -*-
+# Produced from 'fhicl-dump' using:
+#   Input  : ./tracker_vst.fcl
+#   Policy : cet::filepath_maker
+#   Path   : "FHICL_FILE_PATH"
+#------------------------------------------------------------------------------
+daq: {
+    fragment_receiver: {
+        generator              : CRVVstReceiver     # daq generator plug-in type (defines the shared lib to load)
+        board_id               : 0
+        sim_mode               : "n"
+
+        dtcId                  : 0             # P.Murat: the most painful way of dealing with FCL I know
+        roc_mask               : 0x1
+
+        debug_mode             : 3             # 0: use base class, 1 and 2: mimic buffer_test, 3: like base class with more debug
+        debug_print            : true
+        verify_event           : true
+
+        max_fragment_size_bytes: 0x100000
+
+        fragment_ids                 : [ 9 ]      
+
+        debugLevel             : 10
+
+        cfo_config             : {
+            use_dtc_cfo_emulator   : true
+            debug_packet_count     : 0
+            debug_type             : "DTC_DebugType_SpecialSequence"
+            sticky_debug_type      : true
+            quiet                  : true
+            asyncRR                : false
+            force_no_debug_mode    : true
+            useCFODRP              : false
+        }
+
+
+        routing_table_config: {
+            use_routing_manager: false
+        }
+
+        destinations: { 
+#            d1: { 
+#                transferPluginType     : TCPSocket 
+#                destination_rank       : 1 
+#                max_fragment_size_words: 160522570 
+#                host_map: [
+#                           {rank: 0 host: "mu2edaq09"}, 
+#                           {rank: 1 host: "mu2edaq09"}, 
+#                           {rank: 2 host: "mu2edaq09"}, 
+#                           {rank: 3 host: "mu2edaq09"}
+#                          ] 
+#            }
+        }
+    }
+    metrics: {}
+}
