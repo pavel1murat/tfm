@@ -2,7 +2,7 @@
 # P.Murat: moved contents of boot.txt to settings
 # only one ':' on the line is allowed
 #------------------------------------------------------------------------------
-daq_setup_script   : $MRB_TOP/setup_ots.sh
+daq_setup_script   : $MU2E_DAQ_DIR/setup_daq.sh
 debug_level        : 5
 #
 # request_address  : 
