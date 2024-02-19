@@ -48,7 +48,8 @@ class Component(ContextObject):
 #------------------------------------------------------------------------------
         self.contexts = [
             ("rpc_server", rpc_server(port  = self.__rpc_port,
-                                      funcs = { "state"              : self.state,
+                                      funcs = { "alarm"              : self.alarm,
+                                                "state"              : self.state,
                                                 "shutdown"           : self.complete_shutdown,
                                                 "get_state"          : self.get_state,
                                                 "artdaq_process_info": self.artdaq_process_info,
@@ -183,6 +184,12 @@ class Component(ContextObject):
         self.run_params           = trace_args
         self.do_trace_set_boolean = True
 
+#------------------------------------------------------------------------------
+# react to alarm messages sent by the ARTDAQ processes - first of all , the boardreaders
+#---v--------------------------------------------------------------------------
+    def alarm(self,message):
+        print(" >>> ALARM");
+        return
 #------------------------------------------------------------------------------
 # should be able to shut down correctly from any state, not only from 'stopped'
 # to begin with, assume that we're in a 'stopped' state
