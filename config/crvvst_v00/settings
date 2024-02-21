@@ -1,0 +1,45 @@
+#------------------------------------------------------------------------------
+# P.Murat: move contents of boot.txt to settings, don't need both
+# only one ':' on the line is allowed
+#------------------------------------------------------------------------------
+daq_setup_script   : $MRB_TOP/setup_ots.sh
+debug_level        : 1
+#
+# request_address  : 
+# manage_processes :   True/False
+# disable_recovery :   True/False
+#------------------------------------------------------------------------------
+#            id    source     destination  fragmentMode   
+Subsystem:    1      none        none          none
+#-------------------------------------------------------------------------------------
+#              label         host    port subsystem       allowed     prepend   target
+#                                                        processors
+#-------------------------------------------------------------------------------------
+BoardReader : boardreader0   localhost  -1      1              -1       none     none
+EventBuilder: eventbuilder0  localhost  -1      1              -1       none     none
+
+DataLogger  : datalogger01   localhost  -1      1              -1       none    none
+Dispatcher  : dispatcher01   localhost  -1      1              -1       none    none
+#------------------------------------------------------------------------------
+top_output_dir               : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME
+log_directory                : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
+data_directory_override      : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
+record_directory             : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
+
+package_hashes_to_save             : []
+boardreader timeout                : 600
+eventbuilder timeout               : 600
+datalogger timeout                 : 600
+dispatcher timeout                 : 600
+#max_fragment_size_bytes            : 1284180560
+#transfer_plugin_to_use             : TCPSocket
+all_events_to_all_dispatchers      : true
+max_configurations_to_list         : 10
+use_messageviewer                  : false
+kill_existing_processes            : true
+
+advanced_memory_usage              : true
+
+validate_setup_script              : 0      # default=1
+
