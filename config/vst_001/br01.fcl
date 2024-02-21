@@ -10,6 +10,7 @@ daq: {
         board_id               : 0
         loadSimFile            : false
         simFileName            : "none"
+        tfmHost                : "localhost"      ## Trigger Farm Manager host
 
         rawOutputEnable        : false
         rawOutputFile          : "/tmp/TrackerVST.bin"
