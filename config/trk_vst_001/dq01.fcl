@@ -5,11 +5,12 @@
 # when running the ARTDAQ 'demo' example, at any time, can submit in a separate window 
 # a DQM client (of course, setup the Mu2e online environment first): 
 # 
-# mu2e -c config/demo/dqm_client01.fcl
+# mu2e -c config/trk_vst_001/dq01.fcl
 #
 # the job will be just receiving events and filling a few histograms shown on two canvases:
-# - http://localhost:8877/win1/
-# - http://localhost:8877/win2/
+# - http://localhost:8877/win1/  : event and fragment sizes
+# - http://localhost:8877/win2/  : error histograms
+# - http://localhost:8877/win2/  : waveforms
 #------------------------------------------------------------------------------
 # #include "Offline/fcl/minimalMessageService.fcl"# 
 #include "Offline/fcl/standardProducers.fcl"
@@ -26,14 +27,14 @@ services: {
     ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e}
 
     message :       @local::default_message
-    GeometryService :       {
-        inputFile         : "Offline/Mu2eG4/geom/geom_common.txt"
-        bFieldFile        : "Offline/Mu2eG4/geom/bfgeom_reco_v01.txt"
-        simulatedDetector : {tool_type: "Mu2e"}
-    }
-    ConditionsService       : { conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
-    GlobalConstantsService  : { inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
-    DbService               : @local::DbEmpty
+#     GeometryService :       {
+#         inputFile         : "Offline/Mu2eG4/geom/geom_common.txt"
+#         bFieldFile        : "Offline/Mu2eG4/geom/bfgeom_reco_v01.txt"
+#         simulatedDetector : {tool_type: "Mu2e"}
+#     }
+#    ConditionsService       : { conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
+#    GlobalConstantsService  : { inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
+#    DbService               : @local::DbEmpty
 #    ProditionsService       : @local::Proditions
     ArtdaqSharedMemoryServiceInterface      :       {service_provider : ArtdaqGlobalsService}
 }
@@ -145,17 +146,17 @@ source: {
 # overriding crap
 #------------------------------------------------------------------------------
 # source: { module_type : RootInput
-#     fileNames: [ "/scratch/mu2e/mu2etrk_pasha_020/demo/data/artdaqdemo_r000018_sr01_20231225T162134_1_dl1.root" ]
-#    # maxEvents : 1000
+#    fileNames: [ "/scratch/mu2e/mu2etrk_pasha_020/demo/data/artdaqdemo_r000018_sr01_20231225T162134_1_dl1.root" ]
+#   # maxEvents : 1000
 # }
 #------------------------------------------------------------------------------
 # output
 #------------------------------------------------------------------------------
-outputs: {
-    dumpOutput: { module_type : FileDumperOutput
-        wantProductFriendlyClassName : true
-    }
-}
+#outputs: {
+#    dumpOutput: { module_type : FileDumperOutput
+#        wantProductFriendlyClassName : true
+#    }
+#}
 #------------------------------------------------------------------------------
 # job configuration
 #------------------------------------------------------------------------------
@@ -184,7 +185,7 @@ physics: {
 # reference channel to calculate dt(i) = T(0,i)-T(0,referenceChannel)
 # reference channel number is run-dependent
 #------------------------------------------------------------------------------
-            activeLinks         : [ 1 ]
+            activeLinks         : [ 0 ]
             refChCal            : [ 0 , 91, 91, 91, 91, 91 ]
             refChHV             : [ 0 , 94, 94, 94, 94, 94 ]
 #------------------------------------------------------------------------------
@@ -194,7 +195,13 @@ physics: {
 #------------------------------------------------------------------------------
             timeWindow          : 2000
             pulserFrequency     :  250
+            nSamplesBL          : 10
+            minPulseHeight      : 5.
             port                : 8877
+#------------------------------------------------------------------------------
+# smth doesn't work, hardcoded in the module
+#------------------------------------------------------------------------------
+            plotWaveforms       : [ 0, 4 ] ## [ -1, -1];        ## roc=0, channel=4
         }
      }
 
@@ -206,5 +213,5 @@ physics: {
 }
 
 #------------------------------------------------------------------------------
-services.TFileService.fileName : "/scratch/mu2e/mu2etrk_pasha_020/vst_001/mu2e_trackerDQM_%#.root"
+services.TFileService.fileName : "mu2e_trackerDQM_%06r.root"
 services.scheduler.wantSummary : true
