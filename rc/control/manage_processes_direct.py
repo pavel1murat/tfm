@@ -423,14 +423,13 @@ def get_pid_for_process_base(self, procinfo):
               % (procinfo.label, procinfo.host, " ".join(pids)))
 
     return None
-
-
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
 def mopup_process_base(self, procinfo):
 
-    if not rcu.host_is_local(procinfo.host):
-        on_other_node = True
-    else:
-        on_other_node = False
+    if not rcu.host_is_local(procinfo.host): on_other_node = True
+    else:                                    on_other_node = False
 
     pid = get_pid_for_process_base(self, procinfo)
 
@@ -496,7 +495,7 @@ def mopup_process_base(self, procinfo):
     # listening port (e.g., the art processes)
 
     cmd = "kill %s > /dev/null 2>&1" % (
-        " ".join(get_related_pids_for_process(procinfo))
+        " ".join(procinfo.get_related_pids())
     )
 
     if on_other_node:
@@ -507,7 +506,7 @@ def mopup_process_base(self, procinfo):
                      stderr=subprocess.DEVNULL,
     ).wait()
 
-    unkilled_related_pids = get_related_pids_for_process(procinfo)
+    unkilled_related_pids = procinfo.get_related_pids()
     if len(unkilled_related_pids) == 0:
         related_process_mopup_ok = True
     else:
@@ -543,7 +542,8 @@ def mopup_process_base(self, procinfo):
              "issues with the next run using that host and port as a result")
             % (procinfo.host, procinfo.label, procinfo.host, procinfo.port))
         )
-#------------------------------------------------------------------------------
+    return
+#---^--------------------------------------------------------------------------
 # If you change what this function returns, you should rename it for obvious reasons
 #------------------------------------------------------------------------------
 def get_pids_and_labels_on_host(host, procinfos):
@@ -584,33 +584,8 @@ def get_pids_and_labels_on_host(host, procinfos):
     return cleaned_pids, labels_of_found_processes
 
 
-def get_related_pids_for_process(procinfo):
-    related_pids = []
-
-    netstat_cmd = "netstat -alpn | grep %s" % (procinfo.port)
-
-    if not rcu.host_is_local(procinfo.host):
-        netstat_cmd = "ssh -x %s '%s'" % (procinfo.host, netstat_cmd)
-
-    proc = subprocess.Popen(netstat_cmd,executable="/bin/bash",shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-    )
-
-    for procline in proc.stdout.readlines():
-        procstring = procline.decode("utf-8")
-        res = re.search(r"([0-9]+)/(.*)", procstring.split()[-1])
-        if res:
-            pid = res.group(1)
-            pname = res.group(2)
-            if "python" not in pname:  # Don't want DAQInterface to kill itself off...
-                related_pids.append(res.group(1))
-    return set(related_pids)
-
-
 # check_proc_heartbeats_base() will check that the expected artdaq
 # processes are up and running
-
 
 def check_proc_heartbeats_base(self, requireSuccess=True):
 
@@ -629,10 +604,8 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
                 is_all_ok = False
 
                 if requireSuccess:
-                    self.print_log(
-                        "e",
-                        "%s: Appear to have lost process with label %s on host %s"
-                        % (rcu.date_and_time(), procinfo.label, procinfo.host),
+                    self.print_log("e","Appear to have lost process with label %s on host %s"
+                        % (procinfo.label, procinfo.host),
                     )
                     procinfos_to_remove.append(procinfo)
 
@@ -643,19 +616,13 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
             for procinfo in procinfos_to_remove:
                 self.procinfos.remove(procinfo)
                 self.throw_exception_if_losing_process_violates_requirements(procinfo)
-            self.print_log(
-                "i",
-                "Processes remaining:\n%s"
-                % ("\n".join([procinfo.label for procinfo in self.procinfos])),
-            )
+
+            self.print_log("i","Processes remaining:\n%s"
+                           % ("\n".join([procinfo.label for procinfo in self.procinfos])))
         else:
             raise Exception(
                 "\nProcess(es) %s died or found in Error state"
-                % (
-                    ", ".join(
-                        ['"' + procinfo.label + '"' for procinfo in procinfos_to_remove]
-                    )
-                )
+                % (", ".join(['"' + procinfo.label + '"' for procinfo in procinfos_to_remove]))
             )
 
     if is_all_ok:

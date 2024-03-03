@@ -129,7 +129,7 @@ Result:
 
 String: 'stopped:100'
 
-* [[file:test_examples.org][test examples]]                                                               
+* [[file:available_configurations.org][available_configurations]]                                                               
 * TFM command line scripts                                                   
 ** [[file:../bin/tfm_configure][tfm_configure]] : setup active artdaq configuration
 ** tfm_transition                                                            

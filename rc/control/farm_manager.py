@@ -1,42 +1,25 @@
 #!/bin/env python3
-
-import os, sys
-
-sys.path.append(os.environ["TFM_DIR"])
-
-if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
-    sys.path.append(os.environ["TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
-
-import argparse
+#------------------------------------------------------------------------------
+import os, sys, argparse, glob
 from   datetime import datetime, timezone
-import glob
+
+import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
+import threading, time, traceback
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
 from   inspect import currentframe, getframeinfo
 
-import pathlib
-import pdb
-import random
-import re
-import shutil
-import signal
-import socket
-import stat
-import string
-import subprocess
-import threading
-import time
-import traceback
+sys.path.append(os.environ["TFM_DIR"])
 
-import run_control_state
-#------------------------------------------------------------------------------
-# for debugging printouts
-#------------------------------------------------------------------------------
-from inspect      import currentframe, getframeinfo
+if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
+    sys.path.append(os.environ["TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR"])
 #------------------------------------------------------------------------------
 # home brew
 #------------------------------------------------------------------------------
+import rc.control.run_control_state
+
+import run_control_state
 from rc.control.subsystem       import Subsystem
 from rc.control.procinfo        import Procinfo
 
@@ -130,17 +113,19 @@ if (management_method == "direct"):
     from rc.control.manage_processes_direct import get_pid_for_process_base
     from rc.control.manage_processes_direct import process_launch_diagnostics_base
     from rc.control.manage_processes_direct import mopup_process_base
-elif (management_method == "external_run_control"):
-    from rc.control.all_functions_noop import launch_procs_base
-    from rc.control.all_functions_noop import kill_procs_base
-    from rc.control.all_functions_noop import check_proc_heartbeats_base
-    from rc.control.all_functions_noop import set_process_manager_default_variables_base
-    from rc.control.all_functions_noop import reset_process_manager_variables_base
-    from rc.control.all_functions_noop import get_process_manager_log_filenames_base
-    from rc.control.all_functions_noop import process_manager_cleanup_base
-    from rc.control.all_functions_noop import get_pid_for_process_base
-    from rc.control.all_functions_noop import process_launch_diagnostics_base
-    from rc.control.all_functions_noop import mopup_process_base
+#elif (management_method == "external_run_control"):
+#    from rc.control.all_functions_noop import launch_procs_base
+#    from rc.control.all_functions_noop import kill_procs_base
+#    from rc.control.all_functions_noop import check_proc_heartbeats_base
+#    from rc.control.all_functions_noop import set_process_manager_default_variables_base
+#    from rc.control.all_functions_noop import reset_process_manager_variables_base
+#    from rc.control.all_functions_noop import get_process_manager_log_filenames_base
+#    from rc.control.all_functions_noop import process_manager_cleanup_base
+#    from rc.control.all_functions_noop import get_pid_for_process_base
+#    from rc.control.all_functions_noop import process_launch_diagnostics_base
+#    from rc.control.all_functions_noop import mopup_process_base
+else:
+    raise Exception("TROUBLE: uknown management method: %s"%management_method)
 
 # This is the end of if-elifs of process management methods
 if not "TFM_FHICL_DIRECTORY" in os.environ:
@@ -1356,8 +1341,7 @@ class FarmManager(Component):
 
     def check_proc_exceptions(self):
 
-        if self.exception:
-            return
+        if self.exception: return
 
         for procinfo in self.procinfos:
 
@@ -2552,16 +2536,11 @@ class FarmManager(Component):
 
             self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
                 % (num_launch_procs_checks, self.max_num_launch_procs_checks),1)
-
-            # "False" here means "don't consider it an error if all
-            # processes aren't found"
-
+#------------------------------------------------------------------------------
+# "False" here means "don't consider it an error if all processes aren't found"
+#-----------v------------------------------------------------------------------
             found_processes = self.check_proc_heartbeats(False)
-            self.print_log(
-                "i",
-                "found %d of %d processes."
-                % (len(found_processes), len(self.procinfos)),
-            )
+            self.print_log("i","found %d of %d processes." % (len(found_processes),len(self.procinfos)))
 
             assert type(found_processes) is list, rcu.make_paragraph(
                 "check_proc_heartbeats needs to return a list of procinfos"
@@ -3002,7 +2981,7 @@ class FarmManager(Component):
 
         starttime = time.time()
         self.print_log("i", "Reformatting FHiCL documents...", 2)
-        breakpoint()
+        # breakpoint()
         try:
             self.create_setup_fhiclcpp_if_needed()
         except:
@@ -3044,6 +3023,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # this is where the processes are launched - 
 #-----------v------------------------------------------------------------------
+            # breakpoint()
             launch_procs_actions = self.launch_procs()
 
             assert type(launch_procs_actions) is dict, rcu.make_paragraph(
@@ -3060,7 +3040,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 #-------v----------------------------------------------------------------------
-        # breakpoint()
+        # 
         rc = self.check_launch_results();
         if (rc != 0): return;
 

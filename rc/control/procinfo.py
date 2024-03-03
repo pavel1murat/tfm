@@ -21,6 +21,7 @@
 # host and port
 #------------------------------------------------------------------------------
 import os, sys, re
+import rc.control.utilities as rcu
 
 BOARD_READER    = 1;
 EVENT_BUILDER   = 2;
@@ -192,3 +193,31 @@ class Procinfo(object):
                                     % (included_file, ffp_string)
                                 )
                             )
+        return
+#-------^----------------------------------------------------------------------
+#
+#---v--------------------------------------------------------------------------
+    def get_related_pids(self):
+        related_pids = []
+        netstat_cmd = "netstat -alpn | grep %s" % (self.port)
+    
+        if not rcu.host_is_local(self.host):
+            netstat_cmd = "ssh -x %s '%s'" % (self.host, netstat_cmd)
+    
+        proc = subprocess.Popen(netstat_cmd,executable="/bin/bash",shell=True,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+        )
+    
+        for line in proc.stdout.readlines():
+            procstring = line.decode("utf-8")
+            res = re.search(r"([0-9]+)/(.*)", procstring.split()[-1])
+            if res:
+                pid = res.group(1)
+                pname = res.group(2)
+                if "python" not in pname:  # Don't want DAQInterface to kill itself off...
+                    related_pids.append(res.group(1))
+
+        return set(related_pids)
+#-------^----------------------------------------------------------------------
+
