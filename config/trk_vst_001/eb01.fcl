@@ -7,7 +7,7 @@
 ###########################################################
 daq: {
     event_builder: {
-        buffer_count                          : 20
+        buffer_count                          : 250
         expected_fragments_per_event          : 2
         use_art                               : true
         print_event_store_stats               : false
@@ -16,8 +16,8 @@ daq: {
         end_of_data_wait_s                    : 600
         art_analyzer_count                    : 1
         expected_art_event_processing_time_us : 30000000
-        max_fragment_size_bytes               : 0x100000
-        broadcast_buffer_size                 : 0x6400000
+        max_fragment_size_bytes               : 100000 ## 0x100000
+        broadcast_buffer_size                 : 100000 ## 0x6400000
         art_index_offset                      : 4
         routing_token_config: {
             use_routing_manager : false

@@ -72,6 +72,12 @@ physics: {
      raw_data_label: daq
      frag_type: TOY1
    }
+   checkintegrity2: {
+     module_type: CheckIntegrity
+     raw_data_label: daq
+     frag_type: TOY2
+   }
+
   }
 
   producers: {
@@ -83,9 +89,9 @@ physics: {
      }
    }
 
-  p2                   : [ BuildInfo ]
-  a1                   : [ checkintegrity ]
-  my_output_modules    : [ normalOutput ]
+  p2: [ BuildInfo ]
+  a1: [ checkintegrity, checkintegrity2 ]
+  my_output_modules: [ normalOutput ]
   my_mpi_output_modules: [rootNetOutput]
 }
 process_name: DAQDL

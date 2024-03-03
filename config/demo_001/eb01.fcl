@@ -24,11 +24,11 @@ daq: {
     }
     metrics: {
         evbFile: {
-            metricPluginType  : "file"
-            level             : 4
-            fileName          : "eventbuilder/evb_%UID%_metrics.log"
+            metricPluginType: "file"
+            level: 4
+            fileName: "eventbuilder/evb_%UID%_metrics.log"
             absolute_file_path: false
-            uniquify          : true
+            uniquify: true
         }
     }
 } 
@@ -57,9 +57,14 @@ outputs: {
 physics: {
     analyzers: {
         toy1Integ: {
-            module_type   : CheckIntegrity
+            module_type: CheckIntegrity
             raw_data_label: "daq"
-            frag_type     : "TOY1"      
+            frag_type: "TOY1"      
+        }
+        toy2Integ: {
+            module_type: CheckIntegrity
+            raw_data_label: "daq"
+            frag_type: "TOY2"
         }
     }
     

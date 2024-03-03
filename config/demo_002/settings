@@ -1,15 +1,12 @@
 #------------------------------------------------------------------------------
-# [2024-03-02 P.M.] status: not working yet, debug in progress
-#
+# [2024-03-02 P.M.] 
 # configuration:
-# - one boardreader (TRK) on daq09, anotehr one - (CRV) - on daq22
+# - one boardreader (br01, "TRK") on daq09, another one - (br02, "CRV") - on daq22
 # - the "event filter", filtering the tracker events, runs on daq09
-# passing - evrything else is happening on daq09
+# - the event builder, the data logger and the dispatcher run on daq09
+# - daq09 name is 'mu2edaq09-data' - local network
 #
-# processes are organized into two subsystems:
-#
-# 1: the BRs, the EF, and the RM
-# 2: the EB, the DL, and the DS
+# status: 2024-03-02 validation in progress
 #
 # don't set debug_level to zero - smth is going on
 # P.M. DAQ_OUTPUT_TOP and REMOTE_PRODUCTS_DIR are defined in setup_daq.sh

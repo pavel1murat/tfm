@@ -1,8 +1,21 @@
 #--------------------------------------------------------------------------------
+# [2024-03-02 P.M.] configuration: 
+# - one BR, one EB, one DL, one DS, all running on 'localhost'
+# - a BR reads one DTC and one ROC
+#
+# status: validated
+#
+# MU2E_DAQ_TOP and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+# TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 # only one colon character (':') is allowed on a line
 #--------------------------------------------------------------------------------
-daq_setup_script   : $MU2E_DAQ_DIR/setup_daq.sh
-debug_level        : 1
+daq_setup_script               : $MU2E_DAQ_DIR/setup_daq.sh
+top_output_dir                 : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME
+log_directory                  : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/logs
+data_directory_override        : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/data
+record_directory               : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts   : $REMOTE_PRODUCTS_DIR
+debug_level                    : 1
 #
 # request_address  : 
 # manage_processes :   True/False
@@ -20,15 +33,6 @@ EventBuilder: eb01           localhost     -1   2       "0-63"       none    non
 DataLogger  : dl01           localhost     -1   2       "0-63"       none    none
 Dispatcher  : ds01           localhost  10500   2       "0-63"       none    none
 #--------------------------------------------------------------------------------
-# P.M. DAQ_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
-#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
-#------------------------------------------------------------------------------
-top_output_dir                      : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME
-log_directory                       : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/logs
-data_directory_override             : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/data
-record_directory                    : /scratch/mu2e/mu2etrk_pasha_020/$TFM_CONFIG_NAME/run_records
-productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
-#
 # package_hashes_to_save              : [artdaq]   # useless
 boardreader timeout                 : 600
 eventbuilder timeout                : 600

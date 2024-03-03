@@ -74,14 +74,16 @@ TransferPluginConfig: {
     transferPluginType : TCPSocket
     host_map           : [
                           { rank:100 host: "localhost"},   ## tracker DQM - doesn't matter ?
-                          { rank:  3 host: "localhost"},   ## dp01
-                          { rank:  2 host: "localhost"},   ## dl01
-                          { rank:  1 host: "localhost"},   ## eb01
-                          { rank:  0 host: "localhost"}    ## br01
+                          { rank:  5 host: "localhost"},   ## dispatcher01
+                          { rank:  4 host: "localhost"},   ## datalogger01
+                          { rank:  3 host: "localhost"},   ## eventbuilder02
+                          { rank:  2 host: "localhost"},   ## eventbuilder01
+                          { rank:  1 host: "localhost"},   ## boardreader02
+                          { rank:  0 host: "localhost"}    ## boardreader01
                          ]
     
     max_fragment_size_words : 1048576
-    source_rank             : 3          ## dispatcher
+    source_rank             : 5          ## dispatcher
     destination_rank        : 100        ## DQM client
 }
 

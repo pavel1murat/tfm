@@ -5,11 +5,11 @@
 daq: {
     aggregator: {
         is_datalogger                : true
-        buffer_count                 : 10
+        buffer_count                 : 250
         expected_fragments_per_event :  2
-        max_fragment_size_bytes      : 0x100000
+        max_fragment_size_bytes      : 100000 ## 100K should be OK 0x100000
         init_fragment_count          :   1
-        broadcast_buffer_size        : 0x6400000
+        broadcast_buffer_size        : 100000 ## 0x6400000
         sources: { }
     }
     metrics: {}
@@ -34,7 +34,7 @@ art: {
         rootOutput: { module_type: RootDAQOut
             # SelectEvents      # :     # []
             fileName      :     "/tmp/raw.mu2e.trkvst.annex.%06r_%08s.art"
-            # compressionLevel      # :     # 0
+            # compressionLevel    :     0 ## disable compression  ## default: 7 ## 
             outputCommands      :     ["drop *_*_*_*", 
                                        "keep artdaq::Fragments_*_*_*",
                                        "keep *::Mu2eFragment_*_*_*",
