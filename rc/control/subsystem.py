@@ -23,4 +23,10 @@ class Subsystem(object):
                 return False
         else:
             return False  # equal
+
+    def print(self):
+        print ("---- subsystem ID:",self.id,
+               " sources:"    ,self.sources,
+               " destination:",self.destination,
+               "fragmentMode:",self.fragmentMode);
 #------------------------------------------------------------------------------

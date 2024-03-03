@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 
-import os
-import re
-import string
-import socket
-import shutil
-import sys
-import stat
+import os, re, string, socket, shutil, sys, stat
 
 import subprocess
 from   subprocess import Popen
@@ -88,15 +82,13 @@ def make_paragraph(userstring, chars_per_line=75):
 # of interest - e.g., for diagnostics or debugging - they can save
 # this result
 
-
+#------------------------------------------------------------------------------
+# assume that a long hostname might have been passed, allow for 'localhost'
+#------------------------------------------------------------------------------
 def host_is_local(host):
-    return (
-        host == "localhost"
-        or ("HOSTNAME" in os.environ and host == os.environ["HOSTNAME"])
-        or get_short_hostname() in host
-    )
+    return ( (host == "localhost") or (socket.gethostname() in host) )
 
-
+#------------------------------------------------------------------------------
 def get_pids(greptoken, host="localhost", grepresults=None):
 
     cmd = 'ps aux | grep "%s" | grep -v grep' % (greptoken)
@@ -105,7 +97,7 @@ def get_pids(greptoken, host="localhost", grepresults=None):
         cmd = "ssh -x %s '%s'" % (host, cmd)
 
     # breakpoint()
-    proc = subprocess.Popen(cmd, shell=True, executable="/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+    proc = subprocess.Popen(cmd, shell=True, executable="/usr/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
 
     out, err = proc.communicate()
     lines = []
@@ -127,11 +119,12 @@ def get_pids(greptoken, host="localhost", grepresults=None):
 
     return pids
 
-
+#------------------------------------------------------------------------------
 # [Comment added by KAB, 17-Apr-2018]
 # This function returns the contents of the FHiCL table that immediately
 # follows the specified string (tablename).  It does not require that
 # 'tablename' actually be a FHiCL key.
+#------------------------------------------------------------------------------
 def table_range(fhiclstring, tablename, startingloc=0):
 
     # 13-Apr-2018, KAB: added the startingloc argument so that this function can
@@ -361,42 +354,12 @@ def execute_command_in_xterm(home, cmd):
 # return date and time in Chicago with 0.1 sec precision
 #------------------------------------------------------------------------------
 def date_and_time():
-#     return (
-#         Popen(
-#             'date +"%a %b %e %H:%M:%S %Z %Y"',
-#             shell=True,
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.STDOUT, encoding="UTF-8"
-#         )
-#         .stdout.readlines()[0]
-#         .strip()
-#     )
-
     return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S.%f")[:-5]
 
 def date_and_time_more_precision():
-#     return (
-#         Popen(
-#             "date +%a_%b_%d_%H:%M:%S.%N | sed -r 's/_/ /g'",
-#             shell=True,
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.STDOUT, encoding="UTF-8"
-#         )
-#         .stdout.readlines()[0]
-#         .strip()
-#     )
-
     return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]
 
 def date_and_time_filename():
-#     return (Popen('date +%Y%m%d%H%M%S',
-#                   shell=True,
-#                   stdout=subprocess.PIPE,
-#                   stderr=subprocess.STDOUT, encoding="UTF-8"
-#               )
-#             .stdout.readlines()[0]
-#             .strip()
-#     )
     return datetime.now(tz=ZoneInfo("America/Chicago")).strftime("%Y%m%d%H%M%S")
 
 def construct_checked_command(cmds):
@@ -486,7 +449,7 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     proc.wait()
 #------------------------------------------------------------------------------
 # to check the return code need to wait...
-####
+#---v--------------------------------------------------------------------------
     if proc.returncode != 0:
 
         if proc.stdout : print(proc.stdout)
@@ -992,20 +955,22 @@ def record_directory_info(recorddir):
     stats = os.stat(recorddir)
     return "inode: %s" % (stats.st_ino)
 
-
-def get_short_hostname():
-    hostname = (
-        Popen(
-            "hostname -s",
-            executable="/bin/bash",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
-    )
-    return hostname
+#------------------------------------------------------------------------------
+# socket.gethostname() does exactly this
+#------------------------------------------------------------------------------
+# def get_short_hostname():
+#     hostname = (
+#         Popen(
+#             "hostname -s",
+#             executable="/bin/bash",
+#             shell=True,
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.STDOUT, encoding="UTF-8"
+#         )
+#         .stdout.readlines()[0]
+#         .strip()
+#     )
+#     return hostname
 
 
 def main():

@@ -1,29 +1,9 @@
-
+#
 import random, string, os, sys, subprocess, socket, time, re, copy;
-# from subprocess import Popen
-# import socket
-# from time import sleep
-# import time
-# import re
-# import sys
-# import copy
 
 sys.path.append(os.environ["TFM_DIR"])
 
 import rc.control.utilities as rcu;
-
-# from rc.control.utilities import host_is_local
-# from rc.control.utilities import get_pids
-# from rc.control.utilities import get_setup_commands
-# from rc.control.utilities import date_and_time
-# from rc.control.utilities import date_and_time_filename
-# from rc.control.utilities import construct_checked_command
-# from rc.control.utilities import obtain_messagefacility_fhicl
-# from rc.control.utilities import make_paragraph
-# from rc.control.utilities import get_short_hostname
-# from rc.control.utilities import get_messagefacility_template_filename
-# from rc.control.utilities import RaisingThread
-
 
 def bootfile_name_to_execname(bootfile_name):
 
@@ -43,13 +23,13 @@ def launch_procs_on_host(self,host,
                          launch_commands_to_run_on_host,
                          launch_commands_to_run_on_host_background,
                          launch_commands_on_host_to_show_user):
-    # breakpoint()
     self.print_log("d", "[manage_processes_direct::launch_procs_on_host]: executing commands to launch processes on %s" % (host),2)
 
     # Before we try launching the processes, let's make sure there
     # aren't any pre-existing processes listening on the same ports
 
     # self.print_log("d","Before check for existing processes on %s" % host,2)
+    # breakpoint();
     grepped_lines    = []
     preexisting_pids = rcu.get_pids("\|".join(
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
@@ -126,7 +106,7 @@ def launch_procs_on_host(self,host,
         raise Exception("ERROR to launch processes on %s; status=%s" % (host,status))
     else:
         self.print_log("d", "...host %s done." % host,2)
-
+#    breakpoint();
     return status  # end of launch_procs_on_host
 #------------------------------------------------------------------------------
 # JCF, Dec-18-18
@@ -200,7 +180,7 @@ def launch_procs_base(self):
     self.launch_attempt_files                 = {}
 
     for p in self.procinfos:
-        if p.host == "localhost": p.host = rcu.get_short_hostname()
+        if p.host == "localhost": p.host = socket.gethostname(); ## rcu.get_short_hostname()
         # breakpoint()
         if not p.host in launch_commands_to_run_on_host:
 #------------------------------------------------------------------------------
@@ -231,9 +211,6 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append(
                 "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition(),self.launch_attempt_files[p.host])
             )
-            # launch_commands_to_run_on_host[ p.host ].append("setup valgrind v3_13_0")
-            # launch_commands_to_run_on_host[ p.host ].append("export LD_PRELOAD=libasan.so")
-            # launch_commands_to_run_on_host[ p.host ].append("export ASAN_OPTIONS=alloc_dealloc_mismatch=0")
 
             for command in launch_commands_to_run_on_host[p.host]:
                 res = re.search(r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),command)
@@ -321,12 +298,9 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
             proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                     stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             proc.wait()
-            self.print_log(
-                "d",
-                "%s: Finished (attempted) kill of the following processes on %s: %s"
-                % (rcu.date_and_time(), host, " ".join(labels_of_found_processes)),
-                2,
-            )
+            self.print_log("d",
+                "Finished (attempted) kill of the following processes on %s: %s"
+                % (host, " ".join(labels_of_found_processes)),2)
 
         else:
             self.print_log("w",rcu.make_paragraph(
@@ -343,14 +317,11 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
                                     stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             proc.wait()
             self.print_log(
-                "d",
-                "%s: Finished (attempted) kill -9 of the following processes on %s: %s"
-                % (rcu.date_and_time(), host, " ".join(labels_of_found_processes)),
-                2,
-            )
+                "d","Finished (attempted) kill -9 of the following processes on %s: %s"
+                % (host, " ".join(labels_of_found_processes)),2)
 #------------------------------------------------------------------------------
 # kill art processes
-####
+#---v--------------------------------------------------------------------------
     if kill_art:
         art_pids = rcu.get_pids("art -c .*partition_%d" % self.partition(),host)
 
@@ -361,16 +332,14 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
             if not rcu.host_is_local(host): 
                 cmd = "ssh -x " + host + " '" + cmd + "'"
 
-            self.print_log("d","%s: About to kill the artdaq-associated art processes on %s"
-                           % (rcu.date_and_time(),host),2)
+            self.print_log("d","About to kill the artdaq-associated art processes on %s"%(host),2)
 
             subprocess.Popen(cmd,executable="/bin/bash",
                              shell=True,
                              stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL).wait()
             
-            self.print_log("d","%s: Finished kill of the artdaq-associated art processes on %s"
-                           % (rcu.date_and_time(), host),2)
+            self.print_log("d","Finished kill of the artdaq-associated art processes on %s" % (host),2)
     return
 
 def kill_procs_base(self):

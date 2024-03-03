@@ -345,7 +345,6 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def validate_setup_script(self,node):
 
-        ssh_timeout_in_seconds = 30
         starttime              = time.time()
 
         self.print_log("i",
@@ -362,7 +361,7 @@ class FarmManager(Component):
         )
 
         if not rcu.host_is_local(node):
-            cmd = "timeout %d ssh %s '%s'" % (ssh_timeout_in_seconds,node,cmd)
+            cmd = "timeout %d ssh %s '%s'" % (self.ssh_timeout_in_seconds,node,cmd)
 
         out = subprocess.Popen(cmd,
                                executable="/bin/bash",
@@ -481,6 +480,8 @@ class FarmManager(Component):
         self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
+
+        self.ssh_timeout_in_seconds              = 30  ## was a local var somewhere
                                                 
         self.boardreader_timeout                 = 30
         self.eventbuilder_timeout                = 30
@@ -1056,21 +1057,25 @@ class FarmManager(Component):
 
                 if res:
                     self.strict_fragment_id_mode = True
-
+#------------------------------------------------------------------------------
+# subsystem could have multiple sources and (?) multiple destinations 
+#-----------v------------------------------------------------------------------
             elif (key == "Subsystem"):
+                print("key=Subsystem, pars: ",par);
                 s           = Subsystem();
                 s.id        = par[0];                        # should always be defined
 
-                s.source    = None
-                if (par[1] != "none"): s.source      = par[1];
-
-                s.destination  = None;
+#------------------------------------------------------------------------------
+# P.M. so far, intentionally, handle only one source and one destination - haven't 
+#      seen any configuration with a subsystem having two sources. 
+#      however, 'sources is an array, so this may need to be changed
+#------------------------------------------------------------------------------
+                if (par[1] != "none"): s.sources.append(par[1]);
                 if (par[2] != "none"): s.destination = par[2];
 
                 s.fragmentMode = par[3];                        # should always be defined
                 
-                # breakpoint()
-                self.subsystems[s.id] = s
+                self.subsystems[s.id] = s                       # an associative array
 
             elif "max_launch_checks" in line or "max launch checks" in line:
                 self.max_num_launch_procs_checks = int(data)
@@ -1683,6 +1688,12 @@ class FarmManager(Component):
                      "please check the settings file to ensure that each process gets a unique label"))
             )
 
+#------------------------------------------------------------------------------
+# print subsystems if debug level >= 2
+#------------------------------------------------------------------------------
+        if (self.debug_level >= 2):
+            for key in self.subsystems.keys(): self.subsystems[key].print()
+
         for ss in self.subsystems:
             dest = self.subsystems[ss].destination
             if dest is not None:
@@ -1789,7 +1800,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # presence of oddly named processes should be checked well before this point
 #-----------v------------------------------------------------------------------
-            # breakpoint()
             for i_p in range(len(proclines)):
                 fn = "%s:%s"%(full_hostname,proclines[i_p].strip().split()[-1])
 
@@ -2041,6 +2051,7 @@ class FarmManager(Component):
 
         try:
             if command == "Init":
+                # breakpoint()
                 p.lastreturned = p.server.daq.init(p.fhicl_used, timeout)
             elif command == "Start":
                 p.lastreturned = p.server.daq.start(self.run_number, timeout)
@@ -2177,9 +2188,8 @@ class FarmManager(Component):
 # which leaves 'Init', 'Start', 
 #-----------v------------------------------------------------------------------
             subsystems_in_order.reverse()
-
+        
         starttime = time.time()
-
         self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" 
                        % (command.upper()),1)
 
@@ -2486,7 +2496,6 @@ class FarmManager(Component):
     def do_fhiclcpp_stuff(self):
 
         self.create_setup_fhiclcpp_if_needed()
-        # breakpoint()
         rcu.obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
 
         self.print_log("i", "%s::do_fhiclcpp_stuff 001" %(__file__),2)
@@ -2609,6 +2618,9 @@ class FarmManager(Component):
                     return -1
         return 0
 #------------------------------------------------------------------------------
+# this is the place where each ARTDAQ component get its XMLRPC server created
+# 1) not sure why this can't be done whem initializing the Procinfo thing
+# 2) can have timeout a parameter of the Procinfo thing
 # P.Murat: create_time_server_proxy - make it a separate function
 #---v--------------------------------------------------------------------------
     def create_time_server_proxy(self):
@@ -2671,7 +2683,7 @@ class FarmManager(Component):
             logdircmd = rcu.construct_checked_command(logdir_commands_to_run_on_host)
 
             if not rcu.host_is_local(host):
-                logdircmd = "timeout %d ssh -f %s '%s'" % (ssh_timeout_in_seconds,host,logdircmd)
+                logdircmd = "timeout %d ssh -K -f %s '%s'" % (self.ssh_timeout_in_seconds,host,logdircmd)
 
             self.print_log("i", "farm_manager::make_logfile_dirs 004")
             self.print_log("d", "farm_manager::make_logfile_dirs executing:\n%s" % (logdircmd),2)
@@ -2951,7 +2963,6 @@ class FarmManager(Component):
 # CONFIG transition : 1) at this point the run number is already known, don't need to pass
 #---v--------------------------------------------------------------------------
     def do_config(self, subconfigs_for_run=[], run_number=None):
-        # breakpoint()
 
         self.fState = run_control_state.transition("configure")
 
@@ -2991,7 +3002,7 @@ class FarmManager(Component):
 
         starttime = time.time()
         self.print_log("i", "Reformatting FHiCL documents...", 2)
-
+        breakpoint()
         try:
             self.create_setup_fhiclcpp_if_needed()
         except:
@@ -3001,7 +3012,6 @@ class FarmManager(Component):
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
 #-------v----------------------------------------------------------------------
-        # breakpoint()
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
         self.print_log("i", "CONFIG transition 007: reformatting FHICL done (%.1f seconds)." % (time.time() - starttime),2)
@@ -3034,7 +3044,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # this is where the processes are launched - 
 #-----------v------------------------------------------------------------------
-            # breakpoint()
             launch_procs_actions = self.launch_procs()
 
             assert type(launch_procs_actions) is dict, rcu.make_paragraph(
@@ -3078,7 +3087,6 @@ class FarmManager(Component):
 
         self.print_log("i", "CONFIG transition 014")
 
-        # breakpoint()
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,
                                                                              datetime.now().strftime("%Y-%m-%d-%H:%M:%S.%f"))
         assert not os.path.exists(self.semipermanent_run_record)
@@ -3176,7 +3184,7 @@ class FarmManager(Component):
     def do_start_running(self):
 
         self.print_log("i","START transition underway for run %06d" % (self.run_number))
-
+        # breakpoint()
         self.fState = run_control_state.transition("start")
 
         self.check_run_record_integrity()
@@ -3649,7 +3657,7 @@ class FarmManager(Component):
                 time.sleep(sleep_on_heartbeat_failure)
 
             for name in ["BoardReader","EventBuilder","DataLogger","Dispatcher","RoutingManager"]:
-                self.print_log("i","%s: Attempting to cleanly wind down the %ss if they (still) exist"%(rcu.date_and_time(), name))
+                self.print_log("i","Attempting to cleanly wind down the %ss if they (still) exist"%(name))
 
                 threads = []
                 priorities_used = {}
@@ -3672,15 +3680,13 @@ class FarmManager(Component):
 
         if self.manage_processes:
             print
-            self.print_log("i","%s: Attempting to kill off the artdaq processes from this run if they still exist"
-                           % (rcu.date_and_time()))
+            self.print_log("i","Attempting to kill off the artdaq processes from this run if they still exist")
             try:
                 self.kill_procs()
             except Exception:
                 self.print_log("e", traceback.format_exc())
                 self.print_log("e",rcu.make_paragraph(
-                        ("An exception was thrown "
-                         "within kill_procs(); artdaq processes may not all have been killed"))
+                        ("An exception was thrown within kill_procs(); artdaq processes may not all have been killed"))
                 )
 
         self.in_recovery = False
@@ -3832,7 +3838,6 @@ class FarmManager(Component):
                 and self.state() != "configuring"
                 and self.state() != "terminating"
             ):
-                # breakpoint()
                 self.check_proc_heartbeats()
                 self.check_proc_exceptions()
                 self.perform_periodic_action()

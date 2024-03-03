@@ -111,11 +111,9 @@ EOF
     cat<<EOF
 
 * The TFM environment setup for configuration $TFM_CONFIG_NAME successful. 
-* To launch TFM: tfm_start.sh &
-* using ARTDAQ_PARTITION_NUMBER=$ARTDAQ_PARTITION_NUMBER
-* logfiles are located in ${TFM_LOGDIR}/tfm_partition_<N>.log, 
-  where <N> is the partition the TF manager instance is running on
-* data will be logged in ... TO BE DEFINED
+* ARTDAQ_PARTITION_NUMBER=$ARTDAQ_PARTITION_NUMBER
+* TFM_CONFIG_DIR=$TFM_CONFIG_DIR
+* logfiles are located in $TFM_LOGDIR 
 
 EOF
 }

@@ -89,8 +89,13 @@ class Procinfo(object):
 #------------------------------------------------------------------------------
     def type(self):
         return self._type;
-
+#------------------------------------------------------------------------------
+# P.Murat: in the Edwards Center, the daq servers communicate using the private
+#          data network, where mu2edaq09 has the name of mu2edaq09-data
+#          - change host names in $ARTDAQ_CONFIG/settings
+#------------------------------------------------------------------------------
     def rpc_server(self):
+#        return self.host+'-data:'+self.port;
         return self.host+':'+self.port;
 
     def print(self):
