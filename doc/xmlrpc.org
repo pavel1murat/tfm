@@ -1,7 +1,6 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
-* information on XMLRPC
-* ------------------------------------------------------------------------------
+* information on XMLRPC                                                      
 ** checkout code                                                             
 svn checkout http://svn.code.sf.net/p/xmlrpc-c/code/stable xmlrpc-c
 
@@ -21,10 +20,15 @@ result = xmlrpc_client_call( &env,
 ** http://xmlrpc.com/         
 ** RPC2 manual: http://www.coda.cs.cmu.edu/doc/html/rpc2_manual.html
 ** code examples: https://xmlrpc-c.sourceforge.io/example-code.php
-** TFM status                                                                    
-#+begin_src                                                                   
+** TFM XMLRPC commands                                                       
+*** status                                                                   
 xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
-#+end_src 
+*** configure                                                                
+xmlrpc http://mu2edaq09-data.fnal.gov:23000/RPC2 state_change daqint configuring struct/{run_number:i/105391}
+*** start                                
+*** stop
+*** shutdown                                                                 
+xmlrpc http://mu2edaq09-data.fnal.gov:23000/RPC2 shutdown daqint
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]
 * ------------------------------------------------------------------------------
