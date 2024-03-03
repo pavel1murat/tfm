@@ -1,6 +1,7 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
 * TFM configurations                                                         
+** [[file:../config/crvvst_v00]]
 ** [[file:../config/demo]]               *validated*                             
 - ARTDAQ demo with 6 processess: two boardreaders, two event builders, 
   one dispatcher and one logger, all running on the same machine, 'localhost'

@@ -1,9 +1,14 @@
 #------------------------------------------------------------------------------
-# P.Murat: move contents of boot.txt to settings, don't need both
 # only one ':' on the line is allowed
 #------------------------------------------------------------------------------
-daq_setup_script   : $MRB_TOP/setup_ots.sh
-debug_level        : 1
+daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh
+top_output_dir               : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME
+log_directory                : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/logs
+data_directory_override      : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/data
+record_directory             : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
+#
+debug_level                  : 1
 #
 # request_address  : 
 # manage_processes :   True/False
@@ -21,12 +26,6 @@ EventBuilder: eventbuilder0  localhost  -1      1              -1       none    
 DataLogger  : datalogger01   localhost  -1      1              -1       none    none
 Dispatcher  : dispatcher01   localhost  -1      1              -1       none    none
 #------------------------------------------------------------------------------
-top_output_dir               : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME
-log_directory                : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/logs
-data_directory_override      : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/data
-record_directory             : /scratch1/mu2e/$OTS_USER_STUB/$TFM_CONFIG_NAME/run_records
-productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
-
 package_hashes_to_save             : []
 boardreader timeout                : 600
 eventbuilder timeout               : 600
