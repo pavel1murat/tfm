@@ -1,0 +1,51 @@
+#--------------------------------------------------------------------------------
+# P.M. only one colon character (':') is allowed on a line
+#--------------------------------------------------------------------------------
+daq_setup_script   : $MU2E_DAQ_DIR/setup_daq.sh
+debug_level        : 1
+#
+# request_address  : 
+# manage_processes :   True/False
+# disable_recovery :   True/False
+#--------------------------------------------------------------------------------
+#            id    source     destination  fragmentMode   
+#--------------------------------------------------------------------------------
+Subsystem:    2      none        none          False
+#--------------------------------------------------------------------------------
+#                label         host      port subsystem  allowed  prepend  target
+#                                                     processors
+#--------------------------------------------------------------------------------
+BoardReader : br01           localhost     -1   2         -1         none    none
+EventBuilder: eb01           localhost     -1   2       "0-63"       none    none
+DataLogger  : dl01           localhost     -1   2       "0-63"       none    none
+Dispatcher  : ds01           localhost  10500   2       "0-63"       none    none
+#--------------------------------------------------------------------------------
+# P.M. MU2e_DAQ_TOP and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
+#------------------------------------------------------------------------------
+top_output_dir                      : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME
+log_directory                       : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/logs
+data_directory_override             : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/data
+record_directory                    : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts        : $REMOTE_PRODUCTS_DIR
+#
+# package_hashes_to_save              : [artdaq]   # useless
+boardreader timeout                 : 600
+eventbuilder timeout                : 600
+datalogger timeout                  : 600
+dispatcher timeout                  : 600
+max_fragment_size_bytes             : 1284180560
+transfer_plugin_to_use              : TCPSocket
+all_events_to_all_dispatchers       : true
+max_configurations_to_list          : 10
+disable_unique_rootfile_labels      : false
+use_messageviewer                   : false
+use_messagefacility                 : true
+fake_messagefacility                : false
+kill_existing_processes             : true
+advanced_memory_usage               : false
+strict_fragment_id_mode             : false
+disable_private_network_bookkeeping : false
+allowed_processors                  : "0-63"
+validate_setup_script               : 0      # default=1
+#     Info is provided in the memory management details section.

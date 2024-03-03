@@ -1,0 +1,109 @@
+#------------------------------------------------------------------------------
+# [2024-03-02 P.M.] status: not working yet, debug in progress
+#
+# configuration:
+# - one boardreader (TRK) on daq09, anotehr one - (CRV) - on daq22
+# - the "event filter", filtering the tracker events, runs on daq09
+# passing - evrything else is happening on daq09
+#
+# processes are organized into two subsystems:
+#
+# 1: the BRs, the EF, and the RM
+# 2: the EB, the DL, and the DS
+#
+# don't set debug_level to zero - smth is going on
+# P.M. DAQ_OUTPUT_TOP and REMOTE_PRODUCTS_DIR are defined in setup_daq.sh
+#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
+#------------------------------------------------------------------------------
+debug_level                  : 4  # debug_level ranges from 1 to 4 in increasing level of verbosity
+
+daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh  # location of the ARTDAQ setup script 
+top_output_dir               : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME
+log_directory                : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/logs
+data_directory_override      : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/data
+record_directory             : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/run_records
+productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
+request address              : "227.128.130.130"         # multicast transmission - who is using it ?
+
+# disable_recovery: true/false             # TO BE EXPLAINED
+# manage_processes: true/false             # TO BE EXPLAINED
+#------------------------------------------------------------------------------
+# subsystems  id    source     destination  fragmentMode   
+#-----------------------------------------------------------------------------------
+Subsystem   :  1     none           2             none
+Subsystem   :  2       1          none            none
+#-----------------------------------------------------------------------------------
+# adopt fixed format for boardreaders and friends - and keep it simple
+#
+#            label       host    port subsystem    allowed  prepend  target
+#                                                        processors
+#-----------------------------------------------------------------------------------
+BoardReader    : br01  mu2edaq09-data   -1     1          -1        none    none 
+BoardReader    : br02  mu2edaq22-data   -1     1          -1        none    none 
+#
+EventBuilder   : ef01  mu2edaq09-data   -1     1          -1        none    none
+#-----------------------------------------------------------------------------------
+# here comes routing manager
+#-----------------------------------------------------------------------------------
+RoutingManager : rm01  mu2edaq09-data   -1     1          -1        none    none
+#-----------------------------------------------------------------------------------
+# subsystem 2:
+#-----------------------------------------------------------------------------------
+EventBuilder   : eb01  mu2edaq09-data   -1     2          -1        none    none
+#
+DataLogger     : dl01  mu2edaq09-data   -1     2          -1        none    none
+#
+Dispatcher     : ds01  mu2edaq09-data   -1     2          -1        none    none
+#-----------------------------------------------------------------------------------
+# For more information on these variables and what they mean, see the
+# relevant section of the DAQInterface wiki,
+# https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
+#
+# default values are commented out
+#------------------------------------------------------------------------------
+# to be merged with boot.txt
+#------------------------------------------------------------------------------
+package_hashes_to_save       : [] # no need to save hashes in a so intensive way [ artdaq-demo, artdaq ]
+
+boardreader timeout          : 60
+eventbuilder timeout         : 30
+datalogger timeout           : 30
+dispatcher timeout           : 30
+routing_manager timeout      : 30
+aggregator timeout           : 30
+
+advanced_memory_usage        : true ## default "false". 
+#     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing 
+#     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
+#     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
+#     Info is provided in the memory management details section.
+#
+# use_messagefacility        : true
+#     - dont really know what that does
+use_messageviewer            : false
+#     By default, if windowing is supported and artdaq_mfextensions is installed, 
+#     a MessageViewer window will pop up during runs which will print out messages 
+#     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
+# fake_messagefacility       : false
+#     - when set to true, TFM will format its messages to appear like MessageFacility messages
+# disable_unique_rootfile_labels: true
+#     TO BE EXPLAINED
+# kill_existing_processes       : 
+#     TO BE EXPLAINED
+# max_fragment_size_bytes       : 1024000
+#     TO BE EXPLAINED
+# max_configurations_to_list    : 
+#     TO BE EXPLAINED
+# boardreader_priorities 
+#     Formatted as a set of regular expressions, e.g.:boardreader_priorities: component01 component.*, 
+#     this tells DAQInterface how to order the transitions it sends the BoardReader processes. 
+#     In this example, in the case of "init" (during the config transition) and "start" 
+#     (during the start transition), 
+#     DAQInterface would first send the command for component01, wait for a successful response, 
+#     and then send the commands in no particular order to the remaining components. 
+#     During stop or terminate, the reverse is true.
+# transfer_plugin_to_use : "Autodetect"
+#     The name of the transfer plugin to use to send data between processes; defaults to "Autodetect". 
+#     Only set this if you're sure you know what you're doing.
+validate_setup_script              : 0      # default=1
+#     Info is provided in the memory management details section.
