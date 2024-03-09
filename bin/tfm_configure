@@ -65,7 +65,7 @@ fi
     mf_fcl=messagefacility_partition_${ARTDAQ_PARTITION_NUMBER}_${USER}.fcl
     export ARTDAQ_LOG_FHICL=$DAQ_SCRATCH/$TFM_CONFIG_NAME/tmp_fcl/$mf_fcl
 #------------------------------------------------------------------------------
-# TFM is supposed to have its own logfile
+# TFM keeps its own logfiles - in $TFM_LOGDIR/tfm
 #------------------------------------------------------------------------------
     local x=`cat $TFM_CONFIG_DIR/$TFM_CONFIG_NAME/settings | grep top_output_dir | sed 's/ //g' | awk -F : '{print $2}'`
     if [ $debug != 0 ] ; then echo [$name:$LINENO] x=$x ; fi
@@ -75,6 +75,7 @@ fi
     if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_TOP_OUTPUT_DIR=$TFM_TOP_OUTPUT_DIR ; fi
     if [ $debug != 0 ] ; then echo [$name:$LINENO] TFM_LOGDIR=$TFM_LOGDIR ; fi
     mkdir -p $TFM_LOGDIR
+    mkdir -p $TFM_LOGDIR/tfm
 #------------------------------------------------------------------------------
 # P.M. ARTDAQ_PARTITION_NUMBER is already defined
 #------------------------------------------------------------------------------
