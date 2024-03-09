@@ -17,9 +17,9 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 #------------------------------------------------------------------------------
 # home brew
 #------------------------------------------------------------------------------
-import rc.control.run_control_state
+import rc.control.run_control_state as run_control_state
 
-import run_control_state
+# import run_control_state
 from rc.control.subsystem       import Subsystem
 from rc.control.procinfo        import Procinfo
 
@@ -870,7 +870,9 @@ class FarmManager(Component):
                   (key == "RoutingManager")    ):
 
                 assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
-
+#------------------------------------------------------------------------------
+# here, components are ranked dynamically , in the sequence they are introduced
+#------------------------------------------------------------------------------
                 num_actual_processes += 1
                 rank                  = num_actual_processes - 1
 
@@ -2379,7 +2381,7 @@ class FarmManager(Component):
         inode_fullname = "%s/%s" % (self.record_directory, inode_basename)
         if os.path.exists(inode_fullname):
             with open(inode_fullname) as inf:
-                if not inf.read().strip() == rcu.record_directory_info(self.record_directory):
+                if (not inf.read().strip() == rcu.record_directory_info(self.record_directory)):
                     preface = rcu.make_paragraph(
                         ("Contents of existing %s file and returned value of call to the %s function don't match."
                          " This suggests that since the %s file was created the run records directory has been "
@@ -2415,7 +2417,7 @@ class FarmManager(Component):
                                " PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS"
                                " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
                     raise Exception(rcu.make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
-
+        return
 #------------------------------------------------------------------------------
 # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
 #---v--------------------------------------------------------------------------
