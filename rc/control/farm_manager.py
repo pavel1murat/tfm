@@ -971,7 +971,17 @@ class FarmManager(Component):
                     path = self.top_output_dir+'/'+subdir
                     if (not os.path.exists(path)):
                         os.makedirs(path)
-
+                        if (subdir == 'run_records'):
+#------------------------------------------------------------------------------
+# P.M. as a matter of some kind of [inherited] safety, add the dot file.. 
+#      ... not sure what kind of safety that is
+#      the dot file, '.record_directory_info', contains the number of the first 
+#      directory inode 
+#------------------------------------------------------------------------------
+                            inode = os.stat(path).st_ino
+                            fn    = path+'/.record_directory_info'
+                            with open(fn,"w") as f: 
+                                f.write("inode: %s" % inode);
             elif (key == "manage_processes"):
                 if (data.upper() == "TRUE"): self.manage_processes = True
                 else                       : self.manage_processes = False
