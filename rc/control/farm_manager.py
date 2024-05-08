@@ -35,7 +35,7 @@ if (disable_bookkeeping and (disable_bookkeeping != "false")):
 else:
     from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
-import rc.control.utilities as rcu 
+import rc.control.utilities as rcu
 
 try:
     import python_artdaq
@@ -68,51 +68,53 @@ except:
     from rc.control.all_functions_noop         import do_disable_base
     from rc.control.all_functions_noop         import check_config_base
 
-process_management_methods = ["direct", "external_run_control"]
+# process_management_methods = ["direct", "external_run_control"]
 
-if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-    raise Exception(
-        rcu.make_paragraph(
-            ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
-             "what method to use to control the artdaq processes (%s, etc.)")
-            % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
-        )
-    )
-else:
-    legal_method_found = False
-    for pmm in process_management_methods:
-        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
-            legal_method_found = True
-
-    if not legal_method_found:
-        raise Exception(
-            rcu.make_paragraph(
-                'can\'t interpret the current value of TFM_PROCESS_MANAGEMENT_METHOD ("%s"); legal values are: %s'
-                % (
-                    os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
-                    ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
-                )
-            )
-        )
+# if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
+#     raise Exception(
+#         rcu.make_paragraph(
+#             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
+#              "what method to use to control the artdaq processes (%s, etc.)")
+#             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
+#         )
+#     )
+# else:
+#     legal_method_found = False
+#     for pmm in process_management_methods:
+#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
+#             legal_method_found = True
+#
+#     if not legal_method_found:
+#         raise Exception(
+#             rcu.make_paragraph(
+#                 'can\'t interpret the current value of TFM_PROCESS_MANAGEMENT_METHOD ("%s"); legal values are: %s'
+#                 % (
+#                     os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
+#                     ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
+#                 )
+#             )
+#         )
 #------------------------------------------------------------------------------
 # supposed to be defined
 #------------------------------------------------------------------------------
-management_method = os.environ["TFM_PROCESS_MANAGEMENT_METHOD"];
+# management_method = os.environ["TFM_PROCESS_MANAGEMENT_METHOD"];
 
-if (management_method == "direct"):
-    from rc.control.manage_processes_direct import launch_procs_base
-    from rc.control.manage_processes_direct import kill_procs_base
-    from rc.control.manage_processes_direct import check_proc_heartbeats_base
-    from rc.control.manage_processes_direct import find_process_manager_variable_base
-    from rc.control.manage_processes_direct import set_process_manager_default_variables_base
+# if (management_method == "direct"):
 
-    from rc.control.manage_processes_direct import reset_process_manager_variables_base
-    from rc.control.manage_processes_direct import get_process_manager_log_filenames_base
+from rc.control.manage_processes_direct import launch_procs_base
+from rc.control.manage_processes_direct import kill_procs_base
+from rc.control.manage_processes_direct import check_proc_heartbeats_base
+from rc.control.manage_processes_direct import find_process_manager_variable_base
+from rc.control.manage_processes_direct import set_process_manager_default_variables_base
 
-    from rc.control.manage_processes_direct import process_manager_cleanup_base
-    from rc.control.manage_processes_direct import get_pid_for_process_base
-    from rc.control.manage_processes_direct import process_launch_diagnostics_base
-    from rc.control.manage_processes_direct import mopup_process_base
+from rc.control.manage_processes_direct import reset_process_manager_variables_base
+from rc.control.manage_processes_direct import get_process_manager_log_filenames_base
+
+from rc.control.manage_processes_direct import process_manager_cleanup_base
+from rc.control.manage_processes_direct import get_pid_for_process_base
+from rc.control.manage_processes_direct import process_launch_diagnostics_base
+from rc.control.manage_processes_direct import mopup_process_base
+
 #elif (management_method == "external_run_control"):
 #    from rc.control.all_functions_noop import launch_procs_base
 #    from rc.control.all_functions_noop import kill_procs_base
@@ -124,8 +126,8 @@ if (management_method == "direct"):
 #    from rc.control.all_functions_noop import get_pid_for_process_base
 #    from rc.control.all_functions_noop import process_launch_diagnostics_base
 #    from rc.control.all_functions_noop import mopup_process_base
-else:
-    raise Exception("TROUBLE: uknown management method: %s"%management_method)
+# else:
+#    raise Exception("TROUBLE: uknown management method: %s"%management_method)
 
 # This is the end of if-elifs of process management methods
 if not "TFM_FHICL_DIRECTORY" in os.environ:
@@ -527,7 +529,7 @@ class FarmManager(Component):
                 config_str = "application_name: FarmManager"
                 if self.debug_level > 0:
                     config_str += " debug_logging: true"
-                
+
                 self.messageviewer_sender = python_artdaq.swig_artdaq(config_str)
             except:
                 pass
@@ -3052,7 +3054,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 #-------v----------------------------------------------------------------------
-        # 
+#
         rc = self.check_launch_results();
         if (rc != 0): return;
 
@@ -3063,17 +3065,17 @@ class FarmManager(Component):
 
         self.print_log("i", "CONFIG transition 013: before self.manage_processes")
 #------------------------------------------------------------------------------
-# define names of all logfiles 
+# define names of all logfiles
 #-------v----------------------------------------------------------------------
         rc = self.get_lognames();
         if (rc != 0): return;
 #------------------------------------------------------------------------------
 #  former end of DO_BOOT
 #------------------------------------------------------------------------------
-        if (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
-            self.add_ranks_from_ranksfile()
+#        if (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
+#            self.add_ranks_from_ranksfile()
 #------------------------------------------------------------------------------
-# dealing with the run records, probably, after the submittion
+# dealing with the run records, probably, after the submission
 #-------v----------------------------------------------------------------------
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition())
 
@@ -3085,7 +3087,7 @@ class FarmManager(Component):
 
         if os.path.exists(self.tmp_run_record): shutil.rmtree(self.tmp_run_record)
 
-        self.print_log("i", "CONFIG transition 015: saving the run record", 1) 
+        self.print_log("i", "CONFIG transition 015: saving the run record", 1)
         starttime = time.time()
 
         try:
@@ -3240,28 +3242,30 @@ class FarmManager(Component):
                 "An exception was thrown when trying to save configuration info; see traceback above for more info"
             )
             return
-
-        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-           os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition()):
-
-            os.chmod(rr_dir, 0o755)
-            shutil.copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition(),
-                     "%s/rc_info_start.txt" % (rr_dir)
-            )
-            os.chmod(rr_dir, 0o555)
-
-            if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
-                self.alert_and_recover(
-                    rcu.make_paragraph(
-                        ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt;"
-                         " does original file exist?")
-                        % (self.partition(), rr_dir)
-                    )
-                )
+#------------------------------------------------------------------------------
+# no need to preserve backward compatibility with external run control
+#------------------------------------------------------------------------------
+#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
+#            os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition()):
+#
+#             os.chmod(rr_dir, 0o755)
+#             shutil.copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition(),
+#                      "%s/rc_info_start.txt" % (rr_dir)
+#             )
+#             os.chmod(rr_dir, 0o555)
+#
+#             if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
+#                 self.alert_and_recover(
+#                     rcu.make_paragraph(
+#                         ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt;"
+#                          " does original file exist?")
+#                         % (self.partition(), rr_dir)
+#                     )
+#                 )
 #------------------------------------------------------------------------------
 # start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
-        self.print_log("i","START transition 002: [farm_manager::do_start_running]: before execute_trace_script")   
+        self.print_log("i","START transition 002: [farm_manager::do_start_running]: before execute_trace_script")
 
         self.execute_trace_script("start")
 
@@ -3325,22 +3329,22 @@ class FarmManager(Component):
 
         self.stop_datataking()
 
-        if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-           os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition())):
-            run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
-            os.chmod(run_record_directory, 0o755)
-
-            shutil.copyfile(
-                "/tmp/info_to_archive_partition%d.txt" % self.partition(),
-                "%s/rc_info_stop.txt" % (run_record_directory),
-            )
-            os.chmod(run_record_directory, 0o555)
-
-            if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
-                self.alert_and_recover(rcu.make_paragraph(
-                    ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
-                     "does original file exist?") % (self.partition(), run_record_directory))
-                )
+#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
+#            os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition())):
+#             run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
+#             os.chmod(run_record_directory, 0o755)
+#
+#             shutil.copyfile(
+#                 "/tmp/info_to_archive_partition%d.txt" % self.partition(),
+#                 "%s/rc_info_stop.txt" % (run_record_directory),
+#             )
+#             os.chmod(run_record_directory, 0o555)
+#
+#             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
+#                 self.alert_and_recover(rcu.make_paragraph(
+#                     ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
+#                      "does original file exist?") % (self.partition(), run_record_directory))
+#                 )
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_stop)
@@ -3850,7 +3854,7 @@ def get_args():  # no-coverage
     pn = None;
     x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
     if (x) : pn = int(x);
-    
+
     parser = argparse.ArgumentParser(description="FarmManager")
 
     parser.add_argument("-n","--name"        ,type=str,dest="name"        ,default="daqint"   ,help="Component name")
@@ -3868,29 +3872,29 @@ def get_args():  # no-coverage
 #------------------------------------------------------------------------------
 def main():  # no-coverage
 
-    process_management_methods = ["direct", "pmt", "external_run_control"]
-    if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-        raise Exception(rcu.make_paragraph(
-            ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
-             "what method to use to control the artdaq processes (%s, etc.)")
-            % (",".join(['"' + pmm + '"' for pmm in process_management_methods])))
-        )
-    else:
-        legal_method_found = False
-        for pmm in process_management_methods:
-            if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
-                legal_method_found = True
-
-        if not legal_method_found:
-            raise Exception(
-                rcu.make_paragraph(
-                    ('TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD '
-                    'environment variable ("%s"); legal values include %s')
-                    % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
-                       ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
-                   )
-                )
-            )
+#     process_management_methods = ["direct", "pmt", "external_run_control"]
+#     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
+#         raise Exception(rcu.make_paragraph(
+#             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
+#              "what method to use to control the artdaq processes (%s, etc.)")
+#             % (",".join(['"' + pmm + '"' for pmm in process_management_methods])))
+#         )
+#     else:
+#         legal_method_found = False
+#         for pmm in process_management_methods:
+#             if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
+#                 legal_method_found = True
+#
+#         if not legal_method_found:
+#             raise Exception(
+#                 rcu.make_paragraph(
+#                     ('TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD '
+#                     'environment variable ("%s"); legal values include %s')
+#                     % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
+#                        ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
+#                    )
+#                 )
+#             )
 
     if (os.environ.get("HOSTNAME") == None) :
         print(rcu.make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
