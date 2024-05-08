@@ -27,13 +27,9 @@ def save_run_record_base(self):
     try:
         os.makedirs(outdir)
     except Exception:
-        raise Exception("%s::save_run_record_base:%d Exception raised during creation of %s" 
+        raise Exception("%s::save_run_record_base:%d Exception raised during creation of %s"
                         % (__file__,getframeinfo(currentframe()).lineno,outdir))
         return
-
-#    if not os.path.exists(outdir):
-#        raise Exception("Problem creating output directory %s" % (outdir))
-#        return
 #------------------------------------------------------------------------------
 # P.M. assume the directory has been created
 #---v--------------------------------------------------------------------------
@@ -53,7 +49,7 @@ def save_run_record_base(self):
     try:
         shutil.copy2(self.daq_setup_script,new_fn);
     except Exception:
-        raise Exception("%s::save_run_record_base:%d problem creating %s" 
+        raise Exception("%s::save_run_record_base:%d problem creating %s"
                         % (__file__,getframeinfo(currentframe()).lineno,new_fn))
         return
 
@@ -75,7 +71,7 @@ def save_run_record_base(self):
     try:
         shutil.copy2(settings_fn,new_settings_fn);
     except Exception:
-        raise Exception("%s::save_run_record_base:%d problem creating %s" 
+        raise Exception("%s::save_run_record_base:%d problem creating %s"
                         % (__file__,getframeinfo(currentframe()).lineno,new_settingsfn))
         return
 
@@ -127,9 +123,9 @@ def save_run_record_base(self):
 
     outf = open(outdir + "/metadata.txt", "w")
 
-    outf.write("Config name: %s\n" % (" ".join(self.subconfigs_for_run)))
+    outf.write("Config name  : %s\n"    % (" ".join(self.subconfigs_for_run)))
     outf.write("TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd()))
-    outf.write("DAQInterface logfile: %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"]))
+    outf.write("TFM logfile  : %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"]))
 
     # Now save the commit hashes / versions of the packages listed in the settings file
 
@@ -232,10 +228,10 @@ def save_run_record_base(self):
         outf.write("%s"      % (package_commit_dict[pkg]))
         outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
 
-    outf.write(
-        "\nprocess management method: %s\n"
-        % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"])
-    )
+#    outf.write(
+#        "\nprocess management method: %s\n"
+#        % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"])
+#    )
 
     self.print_log("d", "%s:save_record_base 0064" % (__file__),2)
 
@@ -266,7 +262,7 @@ def save_run_record_base(self):
 #     for (recorddir, dummy, recordfiles) in os.walk(self.tmp_run_record):
 #         for recordfile in recordfiles:
 #             os.chmod("%s/%s" % (recorddir, recordfile), 0o444)
-# 
+#
 #     try:
 #         shutil.copytree(self.tmp_run_record, self.semipermanent_run_record)
 #     except:
