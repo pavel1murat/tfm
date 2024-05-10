@@ -1,6 +1,4 @@
 # -*- mode:tcl -*-
-#------------------------------------------------------------------------------
-# read two ROCs with a single DTC 
 # Produced from 'fhicl-dump' using:
 #   Policy : cet::filepath_maker
 #   Path   : "FHICL_FILE_PATH"
@@ -19,9 +17,9 @@ daq: {
         rawOutputFile          : "/tmp/TrackerVST.bin"
         sendEmpties            : false
 
-#        dtcId                  : 1                ## P.Murat: DTC1 : TS2
-        dtcId                  : 0                ## P.Murat: DTC0 : TS1
-        activeLinks            : [ 0 , 1 ]            ## P.Murat: use first ROC if needed: [ 0 ]
+        dtcId                  : 1                ## P.Murat: DTC1@daq22 : TS1
+#        dtcId                  : 0                ## P.Murat: DTC0 : TS1
+        activeLinks            : [ 0 ]            ## P.Murat: use first ROC if needed: [ 0 ]
         heartbeatInterval      : 2000
         heartbeatsAfter        : 16
 

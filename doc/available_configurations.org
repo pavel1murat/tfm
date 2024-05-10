@@ -2,7 +2,7 @@
 * ------------------------------------------------------------------------------
 * TFM configurations                                                         
 ** [[file:../config/crvvst_v00]]
-** [[file:../config/demo]]               *validated*                             
+** [[file:../config/demo]]              *validated*                             
 - ARTDAQ demo with 6 processess: two boardreaders, two event builders, 
   one dispatcher and one logger, all running on the same machine, 'localhost'
 
@@ -33,9 +33,10 @@ mu2e -c ./config/demo/dqm_client01.fcl
 - two processes, board_reader and event_builder, on the same machine
 - event builder is writing the output
 - configuration: [[file:../config/trk_vst_001/settings]]             
-** [[file:../config/trk_vst_002]]                                                
-- TrackerVST : one DTC two ROCs
-- the board_reader, event_builder, logger and dispatcher.
+** [[file:../config/trk_vst_002]]        *validated*                             
+- board_reader: remote (mu2edaq22)
+- event_builder, logger, dispatcher : local (mu2edaq09)
+- TrackerVST : one DTC one ROC
 - configuration: [[file:../config/trk_vst_002/settings]]
 * running test example in a manual mode                                      
 - the sequence of steps is as follows:
