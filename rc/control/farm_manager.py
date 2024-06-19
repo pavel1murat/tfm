@@ -28,6 +28,8 @@ from rc.control.component       import Component
 from rc.control.save_run_record import save_run_record_base
 from rc.control.save_run_record import save_metadata_value_base
 
+import  TRACE
+
 disable_bookkeeping = os.environ.get("TFM_DISABLE_BOOKKEEPING");
 
 if (disable_bookkeeping and (disable_bookkeeping != "false")):
@@ -750,13 +752,19 @@ class FarmManager(Component):
 
         fn = self.settings_filename();
 
+        TRACE.TRACE(7,":001:START fn=%s exists=%i"%(fn,os.path.exists(fn)))
+
         if not os.path.exists(fn): raise Exception('Unable to find settings file %s'%fn)
 
         inf                    = open(fn)
         num_expected_processes = 0
         num_actual_processes   = 0
 
-        for line in inf.readlines():
+        input_lines = inf.readlines();
+        TRACE.TRACE(7,":0025: inf.readlines.len: %i"%(len(input_lines)))
+        print("---- read_settings : emoe\n");
+        for line in input_lines:
+            TRACE.TRACE(17,":0026: line: %s"%line)
             line = os.path.expandvars(line).strip()
             line = line.split('#')[0];
 #------------------------------------------------------------------------------
@@ -996,10 +1004,9 @@ class FarmManager(Component):
 
             elif (key == "request_address"): self.request_address = data
 
-            elif (key == "routing_manager_timeout"): self.routingmanager_timeout = int(data)
+            elif (key == "routing_manager_timeout"     ): self.routingmanager_timeout = int(data)
 
-            elif ("spack_root_for_bash_scripts" in line or "spack root for bash scripts" in line):
-                self.spackdir = line.split()[-1].strip()
+            elif ("spack_root_for_bash_scripts" in line): self.spackdir = line.split()[-1].strip()
 
             elif "package_hashes_to_save" in line or "package hashes to save" in line:
                 res = re.search(r".*\[(.*)\].*", line)
@@ -1173,6 +1180,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # after the 'settings' file has been read in, check that everything is in place
 #-------v----------------------------------------------------------------------
+        TRACE.TRACE(7,":002: before check_boot_info")
         self.check_boot_info()
         return
 #------------------------------------------------------------------------------

@@ -47,15 +47,15 @@ function tfm_configure_() {
                              else echo "TFM not setup, bail out" ; return 1
     fi
 
-    export TFM_TTY=$(tty | sed -r 's!/dev/!!')
-
-    if ! [[ "$TFM_TTY" =~ pts/[0-9]+ ]]; then
-        cat<<EOF >&2
-WARNING: unable to determine tty. While this will not affect
-actual datataking, any DAQInterface launched in this environment
-may have problems with sending output to a MessageViewer instance
-EOF
-fi
+#    export TFM_TTY=$(tty | sed -r 's!/dev/!!')
+#
+#    if ! [[ "$TFM_TTY" =~ pts/[0-9]+ ]]; then
+#        cat<<EOF >&2
+#WARNING: unable to determine tty. While this will not affect
+#actual datataking, any DAQInterface launched in this environment
+#may have problems with sending output to a MessageViewer instance
+#EOF
+# fi
 #------------------------------------------------------------------------------
 # this is the directory where the FCL files of all configurations reside 
 # with the subdirectory per configuration

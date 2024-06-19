@@ -301,8 +301,9 @@ def is_msgviewer_running():
     ).stdout.readlines():
         if (
             "msgviewer" in line
-            and "TFM_TTY" in os.environ
-            and os.environ["TFM_TTY"] in line
+                # P.Murat: don't need message viewer, turn it off softly
+#            and "TFM_TTY" in os.environ
+#            and os.environ["TFM_TTY"] in line
         ):
             return True
 
@@ -1236,15 +1237,19 @@ def get_setup_commands(productsdir=None, spackdir=None, log_file=None):
     return output
 
 def kill_tail_f():
-    tail_pids = get_pids(
-        "%s.*tail -f %s"
-        % (os.environ["TFM_TTY"], os.environ["TFM_LOGFILE"])
-    )
+#     tail_pids = get_pids(
+#         "%s.*tail -f %s"
+#         % (os.environ["TFM_TTY"], os.environ["TFM_LOGFILE"])
+#     )
+    
+    tail_pids = ""; # P.Murat: turn it off "softly"
+    
     if len(tail_pids) > 0:
         status = Popen("kill %s" % (" ".join(tail_pids)), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).wait()
         if status != 0:
             print(
-                "There was a problem killing \"tail -f\" commands in this terminal; you'll want to do this manually or you'll get confusing output moving forward"
+                "There was a problem killing \"tail -f\" commands in this terminal; "
+                "you'll want to do this manually or you'll get confusing output moving forward"
             )
 
 if __name__ == "__main__":

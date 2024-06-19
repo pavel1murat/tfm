@@ -4,3 +4,4 @@ MessageFacility.fcl
 sync.ffs_*
 .editorconfig
 *.pyproj*
+build-*
