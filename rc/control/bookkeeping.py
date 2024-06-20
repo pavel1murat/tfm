@@ -50,7 +50,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         other_allowed_versions = ["v3_02_01a"]
 
         self.fill_package_versions(["artdaq"])
-        version = self.package_versions["artdaq"]
+        version = "v3_13_01"; # self.package_versions["artdaq"]
 
         res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
 

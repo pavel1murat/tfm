@@ -1,22 +1,18 @@
 # -*- mode:tcl -*- 
-services: {
-    ArtdaqSharedMemoryServiceInterface: {
-        service_provider: ArtdaqSharedMemoryService
-    }
-}
-
 daq: {
     aggregator: {
-        expected_events_per_bunch: 1
-        print_event_store_stats  : true
-        event_queue_depth        : 40
-        event_queue_wait_time    : 5
-        buffer_count             : 40
-        onmon_event_prescale     : 1
-        is_data_logger           : true
+        is_datalogger                : true
+        buffer_count                 : 250
+        # max_fragment_size_bytes      : 100000 ## 100K should be OK 0x100000
+        # init_fragment_count          :   0
+        send_init_fragments          : false
+        broadcast_buffer_size        : 1000000 ## 0x6400000
+        events_expected_in_SimpleQueueReader: 5
+        expected_fragments_per_event        : 4
         
-        auto_suppression_enabled: false
-        
+        end_of_data_wait_s: 600
+        print_event_store_stats: true
+       
         routing_token_config: {
             use_routing_manager: false
         }
@@ -42,56 +38,90 @@ daq: {
     }
 }
 
-source: {
-  module_type: ArtdaqInput
-  register_fragment_types: false
+art: {
+    process_name: DL01
+
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : "ArtdaqSharedMemoryService"
+            waiting_time        : 300
+            resume_after_timeout: true
+        }
+
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider : "ArtdaqFragmentNamingService"
+            helper_plugin    : "Mu2e"
+        }
+    }
+
+    source: { module_type: ArtdaqInput
+        waiting_time: 2500000
+        resume_after_timeout: true
+        # register_fragment_types: false
+    }
+
+    outputs: {
+        rootOutput: { module_type: RootDAQOut
+            # SelectEvents      # :     # []
+            fileName      :     "/tmp/raw.mu2e.trkvst.annex.%06r_%08s.art"
+            # compressionLevel    :     0 ## disable compression  ## default: 7 ## 
+#             outputCommands      :     ["drop *_*_*_*", 
+#                                        "keep artdaq::Fragments_*_*_*",
+#                                        "keep *::Mu2eFragment_*_*_*",
+#                                        "keep mu2e::TriggerInfo_*_*_*",
+#                                        "keep art::TriggerResults_*_*_*",
+#                                        "keep artdaq::detail::RawEventHeader_*_*_*",
+#                                        "keep mu2e::CaloClusters_*_*_*",
+#                                        "keep mu2e::TimeClusters_*_*_*",
+#                                        "keep mu2e::HelixSeeds_*_*_*",
+#                                        "keep mu2e::KalSeeds_*_*_*",
+#                                        "keep mu2e::Mu2eEventHeader_*_*_*",
+#                                        "keep mu2e::IntensityInfo*_*_*_*",
+#                                        "keep mu2e::CaloHits_CaloHitMakerFast_caphri_*"
+#                                       ]
+            fileProperties : { 
+                maxSize     : 1500000 
+                granularity :  SubRun 
+            }
+            checkFileName   :  false
+        }
+        
+        rootNetOutput: {
+            module_type: RootNetOutput
+            host_map      :     []
+            destinations: {}
+
+            routing_table_config: {
+                use_routing_manager: false
+            }
+        }
+    }
+    
+    physics: {
+        analyzers: {
+#            checkintegrity: {
+#                module_type: CheckIntegrity
+#                raw_data_label: daq
+#                frag_type: TOY1
+#            }
+#            checkintegrity2: {
+#                module_type: CheckIntegrity
+#                raw_data_label: daq
+#                frag_type: TOY2
+#            }
+        }
+
+        producers: {
+#            BuildInfo: {
+#                module_type: ArtdaqDemoBuildInfo
+#                instance_name: ArtdaqDemo
+#            }
+        }
+        
+        # p2: [ BuildInfo ]
+        # a1: [ checkintegrity, checkintegrity2 ]
+        
+        e1        : [ rootOutput, rootNetOutput ]
+        end_paths : [ e1 ]
+    }
 }
-outputs: {
-  normalOutput: {
-    module_type: RootDAQOut
-    fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root"
-    fileProperties: { maxSubRuns: 1 maxRuns: 1  }
-    fastCloning: false
-    compressionLevel: 501 # ZSTD
-  }
-  rootNetOutput: {
-    module_type: RootNetOutput
-    #SelectEvents: { SelectEvents: [ pmod2,pmod3 ] }
-    broadcast_sends: true
-    nonblocking_sends: true
-	destinations: { }
-  }
-
-}
-physics: {
-  analyzers: {
-
-
-   checkintegrity: {
-     module_type: CheckIntegrity
-     raw_data_label: daq
-     frag_type: TOY1
-   }
-   checkintegrity2: {
-     module_type: CheckIntegrity
-     raw_data_label: daq
-     frag_type: TOY2
-   }
-
-  }
-
-  producers: {
-
-     BuildInfo:
-     {
-       module_type: ArtdaqDemoBuildInfo
-       instance_name: ArtdaqDemo
-     }
-   }
-
-  p2: [ BuildInfo ]
-  a1: [ checkintegrity, checkintegrity2 ]
-  my_output_modules: [ normalOutput ]
-  my_mpi_output_modules: [rootNetOutput]
-}
-process_name: DAQDL

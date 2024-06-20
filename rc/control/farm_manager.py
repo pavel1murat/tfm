@@ -268,22 +268,30 @@ class FarmManager(Component):
     def metadata_filename(self):
         return "%s/metadata.txt" % (self.run_record_directory());
 
+    def component_port_number(self,rank):
+        base_port = 10000;
+        if os.environ.get("ARTDAQ_BASE_PORT") :
+            base_port           = int(os.environ["ARTDAQ_BASE_PORT"]);
+
+            
+        ports_per_partition = 1000; 
+        if os.environ.get("ARTDAQ_PORTS_PER_PARTITION") :
+            ports_per_partition = int(os.environ.get("ARTDAQ_PORTS_PER_PARTITION"))
+            
+        port                = base_port+100 + self.partition()*ports_per_partition+rank
+        return port
+
+    
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
 #---v--------------------------------------------------------------------------
-    def component_port_number(self,rank):
-        base_port           = int(os.environ["ARTDAQ_BASE_PORT"]);
-        ports_per_partition = int(os.environ["ARTDAQ_PORTS_PER_PARTITION"])
-        port                = base_port+100 + self.partition()*ports_per_partition+rank
-        return port
-
     def pmt_log_filename_format(self):
         return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
 
+    
     def settings_filename(self):
         return os.path.expandvars(self.config_dir+'/settings')
-
 #------------------------------------------------------------------------------
 # WK 8/31/21
 # Startup msgviewer early. check on it later
