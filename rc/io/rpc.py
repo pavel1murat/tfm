@@ -1,9 +1,10 @@
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-from   rc.compatibility    import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
-from   rc.io.timeoutclient import TimeoutServerProxy
-from   rc.threading        import threaded
+from   tfm.rc.compatibility    import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+from   tfm.rc.io.timeoutclient import TimeoutServerProxy
+from   tfm.rc.threading        import threaded
+
 import contextlib
 import select
 import threading

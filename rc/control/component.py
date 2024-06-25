@@ -7,11 +7,11 @@ from contextlib                   import contextmanager
 #------------------------------------------------------------------------------
 # homebrew
 #------------------------------------------------------------------------------
-from rc.io.rpc                    import rpc_server
-from rc.threading                 import threadable
-from rc.util.contexts             import ContextObject
+from   tfm.rc.io.rpc                    import rpc_server
+from   tfm.rc.threading                 import threadable
+from   tfm.rc.util.contexts             import ContextObject
 
-import rc.control.run_control_state as run_control_state
+import tfm.rc.control.run_control_state as run_control_state
 
 #------------------------------------------------------------------------------
 # P.M. why we're inheriting from something with LBNE in the name ?

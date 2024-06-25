@@ -1,6 +1,6 @@
-from contexts import ContextObject, apply_on_exception
-from rc.util import eq, raises
-from contextlib import contextmanager, nested
+from contexts    import ContextObject, apply_on_exception
+from tfm.rc.util import eq, raises
+from contextlib  import contextmanager, nested
 
 
 @contextmanager

@@ -9,11 +9,11 @@ import traceback
 import shutil
 import subprocess
 
-from rc.control.subsystem import Subsystem
-from rc.control.procinfo  import Procinfo
+from tfm.rc.control.subsystem import Subsystem
+from tfm.rc.control.procinfo  import Procinfo
 
 # from rc.control.utilities import make_paragraph
-import rc.control.utilities as rcu; # import make_paragraph
+import tfm.rc.control.utilities as rcu; # import make_paragraph
 
 #------------------------------------------------------------------------------
 def get_config_info_base(self):

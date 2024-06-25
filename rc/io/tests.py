@@ -1,9 +1,10 @@
 import Queue
 import contextlib
-from rc.threading import threadable
-from rc.io import sender, receiver, threaded_receiver, queueing_receiver
-from rc.io.rpc import rpc_server, rpc_client
-from rc.util import wait_until, eq, raises, is_mac
+
+from   tfm.rc.threading import threadable
+from   tfm.rc.io import sender, receiver, threaded_receiver, queueing_receiver
+from   tfm.rc.io.rpc import rpc_server, rpc_client
+from   tfm.rc.util import wait_until, eq, raises, is_mac
 
 
 def test_simple_connection():

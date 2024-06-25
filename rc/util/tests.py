@@ -1,5 +1,5 @@
-from datetime import datetime
-from rc.util import eq, andn, orn, gt, raises, stringify_times, convert_to_time
+from datetime    import datetime
+from tfm.rc.util import eq, andn, orn, gt, raises, stringify_times, convert_to_time
 
 
 def test_andn():

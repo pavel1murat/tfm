@@ -3,16 +3,16 @@ import os
 import stat
 import re
 import subprocess
-from subprocess import Popen
+from   subprocess import Popen
 import traceback
 import shutil
 import string
 from   inspect import currentframe, getframeinfo
 
-from rc.control.utilities import make_paragraph
-from rc.control.utilities import get_commit_info
-from rc.control.utilities import get_commit_info_filename
-from rc.control.utilities import get_build_info
+from   tfm.rc.control.utilities import make_paragraph
+from   tfm.rc.control.utilities import get_commit_info
+from   tfm.rc.control.utilities import get_commit_info_filename
+from   tfm.rc.control.utilities import get_build_info
 #------------------------------------------------------------------------------
 # Save the FHiCL documents which were used to initialize the artdaq processes
 #------------------------------------------------------------------------------

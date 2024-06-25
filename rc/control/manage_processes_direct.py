@@ -3,7 +3,7 @@ import random, string, os, sys, subprocess, socket, time, re, copy;
 
 sys.path.append(os.environ["TFM_DIR"])
 
-import rc.control.utilities as rcu;
+import tfm.rc.control.utilities as rcu;
 
 def bootfile_name_to_execname(bootfile_name):
 

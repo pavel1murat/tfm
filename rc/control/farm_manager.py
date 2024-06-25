@@ -17,27 +17,25 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 #------------------------------------------------------------------------------
 # home brew
 #------------------------------------------------------------------------------
-import rc.control.run_control_state as run_control_state
+import tfm.rc.control.run_control_state as     run_control_state
+from   tfm.rc.control.subsystem         import Subsystem
+from   tfm.rc.control.procinfo          import Procinfo
 
-# import run_control_state
-from rc.control.subsystem       import Subsystem
-from rc.control.procinfo        import Procinfo
-
-from rc.io.timeoutclient        import TimeoutServerProxy
-from rc.control.component       import Component
-from rc.control.save_run_record import save_run_record_base
-from rc.control.save_run_record import save_metadata_value_base
+from tfm.rc.io.timeoutclient        import TimeoutServerProxy
+from tfm.rc.control.component       import Component
+from tfm.rc.control.save_run_record import save_run_record_base
+from tfm.rc.control.save_run_record import save_metadata_value_base
 
 import  TRACE
 
 disable_bookkeeping = os.environ.get("TFM_DISABLE_BOOKKEEPING");
 
 if (disable_bookkeeping and (disable_bookkeeping != "false")):
-    from rc.control.all_functions_noop import bookkeeping_for_fhicl_documents_artdaq_v3_base
+    from tfm.rc.control.all_functions_noop import bookkeeping_for_fhicl_documents_artdaq_v3_base
 else:
-    from rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
+    from tfm.rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
-import rc.control.utilities as rcu
+import tfm.rc.control.utilities as rcu
 
 try:
     import python_artdaq
@@ -63,12 +61,12 @@ try:
     from daqinterface_overrides_for_experiment import do_disable_base
     from daqinterface_overrides_for_experiment import check_config_base
 except:
-    from rc.control.all_functions_noop         import perform_periodic_action_base
-    from rc.control.all_functions_noop         import start_datataking_base
-    from rc.control.all_functions_noop         import stop_datataking_base
-    from rc.control.all_functions_noop         import do_enable_base
-    from rc.control.all_functions_noop         import do_disable_base
-    from rc.control.all_functions_noop         import check_config_base
+    from tfm.rc.control.all_functions_noop         import perform_periodic_action_base
+    from tfm.rc.control.all_functions_noop         import start_datataking_base
+    from tfm.rc.control.all_functions_noop         import stop_datataking_base
+    from tfm.rc.control.all_functions_noop         import do_enable_base
+    from tfm.rc.control.all_functions_noop         import do_disable_base
+    from tfm.rc.control.all_functions_noop         import check_config_base
 
 # process_management_methods = ["direct", "external_run_control"]
 
@@ -103,19 +101,19 @@ except:
 
 # if (management_method == "direct"):
 
-from rc.control.manage_processes_direct import launch_procs_base
-from rc.control.manage_processes_direct import kill_procs_base
-from rc.control.manage_processes_direct import check_proc_heartbeats_base
-from rc.control.manage_processes_direct import find_process_manager_variable_base
-from rc.control.manage_processes_direct import set_process_manager_default_variables_base
+from tfm.rc.control.manage_processes_direct import launch_procs_base
+from tfm.rc.control.manage_processes_direct import kill_procs_base
+from tfm.rc.control.manage_processes_direct import check_proc_heartbeats_base
+from tfm.rc.control.manage_processes_direct import find_process_manager_variable_base
+from tfm.rc.control.manage_processes_direct import set_process_manager_default_variables_base
 
-from rc.control.manage_processes_direct import reset_process_manager_variables_base
-from rc.control.manage_processes_direct import get_process_manager_log_filenames_base
+from tfm.rc.control.manage_processes_direct import reset_process_manager_variables_base
+from tfm.rc.control.manage_processes_direct import get_process_manager_log_filenames_base
 
-from rc.control.manage_processes_direct import process_manager_cleanup_base
-from rc.control.manage_processes_direct import get_pid_for_process_base
-from rc.control.manage_processes_direct import process_launch_diagnostics_base
-from rc.control.manage_processes_direct import mopup_process_base
+from tfm.rc.control.manage_processes_direct import process_manager_cleanup_base
+from tfm.rc.control.manage_processes_direct import get_pid_for_process_base
+from tfm.rc.control.manage_processes_direct import process_launch_diagnostics_base
+from tfm.rc.control.manage_processes_direct import mopup_process_base
 
 #elif (management_method == "external_run_control"):
 #    from rc.control.all_functions_noop import launch_procs_base
@@ -139,16 +137,16 @@ if not "TFM_FHICL_DIRECTORY" in os.environ:
          "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
     )
 elif os.environ["TFM_FHICL_DIRECTORY"] == "IGNORED":
-    from rc.control.config_functions_database_v2 import get_config_info_base
-    from rc.control.config_functions_database_v2 import put_config_info_base
-    from rc.control.config_functions_database_v2 import put_config_info_on_stop_base
-    from rc.control.config_functions_database_v2 import listconfigs_base
+    from tfm.rc.control.config_functions_database_v2 import get_config_info_base
+    from tfm.rc.control.config_functions_database_v2 import put_config_info_base
+    from tfm.rc.control.config_functions_database_v2 import put_config_info_on_stop_base
+    from tfm.rc.control.config_functions_database_v2 import listconfigs_base
 
 else:
-    from rc.control.config_functions_local import get_config_info_base
-    from rc.control.config_functions_local import put_config_info_base
-    from rc.control.config_functions_local import put_config_info_on_stop_base
-    from rc.control.config_functions_local import listconfigs_base
+    from tfm.rc.control.config_functions_local import get_config_info_base
+    from tfm.rc.control.config_functions_local import put_config_info_base
+    from tfm.rc.control.config_functions_local import put_config_info_on_stop_base
+    from tfm.rc.control.config_functions_local import listconfigs_base
 
 class FarmManager(Component):
     """

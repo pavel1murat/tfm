@@ -10,7 +10,7 @@ from   zoneinfo   import ZoneInfo
 from   time       import sleep
 from   time       import time
 
-from threading import Thread
+from   threading  import Thread
 
 # from rc.control.procinfo import Procinfo
 

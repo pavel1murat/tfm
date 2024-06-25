@@ -8,16 +8,16 @@ sys.path.append(os.environ["TFM_DIR"])
 
 import string, re
 
-from rc.control.procinfo import *
+from tfm.rc.control.procinfo import *
 
-from rc.control.utilities import table_range
-from rc.control.utilities import enclosing_table_range
-from rc.control.utilities import enclosing_table_name
-from rc.control.utilities import commit_check_throws_if_failure
-from rc.control.utilities import make_paragraph
-from rc.control.utilities import fhicl_writes_root_file
-from rc.control.utilities import get_private_networks
-from rc.control.utilities import zero_out_last_subnet
+from tfm.rc.control.utilities import table_range
+from tfm.rc.control.utilities import enclosing_table_range
+from tfm.rc.control.utilities import enclosing_table_name
+from tfm.rc.control.utilities import commit_check_throws_if_failure
+from tfm.rc.control.utilities import make_paragraph
+from tfm.rc.control.utilities import fhicl_writes_root_file
+from tfm.rc.control.utilities import get_private_networks
+from tfm.rc.control.utilities import zero_out_last_subnet
 
 
 def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):

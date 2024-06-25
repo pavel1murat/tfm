@@ -1,5 +1,5 @@
 from __future__ import print_function
-from rc.util.exc_string import exc_string
+from   tfm.rc.util.exc_string import exc_string
 import contextlib
 import datetime
 import inspect

@@ -19,16 +19,18 @@ assert (
 sys.path.append(dbdirs[0] + "/../bin")
 
 import subprocess
-from subprocess import Popen
-from rc.control.utilities import make_paragraph
-from rc.control.utilities import fhiclize_document
+from   subprocess import Popen
+
+from   tfm.rc.control.utilities import make_paragraph
+from   tfm.rc.control.utilities import fhiclize_document
+
 import shutil
-from shutil import copyfile
+from   shutil import copyfile
 
 import re
 import os
 import string
-from time import time
+from   time import time
 
 def version_to_integer(version):
     res = re.search(r"v([0-9])_([0-9][0-9])_([0-9][0-9]).*", version)

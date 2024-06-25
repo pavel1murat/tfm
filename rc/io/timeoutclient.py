@@ -1,5 +1,5 @@
-from rc.compatibility import xmlrpclib
-from rc.compatibility import httplib
+from   tfm.rc.compatibility import xmlrpclib
+from   tfm.rc.compatibility import httplib
 import socket
 import sys
 

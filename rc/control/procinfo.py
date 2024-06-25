@@ -21,7 +21,7 @@
 # host and port
 #------------------------------------------------------------------------------
 import os, sys, re
-import rc.control.utilities as rcu
+import tfm.rc.control.utilities as rcu
 
 BOARD_READER    = 1;
 EVENT_BUILDER   = 2;

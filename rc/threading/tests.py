@@ -4,8 +4,8 @@ raise Exception("JCF, Sep-6-2017: At least for the time being, this file is depr
 import sys
 # sys.path.append("/home/nfs/dunedaq/jcfree/standalone_daq")
 
-from rc.util import eq, wait_until
-from rc.threading import Threadable, threadable
+from   tfm.rc.util      import eq, wait_until
+from   tfm.rc.threading import Threadable, threadable
 import threading
 import time
 
