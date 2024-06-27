@@ -22,25 +22,25 @@ daq: {
         routing_token_config: {
             use_routing_manager : false
         }
-        sources: {
-        }
+        sources: {}
     }
 
-    metrics: {
-    }
+    metrics: {}
 }
 
 art: {
-  services: {
-      ArtdaqSharedMemoryServiceInterface: { 
-          service_provider    : ArtdaqSharedMemoryService 
-          waiting_time        : 1
-          resume_after_timeout: false
-      }
+    process_name: EventBuilder0
 
-      ArtdaqFragmentNamingServiceInterface: { 
-          service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
-      }
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : ArtdaqSharedMemoryService 
+            waiting_time        : 1
+            resume_after_timeout: false
+        }
+        
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
+        }
 
 #       # message   # :   # @local::default_message
 #       GeometryService   :   {
@@ -53,7 +53,9 @@ art: {
 #       GlobalConstantsService :   {inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
 #       DbService              :   @local::DbEmpty
 #       ProditionsService      :   @local::Proditions
-  }
+    }
+
+    source: { module_type: ArtdaqInput }
 
     outputs: {
         rootNetOutput: {
@@ -88,11 +90,4 @@ art: {
         p1        : [ rootNetOutput ]
         end_paths : [ p1 ]
     }
-
-    source: {
-        module_type: ArtdaqInput
-    }
-
-    process_name: EventBuilder0
 }
-

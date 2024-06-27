@@ -15,7 +15,7 @@ fi
 
 nruns=$1
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 for dir in $( ls -tr1 $recorddir | tail -$nruns  ); do
     

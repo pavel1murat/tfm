@@ -8,8 +8,8 @@
 
 cat <<EOF >&2
 
-1) Make sure you're using a copy of the original located in $TFM_DIR, and not the original itself. 
-   The copy should *not* be in $TFM_DIR
+1) Make sure you're using a copy of the original located in $SPACK_VIEW, and not the original itself. 
+   The copy should *not* be in $SPACK_VIEW
 
 2) Alter user-specific code in the script (references to "biery" and ProtoDUNE-cluster-specific paths)
 

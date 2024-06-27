@@ -5,6 +5,8 @@ from   tfm.rc.compatibility    import SimpleXMLRPCServer, SimpleXMLRPCRequestHan
 from   tfm.rc.io.timeoutclient import TimeoutServerProxy
 from   tfm.rc.threading        import threaded
 
+import TRACE
+
 import contextlib
 import select
 import threading
@@ -46,16 +48,20 @@ class StoppableRPCServer(SimpleXMLRPCServer):
 
 @contextlib.contextmanager
 def rpc_server(host='', port=6000, funcs={}, timeout=0.01):
+    TRACE.TRACE(7,f"EMOE 000: host:{host} port:{port}","rpc.py")
     server = StoppableRPCServer((host, port), timeout=timeout)
-    with threaded(target=server.serve_forever,
-                  name='rpc-server-%s-%d' % (host, port)):
+    TRACE.TRACE(7,f"EMOE 001: host:{host} port:{port}","rpc.py")
+    with threaded(target=server.serve_forever,name=f'rpc-server-{host}-{port}'):
+        TRACE.TRACE(7,"EMOE 002 in the loop, I guess","rpc.py")
         for name, func in funcs.items():
             server.register_function(func, name)
         try:
             yield
         finally:
-            server.stop()
+            # server.stop()
+            TRACE.TRACE(7,"EMOE 003","rpc.py")
 
+    TRACE.TRACE(7,"004 DONE","rpc.py")
 
 @contextlib.contextmanager
 def rpc_client(host="localhost", port=6000, timeout=30):

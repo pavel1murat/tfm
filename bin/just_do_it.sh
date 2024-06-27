@@ -78,7 +78,7 @@ else
   daq_time_in_seconds=$time_override
 fi
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 function vcmd() {
     if [ -n "${opt_verbose-}" ];then

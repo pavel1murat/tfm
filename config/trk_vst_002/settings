@@ -6,18 +6,19 @@
 # - mu2edaq09-ctrl (local ) : one EB, one DL, one DS 
 #
 # [2024-05-09 P.M.] : first successful run
+# [2024-06-26 P.M.] : runs again
 #
-# MU2E_DAQ_TOP and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
+# MU2E_DAQ_TOP is defined in setup_ots.sh
 # TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 # only one colon character (':') is allowed on a line
 #--------------------------------------------------------------------------------
 daq_setup_script               : $MU2E_DAQ_DIR/setup_daq.sh
+spack_root_for_bash_scripts    : $MU2E_DAQ_DIR/spack
 top_output_dir                 : $DAQ_OUTPUT_TOP
 log_directory                  : $DAQ_OUTPUT_TOP/logs
 data_directory_override        : $DAQ_OUTPUT_TOP/data
 record_directory               : $DAQ_OUTPUT_TOP/run_records
-productsdir_for_bash_scripts   : $REMOTE_PRODUCTS_DIR
-debug_level                    : 1
+debug_level                    : 4
 #
 # request_address  : 
 # manage_processes :   True/False
@@ -27,13 +28,13 @@ debug_level                    : 1
 #--------------------------------------------------------------------------------
 Subsystem:    2      none        none          False
 #--------------------------------------------------------------------------------
-#            label         host          port subsystem  allowed   prepend  target
-#                                                       processors
+#                label         host           port subsystem  allowed  prepend  target
+#                                                           processors
 #--------------------------------------------------------------------------------
-BoardReader : br01      mu2edaq22-ctrl     -1      2      -1         none    none
-EventBuilder: eb01      mu2edaq09-ctrl     -1      2    "0-63"       none    none
-DataLogger  : dl01      mu2edaq09-ctrl     -1      2    "0-63"       none    none
-Dispatcher  : ds01      mu2edaq09-ctrl  10500      2    "0-63"       none    none
+BoardReader : br01           mu2edaq22-ctrl     -1      2      -1         none    none
+EventBuilder: eb01           mu2edaq09-ctrl     -1      2    "0-63"       none    none
+DataLogger  : dl01           mu2edaq09-ctrl     -1      2    "0-63"       none    none
+Dispatcher  : ds01           mu2edaq09-ctrl  10500      2    "0-63"       none    none
 #--------------------------------------------------------------------------------
 # package_hashes_to_save              : [artdaq]   # useless
 boardreader timeout                 : 600

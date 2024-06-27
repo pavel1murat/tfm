@@ -2,7 +2,7 @@
 #------------------------------------------------------------------------------
 # call signature: tfm_kill <partition_number>
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utis.sh
+source $SPACK_VIEW/tfm/bin/tfm_utis.sh
 
 scriptdir="$(dirname "$0")"
 daqutils_script=$scriptdir/daqutils.sh

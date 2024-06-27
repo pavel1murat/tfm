@@ -10,7 +10,7 @@ runnum=$1
 
 echo
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 metadata_file=$recorddir/$runnum/metadata.txt
 

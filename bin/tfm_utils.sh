@@ -10,7 +10,7 @@ function tfm_port() {
 
 #------------------------------------------------------------------------------
 function tfm_list_instances() {
-    ps aux | grep "python.*farm_manager.py" | grep -v grep | \
+    ps aux | grep "bin/tfm_launch_fe.py" | grep -v grep | \
         awk '{ print "TFM instance was launched at "$9" by "$1" in partition "$14" on port "$NF  }'
 }
 

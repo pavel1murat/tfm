@@ -5,6 +5,7 @@ from   datetime import datetime, timezone
 
 import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
 import threading, time, traceback
+import TRACE
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
@@ -21,10 +22,10 @@ import tfm.rc.control.run_control_state as     run_control_state
 from   tfm.rc.control.subsystem         import Subsystem
 from   tfm.rc.control.procinfo          import Procinfo
 
-from tfm.rc.io.timeoutclient        import TimeoutServerProxy
-from tfm.rc.control.component       import Component
-from tfm.rc.control.save_run_record import save_run_record_base
-from tfm.rc.control.save_run_record import save_metadata_value_base
+from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
+from   tfm.rc.control.component         import Component
+from   tfm.rc.control.save_run_record   import save_run_record_base
+from   tfm.rc.control.save_run_record   import save_metadata_value_base
 
 import  TRACE
 
@@ -61,45 +62,12 @@ try:
     from daqinterface_overrides_for_experiment import do_disable_base
     from daqinterface_overrides_for_experiment import check_config_base
 except:
-    from tfm.rc.control.all_functions_noop         import perform_periodic_action_base
-    from tfm.rc.control.all_functions_noop         import start_datataking_base
-    from tfm.rc.control.all_functions_noop         import stop_datataking_base
-    from tfm.rc.control.all_functions_noop         import do_enable_base
-    from tfm.rc.control.all_functions_noop         import do_disable_base
-    from tfm.rc.control.all_functions_noop         import check_config_base
-
-# process_management_methods = ["direct", "external_run_control"]
-
-# if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-#     raise Exception(
-#         rcu.make_paragraph(
-#             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
-#              "what method to use to control the artdaq processes (%s, etc.)")
-#             % (",".join(['"' + pmm + '"' for pmm in process_management_methods[:2]]))
-#         )
-#     )
-# else:
-#     legal_method_found = False
-#     for pmm in process_management_methods:
-#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
-#             legal_method_found = True
-#
-#     if not legal_method_found:
-#         raise Exception(
-#             rcu.make_paragraph(
-#                 'can\'t interpret the current value of TFM_PROCESS_MANAGEMENT_METHOD ("%s"); legal values are: %s'
-#                 % (
-#                     os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
-#                     ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
-#                 )
-#             )
-#         )
-#------------------------------------------------------------------------------
-# supposed to be defined
-#------------------------------------------------------------------------------
-# management_method = os.environ["TFM_PROCESS_MANAGEMENT_METHOD"];
-
-# if (management_method == "direct"):
+    from tfm.rc.control.all_functions_noop     import perform_periodic_action_base
+    from tfm.rc.control.all_functions_noop     import start_datataking_base
+    from tfm.rc.control.all_functions_noop     import stop_datataking_base
+    from tfm.rc.control.all_functions_noop     import do_enable_base
+    from tfm.rc.control.all_functions_noop     import do_disable_base
+    from tfm.rc.control.all_functions_noop     import check_config_base
 
 from tfm.rc.control.manage_processes_direct import launch_procs_base
 from tfm.rc.control.manage_processes_direct import kill_procs_base
@@ -115,21 +83,8 @@ from tfm.rc.control.manage_processes_direct import get_pid_for_process_base
 from tfm.rc.control.manage_processes_direct import process_launch_diagnostics_base
 from tfm.rc.control.manage_processes_direct import mopup_process_base
 
-#elif (management_method == "external_run_control"):
-#    from rc.control.all_functions_noop import launch_procs_base
-#    from rc.control.all_functions_noop import kill_procs_base
-#    from rc.control.all_functions_noop import check_proc_heartbeats_base
-#    from rc.control.all_functions_noop import set_process_manager_default_variables_base
-#    from rc.control.all_functions_noop import reset_process_manager_variables_base
-#    from rc.control.all_functions_noop import get_process_manager_log_filenames_base
-#    from rc.control.all_functions_noop import process_manager_cleanup_base
-#    from rc.control.all_functions_noop import get_pid_for_process_base
-#    from rc.control.all_functions_noop import process_launch_diagnostics_base
-#    from rc.control.all_functions_noop import mopup_process_base
-# else:
-#    raise Exception("TROUBLE: uknown management method: %s"%management_method)
-
 # This is the end of if-elifs of process management methods
+
 if not "TFM_FHICL_DIRECTORY" in os.environ:
     raise Exception(rcu.make_paragraph(
         ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
@@ -278,8 +233,6 @@ class FarmManager(Component):
             
         port                = base_port+100 + self.partition()*ports_per_partition+rank
         return port
-
-    
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
@@ -404,8 +357,6 @@ class FarmManager(Component):
                  rpc_host         = "localhost"   ,
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
-#                 rpc_port         = 6659          ,
-#                 partition        = 999           ,
                  debug_level      = -1
     ):
 
@@ -1315,7 +1266,7 @@ class FarmManager(Component):
         proclines     = proc.stdout.readlines()
 
         printenv_line = proclines[-1].decode("utf-8")
-        version       = printenv_line.split()[1]
+        version       = printenv_line.split()[ 1]
         qualifiers    = printenv_line.split()[-1]
 
         return (version, qualifiers)
@@ -2059,7 +2010,7 @@ class FarmManager(Component):
 
         p.state = self.verbing_to_states[command]
 
-        self.print_log("d","%s: Sending transition to %s" % (rcu.date_and_time_more_precision(), p.label),3)
+        self.print_log("d","Sending transition %s to %s" % (command, p.label),3)
 
         try:
             if command == "Init":
@@ -2086,6 +2037,8 @@ class FarmManager(Component):
             else:
                 assert False, "Unknown command"
 
+            self.print_log("d",f"farm_manager::process_command p.pastreturned:\n{p.lastreturned}",3)
+                
             if "with ParameterSet" in p.lastreturned:
                 p.lastreturned = p.lastreturned[0:200]+" // REMAINDER TRUNCATED BY TFM, SEE"
                 +self.tmp_run_record+" FOR FULL FHiCL DOCUMENT"
@@ -2139,6 +2092,8 @@ class FarmManager(Component):
 
             self.print_log("e", rcu.make_paragraph(output_message))
 
+        self.print_log("d",f"returning from process_command {command} for {p.label}",3)
+        
         return  # From process_command
 #------------------------------------------------------------------------------
 # JCF, Nov-8-2015
@@ -3068,7 +3023,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 #-------v----------------------------------------------------------------------
-#
         rc = self.check_launch_results();
         if (rc != 0): return;
 
@@ -3093,7 +3047,7 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition())
 
-        self.print_log("i", "CONFIG transition 014")
+        self.print_log("i", f"CONFIG transition 014: self.tmp_run_record={self.tmp_run_record}")
 
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,
                                                                              datetime.now().strftime("%Y-%m-%d-%H:%M:%S.%f"))
@@ -3388,7 +3342,6 @@ class FarmManager(Component):
 
         self.print_log("i","STOP transition complete, run=%06d" % (self.run_number))
         return
-
 #------------------------------------------------------------------------------
 #  SHUTDOWN transition - complete everything and exit
 #---v--------------------------------------------------------------------------
@@ -3400,7 +3353,6 @@ class FarmManager(Component):
         else:
             print("FarmManager::do_shutdown: ERROR: state=%s\n",self.fState.get_name())
         return
-
 #------------------------------------------------------------------------------
 #  TERMINATE transition - what does it really do ?
 #---v--------------------------------------------------------------------------
@@ -3494,8 +3446,7 @@ class FarmManager(Component):
 
         self.print_log("i", "\n%s: TERMINATE transition complete" % (rcu.date_and_time()))
         return
-
-#------------------------------------------------------------------------------
+#-------^----------------------------------------------------------------------
 # RECOVER transition
 #---v--------------------------------------------------------------------------
     def do_recover(self):
@@ -3872,8 +3823,6 @@ def get_args():  # no-coverage
     parser = argparse.ArgumentParser(description="FarmManager")
 
     parser.add_argument("-n","--name"        ,type=str,dest="name"        ,default="daqint"   ,help="Component name")
-#    parser.add_argument("-p","--partition"   ,type=int,dest="partition"   ,default=pn         ,help="Partition number")
-#    parser.add_argument("-r","--rpc-port"    ,type=int,dest="rpc_port"    ,default=5570       ,help="RPC port")
     parser.add_argument("-H","--rpc-host"    ,type=str,dest="rpc_host"    ,default="localhost",help="this hostname/IP addr")
     parser.add_argument("-c","--control-host",type=str,dest="control_host",default="localhost",help="Control host")
     parser.add_argument("-d","--debug-level" ,type=int,dest="debug_level" ,default=-1         ,help="debug level, default=-1")

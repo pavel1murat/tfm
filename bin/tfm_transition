@@ -11,9 +11,16 @@ function tfm_transition_() {
         xmlrpc_arg=
     translated_cmd=
 
-    source $TFM_DIR/bin/tfm_utils.sh
+    if [ $debug != 0 ] ; then echo [$script:$LINENO] : before tfm_utils ; fi
+
+    source $SPACK_VIEW/tfm/bin/tfm_utils.sh
+
+    if [ $debug != 0 ] ; then echo [$script:$LINENO] : after  tfm_utils ; fi
     tfm_preamble
-    source $TFM_DIR/bin/diagnostic_tools.sh  # provides recorddir
+    
+    source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh  # provides recorddir
+
+    if [ $debug != 0 ] ; then echo [$script:$LINENO] : done sourcing ; fi
 
     case $cmd in
         "boot")
@@ -29,7 +36,7 @@ function tfm_transition_() {
 #	          test $# -gt 1 || badargs=true 
 	          translated_cmd="configuring"
 #------------------------------------------------------------------------------
-# as a hack, add run number, 'recorddir' comes from $TFM_DIR/bin/diagnostic_tools.sh 
+# as a hack, add run number, 'recorddir' comes from $SPACK_VIEW/tfm/bin/diagnostic_tools.sh 
 #------------------------------------------------------------------------------
             if [ $debug != 0 ] ; then echo [$script:$LINENO] : recorddir=$recorddir ; fi
             # ls -l $recorddir 

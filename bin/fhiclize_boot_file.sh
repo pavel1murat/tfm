@@ -5,7 +5,7 @@ if [[ "$#" != 1 ]]; then
     exit 0
 fi
 
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 
 bootfile=$1
 if [[ ! -e $bootfile ]]; then
@@ -40,7 +40,7 @@ exit 1
 fi
 
 tmpfile=$( mktemp )
-cat $bootfile | awk -f $TFM_DIR/utils/fhiclize_boot_file.awk > $tmpfile
+cat $bootfile | awk -f $SPACK_VIEW/tfm/utils/fhiclize_boot_file.awk > $tmpfile
 
 fhicl-dump -l 0 -c $tmpfile 
 
@@ -49,7 +49,7 @@ if [[ "$?" != "0" ]]; then
 Error: fhicl-dump returned nonzero, so the fhicl printed out above
 should not be used. Perhaps there's a problem with the intermediate
 file created with the
-$TFM_DIR/utils/fhiclize_boot_file.awk script,
+$SPACK_VIEW/tfm/utils/fhiclize_boot_file.awk script,
 $tmpfile. Exiting...
 EOF
     exit 1

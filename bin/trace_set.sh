@@ -2,8 +2,8 @@
 #------------------------------------------------------------------------------
 # depends on XMLRPC_C, that is addressed via UPS setup
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
-daqinterface_preamble
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
+tfm_preamble
 
 if (( "$#" != 3 )); then
     echo "Usage: "$( basename $0 )" <name> <masktype> <maskval>" >&2

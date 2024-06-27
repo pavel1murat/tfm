@@ -13,7 +13,7 @@ if [[ -n $2 ]]; then
     nevents=$2
 fi
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 
 if [[ "$runnum" =~ ^[0-9]+$ ]]; then
@@ -88,7 +88,7 @@ else \
   echo -Will try to run a generic, experiment-independent version of rawEventDump ; \
   echo -Will source the DAQ setup script in order to set up art \($recorddir/$runnum/setup.txt\) ; \
   . $recorddir/$runnum/setup.txt ; \
-  art -c $TFM_DIR/docs/rawEventDump.fcl \$( ls -tr1 $file_format | head -1 ) -n $nevents  ; \
+  art -c $SPACK_VIEW/docs/rawEventDump.fcl \$( ls -tr1 $file_format | head -1 ) -n $nevents  ; \
 fi ; \
                      else \
 echo Using the rawEventDump which is already available, if a rawEventDump alias exists in $recorddir/$runnum/setup.txt it will be ignored ; \

@@ -8,7 +8,7 @@ fi
  runnum=$1
 examine=$2
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 metadata_file=$recorddir/$runnum/metadata.txt
 

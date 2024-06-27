@@ -13,7 +13,7 @@ compname=$2
 label=$3
 searchstring=$4
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 echo
 

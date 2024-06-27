@@ -28,7 +28,47 @@ xmlrpc http://mu2edaq09-data.fnal.gov:23000/RPC2 state_change daqint configuring
 *** start                                
 *** stop
 *** shutdown                                                                 
-xmlrpc http://mu2edaq09-data.fnal.gov:23000/RPC2 shutdown daqint
+xmlrpc http://mu2edaq09-yyyy.fnal.gov:23000/RPC2 shutdown daqint
+** Python example (stolen from the web)                                      
+----- server
+#+begin_src
+#!/usr/bin/env python
+from xmlrpc.server import SimpleXMLRPCServer
+from xmlrpc.server import SimpleXMLRPCRequestHandler
+class RequestHandler(SimpleXMLRPCRequestHandler):
+   rpc_paths = ('/RPC2',)
+with SimpleXMLRPCServer((xxx-yyyy.fnal.gov', 21000),
+                        requestHandler=RequestHandler) as server:
+   server.register_introspection_functions()
+   # Register len() function;
+   server.register_function(len)
+   # Register a function under a different name
+   @server.register_function(name='rmndr')
+   def remainder_function(x, y):
+      return x // y
+   # Register a function under function.__name__.
+   @server.register_function
+   def modl(x, y):
+      return x % y
+   server.serve_forever()
+#+end_src
+------------ client
+#+begin_src
+#!/usr/bin/env python
+# examples :
+# xmlrpc http://xxx-yyyy.fnal.gov:21000/RPC2 len aaa
+# xmlrpc http://xxx-yyyy.fnal.gov:21000/RPC2 rmndr i/12 i/5
+# xmlrpc http://xxx-yyyy.fnal.gov:21000/RPC2 modl i/7 i/3
+# xmlrpc http://xxx-yyyy.fnal.gov:21000/RPC2 system.listMethods
+#------------------------------------------------------------------------------
+import xmlrpc.client
+s = xmlrpc.client.ServerProxy('http://xxx-yyyy.fnal.gov:21000')
+print(s.len("Tutorialspoint"))
+print(s.rmndr(12,5))
+print(s.modl(7,3))
+# Print list of available methods
+print(s.system.listMethods())
+#+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]
 * ------------------------------------------------------------------------------

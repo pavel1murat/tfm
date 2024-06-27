@@ -16,6 +16,8 @@ daq: {
 }
 
 art: {
+    process_name: DAQDL
+
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : "ArtdaqSharedMemoryService"
@@ -28,6 +30,10 @@ art: {
             helper_plugin    : "Mu2e"
         }
 
+    }
+
+    source: {
+        module_type: ArtdaqInput
     }
 
     outputs: {
@@ -74,11 +80,5 @@ art: {
         output    :   [ rootOutput, rootNetOutput ]
         end_paths :   [ output ]
     }
-
-    source: {
-        module_type: ArtdaqInput
-    }
-
-    process_name: DAQDL
 }
 

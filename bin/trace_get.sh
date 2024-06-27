@@ -1,6 +1,6 @@
 #!/bin/env bash
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 tfm_preamble
 
 if (( "$#" > 1 )); then

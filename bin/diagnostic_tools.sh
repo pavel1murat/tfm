@@ -1,14 +1,10 @@
 #!/usr/bin/bash
+script=`basename $0`
 
-#------------------------------------------------------------------------------
-# always require that to be sourced first
-#------------------------------------------------------------------------------
-# if [[ -z $TFM_STANDARD_SOURCEFILE_SOURCED ]]; then
-#    echo \$TFM_DIR/source_me not sourced. BAIL OUT
-#    exit 1
-# fi
+config_dir=$MU2E_DAQ_DIR/config/$TFM_CONFIG_NAME
 
-config_dir=$MRB_TOP/config/$TFM_CONFIG_NAME
+echo [$script:$LINENO] : config_dir=$config_dir 
+
 x=`cat $config_dir/settings | grep '^record_directory' | awk -F : '{print $2}'`
 recorddir=$(eval echo $x)  # Expand environ variables in string     
 
@@ -29,9 +25,7 @@ function file_locations() {
     echo $file_locations
 }
 
-
-
-
+echo [$script:$LINENO] : done
 
 
 

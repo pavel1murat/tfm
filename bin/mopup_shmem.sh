@@ -1,6 +1,6 @@
 #!/bin/env bash
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 
 if (( "$#" != 1 && "$#" != 2)) || [[ "$#" == 2 && "$2" != "--force" ]]; then
     echo "Usage: "$( basename $0 )" <partition number to mopup> (optional \"--force\")"
@@ -33,7 +33,7 @@ $timeoutsecs second timeout...
 
 EOF
         
-		    res=$( timeout $timeoutsecs $TFM_DIR/bin/status.sh | tail -1 | tr "'" " " | awk '{print $2}' )
+		    res=$( timeout $timeoutsecs $SPACK_VIEW/tfm/bin/status.sh | tail -1 | tr "'" " " | awk '{print $2}' )
 		    
 		    if [[ "$res" == "stopped" ]]; then
             

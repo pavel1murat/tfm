@@ -6,7 +6,7 @@
 #
 # -v : turns on verbose mode, prints the XMLRPC command itself
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 tfm_preamble
 
     port=`tfm_port $ARTDAQ_PARTITION_NUMBER`

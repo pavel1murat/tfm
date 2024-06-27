@@ -10,7 +10,7 @@ runnum=$1
 proclabel=$2
 examine=$3
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 if [[ "$runnum" =~ ^[0-9]+$ ]]; then
     echo "Run number is $runnum"

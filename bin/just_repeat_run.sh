@@ -24,7 +24,7 @@ if ! [[ "$seconds_to_run" =~ ^[0-9]+$ ]] ; then
     exit 1
 fi
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 if $nostrict ; then
     

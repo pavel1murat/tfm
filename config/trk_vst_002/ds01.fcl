@@ -26,6 +26,8 @@ daq: {
 }
 
 art: {
+    process_name: Dispatcher0
+
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : ArtdaqSharedMemoryService 
@@ -39,12 +41,7 @@ art: {
         }
     }
 
-    outputs: {
-    }
+    source: { module_type: ArtdaqInput }
 
-    source: {
-        module_type: ArtdaqInput
-    }
-
-    process_name: Dispatcher0
+    outputs: { }
 }

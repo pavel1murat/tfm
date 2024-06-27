@@ -17,8 +17,8 @@ daq: {
         rawOutputFile          : "/tmp/TrackerVST.bin"
         sendEmpties            : false
 
-        dtcId                  : 1                ## P.Murat: DTC1@daq22 : TS1
-#        dtcId                  : 0                ## P.Murat: DTC0 : TS1
+#        dtcId                  : 1                ## P.Murat: DTC1@daq22 : TS1
+        dtcId                  : 0                ## P.Murat: DTC0@daq22 : TS1
         activeLinks            : [ 0 ]            ## P.Murat: use first ROC if needed: [ 0 ]
         heartbeatInterval      : 2000
         heartbeatsAfter        : 16
@@ -26,7 +26,7 @@ daq: {
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         resetROC               : 1                ## 1: do reset ROC for each event
         readoutMode            : 0                ## 0:read digis
-        max_fragment_size_bytes: 0x100000         ## = 1048576
+        # max_fragment_size_bytes: 0x100000         ## = 1048576
         maxEventsPerSubrun     : 500000           ## 500K events/subrun
 
         saveDTCRegisters             : 1          ## 1

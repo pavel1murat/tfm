@@ -7,7 +7,7 @@ fi
 
 runnum=$1
 
-source $TFM_DIR/bin/diagnostic_tools.sh
+source $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 if [[ ! -d $recorddir/$runnum ]]; then
     echo "Unable to find subdirectory \"$runnum\" in $recorddir; exiting..." >&2

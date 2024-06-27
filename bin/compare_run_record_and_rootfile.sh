@@ -15,7 +15,7 @@ fi
 
 runnum=$1
 
-. $TFM_DIR/bin/diagnostic_tools.sh
+. $SPACK_VIEW/tfm/bin/diagnostic_tools.sh
 
 setupscript=$recorddir/$runnum/setup.txt
 
@@ -61,7 +61,7 @@ if [[ -e $setupscript ]]; then
 
 else 
     echo "WARNING: unable to find setup script originally used for run $runnum (looked for ${setupscript}); will try to set up art with package_setup.sh" >&2
-    source $TFM_DIR/bin/package_setup.sh art
+    source $SPACK_VIEW/tfm/bin/package_setup.sh art
     art_retval=$?
     
     if [[ "$art_retval" != "0" ]]; then

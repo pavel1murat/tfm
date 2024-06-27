@@ -7,7 +7,7 @@ fi
 
 bootfile=$1
 
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 
 if [[ ! -e $bootfile ]]; then
     cat<<EOF >&2
@@ -47,7 +47,7 @@ EOF
     exit 1
 fi
 
-cat $tmpfile | awk -f $TFM_DIR/utils/convert_fhicl_dumped_bootfile_to_traditional_format.awk
+cat $tmpfile | awk -f $SPACK_VIEW/tfm/utils/convert_fhicl_dumped_bootfile_to_traditional_format.awk
 rm -f $tmpfile
 
 exit 0

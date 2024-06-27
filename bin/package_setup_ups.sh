@@ -21,12 +21,12 @@ if [[ -n "${!prodDirEnvVar}" ]]; then
     return
 fi
 
-test -z "${TFM_DIR-}" && { echo "Error: tfm not setup"; return 40; }
+test -z "${SPACK_VIEW-}" && { echo "Error: tfm not setup"; return 40; }
 
 proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $settings )
 export PRODUCTS
 eval "PRODUCTS=\"$proddir\"" # Expand environ variables in string
-proddir=`$TFM_DIR/rc/control/utilities.py upsproddir_from_productsdir "$PRODUCTS"`
+proddir=`$SPACK_VIEW/python/tfm/rc/control/utilities.py upsproddir_from_productsdir "$PRODUCTS"`
 
 if [[ -n $proddir ]]; then
 

@@ -1,8 +1,10 @@
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-import argparse, datetime, os.path, os, random
-from contextlib                   import contextmanager
+import argparse, datetime, os.path, os, random, threading
+
+from   contextlib    import contextmanager
+from   xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 
 #------------------------------------------------------------------------------
 # homebrew
@@ -12,6 +14,24 @@ from   tfm.rc.threading                 import threadable
 from   tfm.rc.util.contexts             import ContextObject
 
 import tfm.rc.control.run_control_state as run_control_state
+import TRACE
+
+# Restrict to a particular path.
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/RPC2',)
+    
+class ServerThread(threading.Thread):
+    def __init__(self,host='localhost',port=6000,funcs = {}):
+         threading.Thread.__init__(self)
+         self.localServer = SimpleXMLRPCServer((host,port),requestHandler=SimpleXMLRPCRequestHandler)
+
+         # self.localServer.register_function(getTextA) #just return a string
+         
+         for name, func in funcs.items():
+             self.localServer.register_function(func, name)
+
+    def run(self):
+         self.localServer.serve_forever()
 
 #------------------------------------------------------------------------------
 # P.M. why we're inheriting from something with LBNE in the name ?
@@ -28,7 +48,6 @@ class Component(ContextObject):
                  rpc_host     = "localhost",
                  control_host = "localhost",
                  synchronous  = False,
-#                 rpc_port     = 6659,
                  skip_init    = False):
 
 #        if rpc_port > Component.__MAXPORT:
@@ -46,26 +65,51 @@ class Component(ContextObject):
         self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
         self.__rpc_port  = 10000+1000*self.__partition;
         self.__messages  = [];
+
+        TRACE.TRACE(7,f"rpc_host={self.__rpc_host} rpc_port={self.__rpc_port}","component.py")
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
-# two contexts corresponding to two threads
+# two contexts correspond to two threads
 #------------------------------------------------------------------------------
         self.contexts = [
-            ("rpc_server", rpc_server(port  = self.__rpc_port,
-                                      funcs = { "alarm"              : self.alarm,
-                                                "state"              : self.state,
-                                                "shutdown"           : self.complete_shutdown,
-                                                "get_state"          : self.get_state,
-                                                "artdaq_process_info": self.artdaq_process_info,
-                                                "state_change"       : self.state_change,
-                                                "listconfigs"        : self.listconfigs,
-                                                "trace_get"          : self.trace_get,
-                                                "trace_set"          : self.trace_set,
-                                                "message"            : self.message,
-                                                "get_messages"       : self.get_messages
-                                            })),
+#             ("rpc_server",
+#              rpc_server(host  = self.__rpc_host,
+#                         port  = self.__rpc_port,
+#                         funcs = { "alarm"              : self.alarm,
+#                                   "state"              : self.state,
+#                                   "shutdown"           : self.complete_shutdown,
+#                                   "get_state"          : self.get_state,
+#                                   "artdaq_process_info": self.artdaq_process_info,
+#                                   "state_change"       : self.state_change,
+#                                   "listconfigs"        : self.listconfigs,
+#                                   "trace_get"          : self.trace_get,
+#                                   "trace_set"          : self.trace_set,
+#                                   "message"            : self.message,
+#                                   "get_messages"       : self.get_messages
+#                                  })),
             ("runner"    , threadable(func=self.runner))
         ]
+
+        TRACE.TRACE(7,f"server should be running !","component.py")
+        
+        self._server2 = ServerThread(host  = self.__rpc_host,
+                                     port  = self.__rpc_port,
+                                     funcs = { "alarm"              : self.alarm,
+                                               "state"              : self.state,
+                                               "shutdown"           : self.complete_shutdown,
+                                               "get_state"          : self.get_state,
+                                               "artdaq_process_info": self.artdaq_process_info,
+                                               "state_change"       : self.state_change,
+                                               "listconfigs"        : self.listconfigs,
+                                               "trace_get"          : self.trace_get,
+                                               "trace_set"          : self.trace_set,
+                                               "message"            : self.message,
+                                               "get_messages"       : self.get_messages                                     
+                                              })
+        
+        self._server2.start() # server2 is now running
+
+        TRACE.TRACE(7,f"server2 should be running !","component.py")
 #------------------------------------------------------------------------------
 # transition "booting" leads to the "booted' state
 # states we need: 
@@ -81,7 +125,7 @@ class Component(ContextObject):
 # 4. "recover"          : from anywhere trouble to "idle"
 #
 # but do the cleanup step by step
-#-------
+#-------v----------------------------------------------------------------------
         self.fState = None;
         
         self.transition = { 
@@ -105,7 +149,6 @@ class Component(ContextObject):
             "terminating": "stopped",
             "recovering" : "stopped",
         }
-
 #------------------------------------------------------------------------------
 # transition "booting" allowed only from "stopped" state
 #------------------------------------------------------------------------------

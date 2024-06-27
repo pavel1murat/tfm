@@ -11,8 +11,8 @@ class ContextObject(object):
     def __enter__(self):
         for vec in self.contexts:
             context = vec[-1]
-            names = vec[:-1]
-            vals = context.__enter__()
+            names   = vec[:-1]
+            vals    = context.__enter__()
             # Context managers can yield None, a single scalar value,
             # or a tuple of values:
             if vals is None:

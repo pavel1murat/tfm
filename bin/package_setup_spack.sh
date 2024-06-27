@@ -14,7 +14,7 @@ if [[ -z $packagename ]]; then
     return 70
 fi
 
-test -z "${TFM_DIR-}" && { echo "Error: TFM not setup"; return 40; }
+test -z "${SPACK_VIEW-}" && { echo "Error: TFM not setup"; return 40; }
 
 spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $settings )
 

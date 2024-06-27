@@ -10,7 +10,7 @@
 #
 # call signature : source tfm_configure config_name partition [ debug ]
 #------------------------------------------------------------------------------
-source $TFM_DIR/bin/tfm_utils.sh
+source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 
 function tfm_configure_() {
     local name="tfm_configure"
@@ -18,7 +18,7 @@ function tfm_configure_() {
 #------------------------------------------------------------------------------
 # do cleanup
 #------------------------------------------------------------------------------
-    export PATH=$(echo $PATH | sed -r 's!'${TFM_DIR}/bin':*!!')
+#    export PATH=$(echo $PATH | sed -r 's!'${SPACK_VIEW}/tfm/bin':*!!')
 
     unset TFM_LOGDIR
     unset TFM_LOGFILE
@@ -84,7 +84,8 @@ function tfm_configure_() {
 
     export TFM_PORT=`tfm_port $ARTDAQ_PARTITION_NUMBER`  # 10000 + 1000*partition_number
 
-    export PATH=$TFM_DIR/bin:$PATH
+    # no longer needed
+#    export PATH=$SPACK_VIEW/bin:$PATH
 
     export TFM_PROCESS_MANAGEMENT_METHOD="direct"
     

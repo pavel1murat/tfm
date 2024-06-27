@@ -33,12 +33,11 @@ add_compile_options(DIAGS VIGILANT
 )
 
 #cet_report_compiler_flags()
+file( GLOB scripts bin/* )
 
-install(DIRECTORY bin       DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-# install(DIRECTORY examples  DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-install(DIRECTORY rc        DESTINATION python/tfm )
-install(DIRECTORY config    DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-install(DIRECTORY utils     DESTINATION . FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
-# install(FILES     source_me DESTINATION .)
+install(DIRECTORY bin         DESTINATION tfm        )
+install(DIRECTORY rc          DESTINATION python/tfm )
+install(DIRECTORY config      DESTINATION .        FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
+install(DIRECTORY utils       DESTINATION tfm        FILE_PERMISSIONS USE_SOURCE_PERMISSIONS)
 
 # cet_cmake_config()

@@ -6,7 +6,7 @@ script=`basename $0`
 #------------------------------------------------------------------------------
 function artdaq_process_info_() {
     local debug=0
-    source $TFM_DIR/bin/tfm_utils.sh
+    source $SPACK_VIEW/tfm/bin/tfm_utils.sh
 
     if [ ".$1" != "." ] ; then 
         if [ $debug != 0 ] ; then echo [$script:$LINENO] : \$1=$1 ; fi

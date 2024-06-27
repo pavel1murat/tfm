@@ -6,7 +6,7 @@ if [[ ! -e $settings ]]; then
     echo "Unable to find TFM settings file \"$settings\"" >&2
     return 30
 fi
-test -z "${TFM_DIR-}" && { echo "Error: tfm not setup"; return 40; }
+test -z "${SPACK_VIEW-}" && { echo "Error: tfm not setup"; return 40; }
 
 spackdir=$( sed -r -n 's/^\s*spack[_ ]root[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p' $settings )
  proddir=$( sed -r -n 's/^\s*productsdir[_ ]for[_ ]bash[_ ]scripts\s*:\s*(\S+).*/\1/p'   $settings )

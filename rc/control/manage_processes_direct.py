@@ -1,9 +1,8 @@
 #
 import random, string, os, sys, subprocess, socket, time, re, copy;
-
-sys.path.append(os.environ["TFM_DIR"])
-
+import TRACE
 import tfm.rc.control.utilities as rcu;
+
 
 def bootfile_name_to_execname(bootfile_name):
 
@@ -15,7 +14,6 @@ def bootfile_name_to_execname(bootfile_name):
     else: assert False
 
     return execname
-
 #------------------------------------------------------------------------------
 # assumes type(self)=FarmManager
 #------------------------------------------------------------------------------
@@ -35,6 +33,8 @@ def launch_procs_on_host(self,host,
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
                                 host,grepped_lines)
 
+    TRACE.TRACE(7,f":001:START len(preexisting_pids)={len(preexisting_pids)}")
+    
     if self.attempt_existing_pid_kill and len(preexisting_pids) > 0:
         self.print_log("i", "Found existing processes on %s" % (host))
 
@@ -72,7 +72,7 @@ def launch_procs_on_host(self,host,
 
     self.print_log("d","[manage_processes_direct::launch_procs_on_host]: after check for existing processes on %s" % host,2)
 #------------------------------------------------------------------------------
-#   Each command already terminated by ampersand
+# each command already terminated by ampersand
 #---v--------------------------------------------------------------------------
     launchcmd = rcu.construct_checked_command(launch_commands_to_run_on_host)
     launchcmd += "; "
@@ -196,10 +196,12 @@ def launch_procs_base(self):
 
             launch_commands_to_run_on_host[p.host].append("set +C")
             launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
+#------------------------------------------------------------------------------
+# make sure that MU2E_DAQ_DIR is defined when commands are executed on remote host
+#------------------------------------------------------------------------------
+            launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % os.environ.get("MU2E_DAQ_DIR"))
             launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
-            launch_commands_to_run_on_host[p.host].append("source %s for_running >> %s 2>&1 " % (
-                self.daq_setup_script, self.launch_attempt_files[p.host])
-            )
+            launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
             launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
@@ -207,9 +209,10 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
 #------------------------------------------------------------------------------
 # Assume if this works, eventbuilder, etc. are also there
+# with spack, all executable commands should be available from the $PATH
 #-----------v------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append(
-                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["TFM_DIR"],self.partition(),self.launch_attempt_files[p.host])
+                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["SPACK_VIEW"],self.partition(),self.launch_attempt_files[p.host])
             )
 
             for command in launch_commands_to_run_on_host[p.host]:
