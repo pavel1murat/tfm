@@ -16,23 +16,25 @@ from   tfm.rc.util.contexts             import ContextObject
 import tfm.rc.control.run_control_state as run_control_state
 import TRACE
 
-# Restrict to a particular path.
+#------------------------------------------------------------------------------
+# use simplistic implementation of the XMLRPC server thread
+# Restrict to RPC2
+#------------------------------------------------------------------------------
 class RequestHandler(SimpleXMLRPCRequestHandler):
     rpc_paths = ('/RPC2',)
     
 class ServerThread(threading.Thread):
     def __init__(self,host='localhost',port=6000,funcs = {}):
          threading.Thread.__init__(self)
-         self.localServer = SimpleXMLRPCServer((host,port),requestHandler=SimpleXMLRPCRequestHandler)
+         self.server = SimpleXMLRPCServer((host,port),requestHandler=RequestHandler)
 
          # self.localServer.register_function(getTextA) #just return a string
-         
+         self.server.register_introspection_functions()      
          for name, func in funcs.items():
-             self.localServer.register_function(func, name)
+             self.server.register_function(func, name)
 
     def run(self):
-         self.localServer.serve_forever()
-
+         self.server.serve_forever()
 #------------------------------------------------------------------------------
 # P.M. why we're inheriting from something with LBNE in the name ?
 #------------------------------------------------------------------------------
@@ -70,28 +72,11 @@ class Component(ContextObject):
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
 # two contexts correspond to two threads
+# better get rid of contexts - smth is fishy with the thread implementation
+# stick to server2
 #------------------------------------------------------------------------------
-        self.contexts = [
-#             ("rpc_server",
-#              rpc_server(host  = self.__rpc_host,
-#                         port  = self.__rpc_port,
-#                         funcs = { "alarm"              : self.alarm,
-#                                   "state"              : self.state,
-#                                   "shutdown"           : self.complete_shutdown,
-#                                   "get_state"          : self.get_state,
-#                                   "artdaq_process_info": self.artdaq_process_info,
-#                                   "state_change"       : self.state_change,
-#                                   "listconfigs"        : self.listconfigs,
-#                                   "trace_get"          : self.trace_get,
-#                                   "trace_set"          : self.trace_set,
-#                                   "message"            : self.message,
-#                                   "get_messages"       : self.get_messages
-#                                  })),
-            ("runner"    , threadable(func=self.runner))
-        ]
+        self.contexts = [("runner",threadable(func=self.runner))]
 
-        TRACE.TRACE(7,f"server should be running !","component.py")
-        
         self._server2 = ServerThread(host  = self.__rpc_host,
                                      port  = self.__rpc_port,
                                      funcs = { "alarm"              : self.alarm,

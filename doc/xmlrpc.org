@@ -23,6 +23,7 @@ result = xmlrpc_client_call( &env,
 ** TFM XMLRPC commands                                                       
 *** status                                                                   
 xmlrpc http://localhost:$TFM_PORT/RPC2 state daqint
+xmlrpc http://mu2edaq09-ctrl.fnal.gov:21000/RPC2 get_state daqint
 *** configure                                                                
 xmlrpc http://mu2edaq09-data.fnal.gov:23000/RPC2 state_change daqint configuring struct/{run_number:i/105391}
 *** start                                

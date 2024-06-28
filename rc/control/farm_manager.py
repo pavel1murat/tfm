@@ -3106,13 +3106,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # at this point, metadata.txt shall exist in self.tmp_run_record
 #------------------------------------------------------------------------------
-#            for filestub in ["metadata", "boot"]:
-#                with open("%s/%s.txt" % (self.tmp_run_record, filestub)) as inf:
-#                    contents = inf.read()
-#                    contents = re.sub("'", '"', contents)
-#                    contents = re.sub('"', '"', contents)
-#                    labeled_fhicl_documents.append((filestub, 'contents: "\n%s\n"\n' % (contents)))
-
             self.archive_documents(labeled_fhicl_documents)
 
             endtime = time.time()
@@ -3727,13 +3720,10 @@ class FarmManager(Component):
 # As of 5/30/14, called every 1s by ??? control.py
 #------------------------------------------------------------------------------
     def runner(self):
-
         """
         Component "ops" loop.  Called at threading hearbeat frequency, currently 1/sec.
         """
-
         try:
-
             if self.in_recovery:
                 pass
 
@@ -3835,30 +3825,6 @@ def get_args():  # no-coverage
 #------------------------------------------------------------------------------
 def main():  # no-coverage
 
-#     process_management_methods = ["direct", "pmt", "external_run_control"]
-#     if "TFM_PROCESS_MANAGEMENT_METHOD" not in os.environ.keys():
-#         raise Exception(rcu.make_paragraph(
-#             ("Need to have the TFM_PROCESS_MANAGEMENT_METHOD set so TFM knows "
-#              "what method to use to control the artdaq processes (%s, etc.)")
-#             % (",".join(['"' + pmm + '"' for pmm in process_management_methods])))
-#         )
-#     else:
-#         legal_method_found = False
-#         for pmm in process_management_methods:
-#             if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == pmm:
-#                 legal_method_found = True
-#
-#         if not legal_method_found:
-#             raise Exception(
-#                 rcu.make_paragraph(
-#                     ('TFM can\'t interpret the current value of the TFM_PROCESS_MANAGEMENT_METHOD '
-#                     'environment variable ("%s"); legal values include %s')
-#                     % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"],
-#                        ",".join(['"' + pmm + '"' for pmm in process_management_methods]),
-#                    )
-#                 )
-#             )
-
     if (os.environ.get("HOSTNAME") == None) :
         print(rcu.make_paragraph(('\nWARNING: os.environ.get("HOSTNAME") returns None'
                               'Will internally set HOSTNAME using socket.gethostname\n')))
@@ -3921,9 +3887,6 @@ def main():  # no-coverage
 #      seems to get corrupted
 #      for the moment, keep debug_level=1 and work around
 #------------------------------------------------------------------------------
-#            if (tfm.debug_level > 1):
-#                print("... FarmManager sleeping for 6 sec, keeprunning=",tfm.fKeepRunning,
-#                      " debug_level=",tfm.debug_level);
             time.sleep(5)
 #------------------------------------------------------------------------------
 # done, exit
