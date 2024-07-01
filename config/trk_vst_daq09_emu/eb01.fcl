@@ -8,39 +8,40 @@
 daq: {
     event_builder: {
         buffer_count                          : 250
-        expected_fragments_per_event          : 2
+        verbose                               : true
+
+        expected_fragments_per_event          : 10
         use_art                               : true
-        print_event_store_stats               : false
-        verbose                               : false
+        print_event_store_stats               : true
         events_expected_in_SimpleQueueReader  : 5
         end_of_data_wait_s                    : 600
-        art_analyzer_count                    : 1
+        art_analyzer_count                    : 1          ## what is that ?
         expected_art_event_processing_time_us : 30000000
-        max_fragment_size_bytes               : 100000 ## 0x100000
-        broadcast_buffer_size                 : 100000 ## 0x6400000
+        # max_fragment_size_bytes               : 100000     ## 0x100000
+        broadcast_buffer_size                 : 100000     ## 0x6400000
         art_index_offset                      : 4
         routing_token_config: {
             use_routing_manager : false
         }
-        sources: {
-        }
+        sources: {}
     }
 
-    metrics: {
-    }
+    metrics: {}
 }
 
 art: {
-  services: {
-      ArtdaqSharedMemoryServiceInterface: { 
-          service_provider    : ArtdaqSharedMemoryService 
-          waiting_time        : 1
-          resume_after_timeout: false
-      }
+    process_name: EventBuilder0
 
-      ArtdaqFragmentNamingServiceInterface: { 
-          service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
-      }
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : ArtdaqSharedMemoryService 
+            waiting_time        : 1
+            resume_after_timeout: false
+        }
+
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
+        }
 
 #       # message   # :   # @local::default_message
 #       GeometryService   :   {
@@ -53,7 +54,11 @@ art: {
 #       GlobalConstantsService :   {inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
 #       DbService              :   @local::DbEmpty
 #       ProditionsService      :   @local::Proditions
-  }
+    }
+
+    source: {
+        module_type: ArtdaqInput
+    }
 
     outputs: {
         rootNetOutput: {
@@ -88,11 +93,4 @@ art: {
         p1        : [ rootNetOutput ]
         end_paths : [ p1 ]
     }
-
-    source: {
-        module_type: ArtdaqInput
-    }
-
-    process_name: EventBuilder0
 }
-

@@ -4,18 +4,30 @@
 ###########################################################
 daq: {
     aggregator: {
-        is_datalogger                : true
-        buffer_count                 : 250
-        expected_fragments_per_event :  2
-        max_fragment_size_bytes      : 100000 ## 100K should be OK 0x100000
-        init_fragment_count          :   1
-        broadcast_buffer_size        : 100000 ## 0x6400000
+        is_datalogger                        : true
+        buffer_count                         : 250
+        expected_fragments_per_event         :  10
+        events_expected_in_SimpleQueueReader : 5
+        end_of_data_wait_s                   : 600
+        print_event_store_stats              : true
+
+        ##        max_fragment_size_bytes      : 100000 ## 100K should be OK 0x100000
+        ##        init_fragment_count          :   1
+
+        broadcast_buffer_size                : 100000 ## 0x6400000
+        
+        routing_token_config: {
+            use_routing_manager: false
+        }
+        
         sources: { }
     }
     metrics: {}
 }
 
 art: {
+    process_name: DL01
+
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : "ArtdaqSharedMemoryService"
@@ -29,6 +41,8 @@ art: {
         }
 
     }
+
+    source: { module_type: ArtdaqInput }
 
     outputs: {
         rootOutput: { module_type: RootDAQOut
@@ -69,16 +83,9 @@ art: {
     }
 
     physics: {
-        analyzers: {}
-
-        output    :   [ rootOutput, rootNetOutput ]
-        end_paths :   [ output ]
+        analyzers : {}
+        e1        :   [ rootOutput, rootNetOutput ]
+        end_paths :   [ e1 ]
     }
-
-    source: {
-        module_type: ArtdaqInput
-    }
-
-    process_name: DAQDL
 }
 
