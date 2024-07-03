@@ -5,7 +5,9 @@ from   datetime import datetime, timezone
 
 import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
 import threading, time, traceback
-import TRACE
+
+import  TRACE
+TRACE_NAME="farm_manager"
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
@@ -26,8 +28,6 @@ from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
 from   tfm.rc.control.component         import Component
 from   tfm.rc.control.save_run_record   import save_run_record_base
 from   tfm.rc.control.save_run_record   import save_metadata_value_base
-
-import  TRACE
 
 disable_bookkeeping = os.environ.get("TFM_DISABLE_BOOKKEEPING");
 
@@ -111,7 +111,6 @@ class FarmManager(Component):
     """
 
     def print_log(self, severity, printstr, debuglevel=-999, newline=True):
-
         if self.debug_level < debuglevel:   return
 #------------------------------------------------------------------------------
 # JCF, Dec-31-2019
@@ -136,7 +135,6 @@ class FarmManager(Component):
             elif severity == "d":
                 self.messageviewer_sender.write_debug(
                     "FarmManager partition %d" % self.partition(),printstr)
-
         else:
             with self.printlock:
                 if self.fake_messagefacility:
@@ -206,8 +204,8 @@ class FarmManager(Component):
         # with multiple request domains and levels of filtering.
 
         self.subsystems = {}
-
-#------------------------------------------------------------------------------
+        return
+#------^-----------------------------------------------------------------------
 # want run number to be always printed with 6 digits
 #---v--------------------------------------------------------------------------
     def get_config_parentdir(self):
@@ -220,18 +218,20 @@ class FarmManager(Component):
 
     def metadata_filename(self):
         return "%s/metadata.txt" % (self.run_record_directory());
-
+#------------------------------------------------------------------------------
+# default artdaq port numbering: 10000+1000*partition+rank
+#------------------------------------------------------------------------------
     def component_port_number(self,rank):
         base_port = 10000;
-        if os.environ.get("ARTDAQ_BASE_PORT") :
-            base_port           = int(os.environ["ARTDAQ_BASE_PORT"]);
 
+        if os.environ.get("ARTDAQ_BASE_PORT") :
+            base_port = int(os.environ["ARTDAQ_BASE_PORT"]);
             
         ports_per_partition = 1000; 
         if os.environ.get("ARTDAQ_PORTS_PER_PARTITION") :
             ports_per_partition = int(os.environ.get("ARTDAQ_PORTS_PER_PARTITION"))
             
-        port                = base_port+100 + self.partition()*ports_per_partition+rank
+        port = base_port+100 + self.partition()*ports_per_partition+rank
         return port
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
@@ -254,7 +254,6 @@ class FarmManager(Component):
 # or if it's set up via the user-supplied setup script
 #-----------v------------------------------------------------------------------
             try:
-
                 if self.have_artdaq_mfextensions() and rcu.is_msgviewer_running():
                     self.print_log("i",rcu.make_paragraph(
                         "An instance of messageviewer already appears to be running; ",
@@ -287,8 +286,8 @@ class FarmManager(Component):
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover("Problem during messageviewer launch stage")
                 return
-
-#------------------------------------------------------------------------------
+        return;
+#-------^----------------------------------------------------------------------
 # make sure that the setup script to be executed on each node runs successfully 
 #---v--------------------------------------------------------------------------
     def validate_setup_script(self,node):
@@ -2710,31 +2709,32 @@ class FarmManager(Component):
         fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
         
         for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
-            for filename in filenames:
-                if filename.endswith(".fcl"):
-                    if filename not in fn_dictionary:
-                        fn_dictionary[filename] = True
+            for fn in filenames:
+                self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
+                TRACE.TRACE(9,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
+                if fn.endswith(".fcl"):
+                    if fn not in fn_dictionary:
+                        fn_dictionary[fn] = True
         
-                        if filename.endswith("_hw_cfg.fcl"):
-                            fn_dictionary[filename.replace("_hw_cfg.fcl", ".fcl")] = True
+                        if fn.endswith("_hw_cfg.fcl"):
+                            fn_dictionary[fn.replace("_hw_cfg.fcl", ".fcl")] = True
                         else:
-                            fn_dictionary[filename.replace(".fcl", "_hw_cfg.fcl")] = True
+                            fn_dictionary[fn.replace(".fcl", "_hw_cfg.fcl")] = True
                     else:
                         raise Exception(
                             rcu.make_paragraph(
-                                ('ERROR in farm_manager::check_hw_fcls: filename "%s" found more than once given the set'
-                                ' of requested subconfigurations "%s" (see %s)')
-                                % (
-                                    filename,
-                                    " ".join(self.subconfigs_for_run),
-                                    tmpdir_for_fhicl,
-                                )
+                                ('ERROR in farm_manager::check_hw_fcls: fn "%s"'
+                                 'found more than once given the set'
+                                 ' of requested subconfigurations "%s" (see %s)')
+                                % (fn," ".join(self.subconfigs_for_run),tmpdir_for_fhicl)
                             )
                         )
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would reupload the FCL files? 
 #-------v------------------------------------------------------------------------------
+#        TRACE.DEBUG(1,f'DEBUG: before loop over procinfos',TRACE_NAME)
+        TRACE.TRACE(7,f'DEBUG: before loop over procinfos',TRACE_NAME)
         for p in self.procinfos:
             matching_filenames = ["%s.fcl" % p.label]
 
@@ -2748,14 +2748,20 @@ class FarmManager(Component):
                         fcl = "%s/%s" % (dirname, filename)
                         found_fhicl = True
 
+            self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
+#            TRACE.DEBUG(1,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
+            TRACE.TRACE(7,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
+
             if not found_fhicl:
+                TRACE.ERROR(1,f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
                 self.print_log("e",rcu.make_paragraph(
-                    'farm_manager::check_hw_fcls : unable to find a FHiCL document for %s in configuration "%s"; '
-                    % (p.label," ".join(self.subconfigs_for_run),p.label))
+                    f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
                 )
                 self.revert_failed_transition("looking for all needed FHiCL documents")
                 return
-
+#------------------------------------------------------------------------------
+# update the process FHICL file
+#------------------------------------------------------------------------------
             try:
                 p.ffp = self.fhicl_file_path
                 p.update_fhicl(fcl)
