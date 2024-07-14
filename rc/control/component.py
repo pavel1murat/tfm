@@ -15,6 +15,7 @@ from   tfm.rc.util.contexts             import ContextObject
 
 import tfm.rc.control.run_control_state as run_control_state
 import TRACE
+TRACE_NAME="component.py"
 
 #------------------------------------------------------------------------------
 # use simplistic implementation of the XMLRPC server thread
@@ -25,13 +26,28 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
     
 class ServerThread(threading.Thread):
     def __init__(self,host='localhost',port=6000,funcs = {}):
-         threading.Thread.__init__(self)
-         self.server = SimpleXMLRPCServer((host,port),requestHandler=RequestHandler)
+        threading.Thread.__init__(self)
+        self.server = SimpleXMLRPCServer((host,port),requestHandler=RequestHandler)
+        TRACE.TRACE(7,"start server",TRACE_NAME)
 
-         # self.localServer.register_function(getTextA) #just return a string
-         self.server.register_introspection_functions()      
-         for name, func in funcs.items():
-             self.server.register_function(func, name)
+        # self.localServer.register_function(getTextA) #just return a string
+        self.server.register_introspection_functions()      
+        for name, func in funcs.items():
+            self.server.register_function(func, name)
+
+    def serve_forever(self):
+        self.quit = 0
+        while not self.quit:
+            self.handle_request()
+            
+        TRACE.TRACE(7,"quitting",TRACE_NAME)
+        return
+
+    def kill(self):
+        self.server.quit = 1
+
+        TRACE.TRACE(7,"killing server",TRACE_NAME)
+        return 1
 
     def run(self):
          self.server.serve_forever()
@@ -68,33 +84,33 @@ class Component(ContextObject):
         self.__rpc_port  = 10000+1000*self.__partition;
         self.__messages  = [];
 
-        TRACE.TRACE(7,f"rpc_host={self.__rpc_host} rpc_port={self.__rpc_port}","component.py")
+        TRACE.TRACE(7,f"rpc_host={self.__rpc_host} rpc_port={self.__rpc_port}",TRACE_NAME)
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
 # two contexts correspond to two threads
 # better get rid of contexts - smth is fishy with the thread implementation
-# stick to server2
+# stick to server
 #------------------------------------------------------------------------------
         self.contexts = [("runner",threadable(func=self.runner))]
 
-        self._server2 = ServerThread(host  = self.__rpc_host,
-                                     port  = self.__rpc_port,
-                                     funcs = { "alarm"              : self.alarm,
-                                               "state"              : self.state,
-                                               "shutdown"           : self.complete_shutdown,
-                                               "get_state"          : self.get_state,
-                                               "artdaq_process_info": self.artdaq_process_info,
-                                               "state_change"       : self.state_change,
-                                               "listconfigs"        : self.listconfigs,
-                                               "trace_get"          : self.trace_get,
-                                               "trace_set"          : self.trace_set,
-                                               "message"            : self.message,
-                                               "get_messages"       : self.get_messages                                     
-                                              })
-        
-        self._server2.start() # server2 is now running
+        self._server = ServerThread(host  = self.__rpc_host,
+                                    port  = self.__rpc_port,
+                                    funcs = { "alarm"              : self.alarm,
+                                              "state"              : self.state,
+                                              "shutdown"           : self.complete_shutdown,
+                                              "get_state"          : self.get_state,
+                                              "artdaq_process_info": self.artdaq_process_info,
+                                              "state_change"       : self.state_change,
+                                              "listconfigs"        : self.listconfigs,
+                                              "trace_get"          : self.trace_get,
+                                              "trace_set"          : self.trace_set,
+                                              "message"            : self.message,
+                                              "get_messages"       : self.get_messages                                     
+                                             })
+        self._server.setDaemon(True);
+        self._server.start() # server is now running
 
-        TRACE.TRACE(7,f"server2 should be running !","component.py")
+        TRACE.TRACE(7,f"server should be running !","component.py")
 #------------------------------------------------------------------------------
 # transition "booting" leads to the "booted' state
 # states we need: 
@@ -160,6 +176,10 @@ class Component(ContextObject):
             "resuming"   : "resume",
             "terminating": "terminate",
         }
+        return
+
+    def __del__(self):
+        self._server.kill()
 
     def rpc_port(self):
         return self.__rpc_port

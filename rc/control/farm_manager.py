@@ -1,5 +1,14 @@
 #!/bin/env python3
 #------------------------------------------------------------------------------
+# this code forks from artdaq_daqinterface: https://github.com/art-daq/artdaq_daqinterface
+# the aim of fork is to :
+# -----------------------
+# a) make it work with MIDAS
+# b) simplify the code and make it maintainable
+# c) streamline the initialization
+# d) allow artdaq clients to message back, handle client messages
+#
+#------------------------------------------------------------------------------
 import os, sys, argparse, glob
 from   datetime import datetime, timezone
 
@@ -511,7 +520,9 @@ class FarmManager(Component):
 
 
     def __del__(self):
-        rcu.kill_tail_f()
+        Component.__del__(self);
+        # rcu.kill_tail_f()
+        
 #------------------------------------------------------------------------------
 # global actor functions
 #---v--------------------------------------------------------------------------
@@ -3137,7 +3148,6 @@ class FarmManager(Component):
         self.print_log("i", "CONFIG transition 018: completed")
         return
 
-
 #------------------------------------------------------------------------------
 # START transition
 # self.run_number already defined at the config step
@@ -3149,53 +3159,6 @@ class FarmManager(Component):
         self.fState = run_control_state.transition("start")
 
         self.check_run_record_integrity()
-#------------------------------------------------------------------------------
-# make sure run numbers could be encoded into the directory names with leading zeroes
-#-------v----------------------------------------------------------------------
-#         for subdir in glob.glob("%s/[0-9]*" % (self.record_directory)): 
-#             rn_string = subdir.split("/")[-1]
-#             rn        = int(rn_string)
-#             if (self.run_number == rn):
-#                 raise Exception(
-#                     rcu.make_paragraph(
-#                         ('Error: requested run number "%i" is found to already exist '
-#                          'in the run records directory "%s"; run duplicates are not allowed.')
-#                         % (self.run_number, subdir)))
-
-#------------------------------------------------------------------------------
-# Mu2e run numbers take up to 6 digits
-#-------v----------------------------------------------------------------------
-#         rr_dir = self.run_record_directory();
-#         if os.path.exists(self.tmp_run_record):
-#             try:
-#                 shutil.copytree(self.tmp_run_record, rr_dir)
-#             except:
-#                 self.print_log("e", traceback.format_exc())
-#                 self.alert_and_recover(
-#                     rcu.make_paragraph(
-#                         ('Error: Attempt to copy temporary run record "%s" into permanent run record'
-#                          ' "%s" didn\'t work; most likely reason is that you don\'t have write permission'
-#                          ' to %s, but it may also mean that your experiment\'s reusing a run number.'
-#                          ' Scroll up past the Recover transition output for further troubleshooting information.')
-#                         % (self.tmp_run_record,rr_dir,self.record_directory))
-#                 )
-#                 return
-#------------------------------------------------------------------------------
-# P.Murat: it looks that the run_record_directory is always local 
-#-----------v------------------------------------------------------------------------------
-#            pathlib.Path(rr_dir).touch();
-#            os.chmod(rr_dir, 0o555)
-
-#            assert re.search(r"^/tmp/\S", self.semipermanent_run_record)
-#            if os.path.exists(self.semipermanent_run_record):
-#                shutil.rmtree(self.semipermanent_run_record)
-
-#        else:
-#            self.alert_and_recover(
-#                "Error in FarmManager: unable to find temporary run records directory %s"
-#                % self.tmp_run_record
-#            )
-#            return
 #------------------------------------------------------------------------------
 # step X) put_config_info
 #-------v------------------------------------------------------------------------------
@@ -3209,26 +3172,6 @@ class FarmManager(Component):
                 "An exception was thrown when trying to save configuration info; see traceback above for more info"
             )
             return
-#------------------------------------------------------------------------------
-# no need to preserve backward compatibility with external run control
-#------------------------------------------------------------------------------
-#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-#            os.path.exists("/tmp/info_to_archive_partition%d.txt" % self.partition()):
-#
-#             os.chmod(rr_dir, 0o755)
-#             shutil.copyfile("/tmp/info_to_archive_partition%d.txt" % self.partition(),
-#                      "%s/rc_info_start.txt" % (rr_dir)
-#             )
-#             os.chmod(rr_dir, 0o555)
-#
-#             if not os.path.exists("%s/rc_info_start.txt" % (rr_dir)):
-#                 self.alert_and_recover(
-#                     rcu.make_paragraph(
-#                         ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_start.txt;"
-#                          " does original file exist?")
-#                         % (self.partition(), rr_dir)
-#                     )
-#                 )
 #------------------------------------------------------------------------------
 # start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
