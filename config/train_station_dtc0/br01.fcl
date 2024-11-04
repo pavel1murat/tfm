@@ -1,0 +1,41 @@
+# -*- mode:tcl -*-
+# Produced from 'fhicl-dump' using:
+#   Policy : cet::filepath_maker
+#   Path   : "FHICL_FILE_PATH"
+# don't put in integer numbers in hex - artdac conversion makes them reals
+# PCIE address comes from ODB, active links are not needed
+#------------------------------------------------------------------------------
+daq: {
+    fragment_receiver: {
+        generator              : TrackerBRDR      ## CommandableFragmentGenerator : defines the shared lib to load
+        artdaqLabel            : "br01"           ## 
+        fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
+        loadSimFile            : false
+        simFileName            : "none"
+
+        tfmHost                : "mu2edaq09"
+        // pcieAddr               : 0                ## P.Murat: DTC1
+        // linkMask               : "0x110111"       ## MN033 doesn't respond -wrong firmware ?
+
+        readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
+        readoutMode            : 0                ## 0:read digis
+        max_fragment_size_bytes: 1048576          ## = 0x100000
+        maxEventsPerSubrun     : 500000           ## 500K events/subrun
+
+        #  generated_fragments_per_event: 2          ## shouldn't need that any longer 
+        fragment_ids           : [ 0 ]      ## , 11 ]  ## fake data + registers   
+
+        nEventsDbg             : 10         ## don't need to dump more
+        debugLevel             : 1
+        printFreq              : 10000
+#------------------------------------------------------------------------------
+# DAQ part 
+#------------------------------------------------------------------------------
+        routing_table_config: {
+            use_routing_manager: false
+        }
+
+        destinations: {}
+    }
+    metrics: {}
+}
