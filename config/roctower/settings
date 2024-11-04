@@ -1,9 +1,9 @@
 # -*- mode:tcl -*-
 #--------------------------------------------------------------------------------
-# [2024-03-02 P.M.] : tracker_vst_003
+# [2024-10-14 P.M.] : trk_vst_daq22
 #
 # 
-# - mu2edaq09-ctrl (local ) 
+# - mu2edaq22-ctrl (local ) 
 #   - one DTC
 #   - one CFO
 #   - one BR (reads one DTC), one EB, one DL, one DS 
@@ -31,11 +31,11 @@ Subsystem:    2      none        none          False
 # name        label              host         port subsystem  allowed  prepend  target
 #                                                           processors
 #-------------------------------------------------------------------------------------
-# BoardReader : br01           mu2edaq09-ctrl  21101      2      -1         none    none
-BoardReader : br02           mu2edaq22-ctrl  21102      2      -1         none    none
-EventBuilder: eb01           mu2edaq09-ctrl  21201      2    "0-63"       none    none
-DataLogger  : dl01           mu2edaq09-ctrl  21301      2    "0-63"       none    none
-Dispatcher  : ds01           mu2edaq09-ctrl  10500      2    "0-63"       none    none
+BoardReader : br01           mu2edaq22-ctrl  21101      2      -1         none    none
+# BoardReader : br02           mu2edaq22-ctrl  21102      2      -1         none    none
+EventBuilder: eb01           mu2edaq22-ctrl  21201      2    "0-63"       none    none
+DataLogger  : dl01           mu2edaq22-ctrl  21301      2    "0-63"       none    none
+Dispatcher  : ds01           mu2edaq22-ctrl  10500      2    "0-63"       none    none
 #--------------------------------------------------------------------------------
 package_hashes_to_save              : []  # [artdaq]   # useless
 
@@ -77,9 +77,9 @@ allowed_processors                  : "0-63"
 #     choices: "Autodetect", "Bundle", "TCPSocket", "Shmem"  (RTIDDS is not for Mu2e)
 #     Only set this if you're sure you know what you're doing.
 #------------------------------------------------------------------------------
-# transfer_plugin_to_use : "Bundle"
+transfer_plugin_to_use : "Bundle"
 # transfer_plugin_to_use : "Autodetect"
 # transfer_plugin_to_use : "Shmem"
-transfer_plugin_to_use : "TCPSocket"
+# transfer_plugin_to_use : "TCPSocket"
 validate_setup_script               : 0      # default=1
 #     Info is provided in the memory management details section.

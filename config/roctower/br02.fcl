@@ -5,17 +5,16 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        generator              : TrackerBRDR        ## defines the shared lib to load
+        generator              : TrackerBRDR      ## defines the shared lib to load
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
 
-        tfmHost                : "mu2edaq09-ctrl"
-                                                  ## DTC : PCIE=0
-#        pcieAddr               : 0                ## P.Murat: DTC0@daq22 : TS1
-#        linkMask               : 0x01             ## P.Murat: roc0@DTC0
+        tfmHost                : "mu2edaq22-ctrl"
+#        pcieAddr               : 1                ## DTC1@daq22 : TS1, TS2
+#        linkMask               : "0x01"           ## roc0@DTC0 = TS1
 
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         readoutMode            : 0                ## 0:read digis
-        max_fragment_size_bytes: 0x100000         ## = 1048576
+        max_fragment_size_bytes: 1048576          ## = 0x100000
         maxEventsPerSubrun     : 500000           ## 500K events/subrun
 
         #  generated_fragments_per_event: 2          ## shouldn't need that any longer 

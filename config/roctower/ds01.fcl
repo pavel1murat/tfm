@@ -44,5 +44,7 @@ art: {
 
     outputs: {}
 
-    source: { module_type: ArtdaqInput }
+    source: {
+        module_type: ArtdaqInput
+    }
 }

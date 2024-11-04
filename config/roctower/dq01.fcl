@@ -20,7 +20,7 @@ process_name: TrackerDQM
 
 services: {
     ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService 
-        waiting_time        : 10
+        waiting_time        : 1
         resume_after_timeout: true
     }
 
@@ -72,13 +72,13 @@ services.message: {
 # rank uniquely identifies the ARTDAQ process
 #------------------------------------------------------------------------------
 TransferPluginConfig: {
-    transferPluginType : "TCPSocket" ## "Bundle" ## 
+    transferPluginType : TCPSocket
     host_map           : [
-                          { rank:100 host: "mu2edaq09-ctrl"},   ## tracker DQM - doesn't matter ?
-                          { rank:  3 host: "mu2edaq09-ctrl"},   ## dispatcher01
-                          { rank:  2 host: "mu2edaq09-ctrl"},   ## datalogger01
-                          { rank:  1 host: "mu2edaq09-ctrl"},   ## eventbuilder01
-                          { rank:  0 host: "mu2edaq09-ctrl"}    ## boardreader01
+                          { rank:100 host: "localhost"},   ## tracker DQM - doesn't matter ?
+                          { rank:  3 host: "localhost"},   ## dispatcher01
+                          { rank:  2 host: "localhost"},   ## datalogger01
+                          { rank:  1 host: "localhost"},   ## eventbuilder01
+                          { rank:  0 host: "localhost"}    ## boardreader01
                          ]
     
     max_fragment_size_words : 1048576
@@ -88,7 +88,7 @@ TransferPluginConfig: {
 
 source: {
     module_type         : TransferInput
-    dispatcherHost      : "mu2edaq09-ctrl"
+    dispatcherHost      : "localhost"
     dispatcherPort      : 10500   ## 18103, 18500 was OK         ## dispatcher01 port number is declared explicitly
     commanderPluginType : xmlrpc
     transfer_plugin     : @local::TransferPluginConfig 
@@ -195,8 +195,8 @@ physics: {
 #------------------------------------------------------------------------------
             timeWindow          : 2000
             pulserFrequency     :  250
-            nSamplesBL          :   10
-            minPulseHeight      :    5.
+            nSamplesBL          : 10
+            minPulseHeight      : 5.
             port                : 8877
 #------------------------------------------------------------------------------
 # smth doesn't work, hardcoded in the module

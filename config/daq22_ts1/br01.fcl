@@ -5,17 +5,15 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        generator              : TrackerBR        ## defines the shared lib to load
+        generator              : TrackerBRDR      ## defines the shared lib to load
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
-        board_id               : 0
         loadSimFile            : false
         simFileName            : "none"
 
-        sleepTimeMs            : 10               ## 10 ms : make sure the input rate is < 100 Hz
         tfmHost                : "mu2edaq22-ctrl"
 
-        pcieAddr               : 1                ## DTC0 : TS2
-        linkMask               : 0x01             ## ROC0
+#        pcieAddr               : 1                ## DTC0 : TS2
+#        linkMask               : "0x01"           ## ROC0
 
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         readoutMode            : 0                ## 0:read digis

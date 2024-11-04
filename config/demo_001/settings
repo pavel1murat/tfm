@@ -1,43 +1,45 @@
+# -*- mode:tcl -*-
 #------------------------------------------------------------------------------
 # [2024-03-02 P.M.] configuration: ARTDAQ demo
-# - 2 BRs, 2 EBs, 1 DL, and 1 DS, all running on 'mu2edaq09-data'
-# - DQM client 
-# status: validation in progress
+# 2 BRs, 2 EBs, 1 DL, and 1 DS, all running on 'localhost'
+# DQM client
+#
+# status: validated
 #
 # don't set debug_level to zero - smth is going on
 #------------------------------------------------------------------------------
-debug_level                  : 1  # debug_level ranges from 1 to 4 in increasing level of verbosity
-daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh  # location of the ARTDAQ setup script 
-top_output_dir               : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME
-log_directory                : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/logs
-data_directory_override      : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/data
-record_directory             : $DAQ_OUTPUT_TOP/$TFM_CONFIG_NAME/run_records
-productsdir_for_bash_scripts : $REMOTE_PRODUCTS_DIR
+debug_level                  : 1                           # debug_level ranges from 1 to 4 in increasing level of verbosity
+daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh  # location of the ARTDAQ setup script
+spack_root_for_bash_scripts  : $MU2E_DAQ_DIR/spack
+top_output_dir               : $DAQ_OUTPUT_TOP
+log_directory                : $DAQ_OUTPUT_TOP/logs
+data_directory_override      : $DAQ_OUTPUT_TOP/data
+record_directory             : $DAQ_OUTPUT_TOP/run_records
 
 # disable_recovery: true/false             # TO BE EXPLAINED
 # manage_processes: true/false             # TO BE EXPLAINED
 # request address :                        # TO BE EXPLAINED
 #------------------------------------------------------------------------------
-# processes are organized in subsystems, by default there is only one 
+# processes are organized in subsystems, by default there is only one
 # need more explanation
-# subsystems  id    source     destination  fragmentMode   
+# subsystems  id    source     destination  fragmentMode
 #------------------------------------------------------------------------------
 Subsystem   :  1     none         none          none
 #------------------------------------------------------------------------------
 # adopt fixed format for boardreaders and friends - and keep it simple
 #
-#              label         host      port subsystem  allowed   prepend target
-#                                                     processors
+#            label     host       port subsystem  allowed   prepend target
+#                                              processors
 #------------------------------------------------------------------------------
-BoardReader : br01       mu2edaq09-data  -1    1          -1       none    none 
-BoardReader : br02       mu2edaq09-data  -1    1          -1       none    none 
+BoardReader : br01  mu2edaq09-ctrl  -1    1          -1       none    none
+BoardReader : br02  mu2edaq22-ctrl  -1    1          -1       none    none
 #
-EventBuilder: eb01       mu2edaq09-data  -1    1          -1       none    none
-EventBuilder: eb02       mu2edaq09-data  -1    1          -1       none    none
+EventBuilder: eb01  mu2edaq09-ctrl  -1    1          -1       none    none
+EventBuilder: eb02  mu2edaq22-ctrl  -1    1          -1       none    none
 #
-DataLogger  : dl01       mu2edaq09-data  -1    1          -1       none    none
+DataLogger  : dl01  mu2edaq09-ctrl  -1    1          -1       none    none
 #
-Dispatcher  : ds01       mu2edaq09-data  -1    1          -1       none    none
+Dispatcher  : ds01  mu2edaq09-ctrl  -1    1          -1       none    none
 #------------------------------------------------------------------------------
 # JCF, Sep-16-2017
 
@@ -72,38 +74,45 @@ dispatcher timeout           : 30
 routing_manager timeout      : 30
 aggregator timeout           : 30
 
-advanced_memory_usage        : true ## default "false". 
-#     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing 
-#     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system. 
-#     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section. 
+advanced_memory_usage        : true ## default "false".
+#     If set to "true", max_fragment_size_bytes must not be set as both settings deal with the same thing
+#     in mutually exclusive ways: the size of fragments and events which can pass through the artdaq system.
+#     advanced_memory_usage allows for more sophisticated fine-tuning of these sizes, and warrants its own section.
 #     Info is provided in the memory management details section.
 #
 # use_messagefacility        : true
 #     - dont really know what that does
 use_messageviewer            : false
-#     By default, if windowing is supported and artdaq_mfextensions is installed, 
-#     a MessageViewer window will pop up during runs which will print out messages 
+#     By default, if windowing is supported and artdaq_mfextensions is installed,
+#     a MessageViewer window will pop up during runs which will print out messages
 #     from the artdaq processes. If you wish to disable this feature, set use_messageviewer to false.
 # fake_messagefacility       : false
 #     - when set to true, TFM will format its messages to appear like MessageFacility messages
 # disable_unique_rootfile_labels: true
 #     TO BE EXPLAINED
-# kill_existing_processes       : 
+# kill_existing_processes       :
 #     TO BE EXPLAINED
 # max_fragment_size_bytes       : 1024000
 #     TO BE EXPLAINED
-# max_configurations_to_list    : 
+# max_configurations_to_list    :
 #     TO BE EXPLAINED
-# boardreader_priorities 
-#     Formatted as a set of regular expressions, e.g.:boardreader_priorities: component01 component.*, 
-#     this tells DAQInterface how to order the transitions it sends the BoardReader processes. 
-#     In this example, in the case of "init" (during the config transition) and "start" 
-#     (during the start transition), 
-#     DAQInterface would first send the command for component01, wait for a successful response, 
-#     and then send the commands in no particular order to the remaining components. 
+# boardreader_priorities
+#     Formatted as a set of regular expressions, e.g.:boardreader_priorities: component01 component.*,
+#     this tells DAQInterface how to order the transitions it sends the BoardReader processes.
+#     In this example, in the case of "init" (during the config transition) and "start"
+#     (during the start transition),
+#     DAQInterface would first send the command for component01, wait for a successful response,
+#     and then send the commands in no particular order to the remaining components.
 #     During stop or terminate, the reverse is true.
-# transfer_plugin_to_use : "Autodetect"
-#     The name of the transfer plugin to use to send data between processes; defaults to "Autodetect". 
+#------------------------------------------------------------------------------
+#     The name of the transfer plugin to use to send data between processes; defaults to "Autodetect".
+#     choices: "Autodetect", "Bundle", "TCPSocket", "Shmem"  (RTIDDS is not for Mu2e)
 #     Only set this if you're sure you know what you're doing.
+#------------------------------------------------------------------------------
+transfer_plugin_to_use : "Bundle"
+# transfer_plugin_to_use : "Autodetect"
+# transfer_plugin_to_use : "Shmem"
+# transfer_plugin_to_use : "TCPSocket"
+#------------------------------------------------------------------------------
 validate_setup_script              : 0      # default=1
 #     Info is provided in the memory management details section.
