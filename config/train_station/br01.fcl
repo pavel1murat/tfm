@@ -6,7 +6,7 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        generator              : "TrackerBRDR"    ## defines the shared lib to load
+        generator              : "TrackerBRDR"      ## defines the shared lib to load
         artdaqLabel            : "br01"           ## 
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
         board_id               : 0
@@ -15,13 +15,10 @@ daq: {
 
         tfmHost                : "mu2edaq09"
 
-#        pcieAddr               : 1                ## P.Murat: DTC1
-#        linkMask               : "0x111111"       ## P.Murat: 6 ROCs
-
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         readoutMode            : 0                ## 0:read digis
         max_fragment_size_bytes: 1048576          ## = 0x100000
-        maxEventsPerSubrun     : 500000           ## 500K events/subrun
+        maxEventsPerSubrun     : 10000            ## 50K events/subrun
 
         #  generated_fragments_per_event: 2          ## shouldn't need that any longer 
         fragment_ids           : [ 0 ]      ## , 11 ]  ## fake data + registers   

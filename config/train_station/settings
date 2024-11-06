@@ -32,7 +32,7 @@ Subsystem:    2      none        none          False
 #                                                           processors
 #-------------------------------------------------------------------------------------
 BoardReader : br01           mu2edaq09       21101      2      -1         none    none
-# BoardReader : br02           mu2edaq22       21102      2      -1         none    none
+BoardReader : br02           mu2edaq09       21102      2      -1         none    none
 EventBuilder: eb01           mu2edaq09       21201      2    "0-63"       none    none
 DataLogger  : dl01           mu2edaq09       21301      2    "0-63"       none    none
 Dispatcher  : ds01           mu2edaq09       10500      2    "0-63"       none    none
