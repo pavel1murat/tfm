@@ -1,0 +1,96 @@
+# -*- mode:tcl -*- 
+###########################################################
+#
+# artdaq builder fcl configuration file produced by otsdaq.
+# Creation time:                  	Thu Nov 16 17:10:27 2023 CST
+#	otsdaq-ARTDAQ builder UID:	builder0
+###########################################################
+daq: {
+    event_builder: {
+        buffer_count                          : 250
+        verbose                               : true
+
+        expected_fragments_per_event          : 10
+        use_art                               : true
+        print_event_store_stats               : true
+        events_expected_in_SimpleQueueReader  : 5
+        end_of_data_wait_s                    : 600
+        art_analyzer_count                    : 1          ## what is that ?
+        expected_art_event_processing_time_us : 30000000
+        # max_fragment_size_bytes               : 100000     ## 0x100000
+        broadcast_buffer_size                 : 100000     ## 0x6400000
+        art_index_offset                      : 4
+        routing_token_config: {
+            use_routing_manager : false
+        }
+        sources: {}
+    }
+
+    metrics: {}
+}
+
+art: {
+    process_name: EventBuilder0
+
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : ArtdaqSharedMemoryService 
+            waiting_time        : 1
+            resume_after_timeout: false
+        }
+
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
+        }
+
+#       # message   # :   # @local::default_message
+#       GeometryService   :   {
+#           inputFile         : "Offline/Mu2eG4/geom/geom_common.txt" 
+#           bFieldFile        : "Offline/Mu2eG4/geom/bfgeom_v01.txt" 
+#           simulatedDetector : {tool_type: "Mu2e"}
+#       }
+# 
+#       ConditionsService      :   { conditionsfile : "Offline/ConditionsService/data/conditions_01.txt"}
+#       GlobalConstantsService :   {inputFile : "Offline/GlobalConstantsService/data/globalConstants_01.txt"}
+#       DbService              :   @local::DbEmpty
+#       ProditionsService      :   @local::Proditions
+    }
+
+    source: {
+        module_type: ArtdaqInput
+    }
+
+    outputs: {
+        rootNetOutput: {
+            module_type    : RootNetOutput
+            SelectEvents   : []
+            outputCommands : [
+                              "drop *_*_*_*", 
+                              "keep artdaq::Fragments_*_*_*",
+                              "keep *::Mu2eFragment_*_*_*",
+                              "keep mu2e::TriggerInfo_*_*_*", 
+                              "keep art::TriggerResults_*_*_*", 
+                              "keep artdaq::detail::RawEventHeader_*_*_*", 
+                              "keep mu2e::CaloClusters_*_*_*", 
+                              "keep mu2e::TimeClusters_*_*_*", 
+                              "keep mu2e::HelixSeeds_*_*_*",
+                              "keep mu2e::KalSeeds_*_*_*", 
+                              "keep mu2e::Mu2eEventHeader_*_*_*", 
+                              "keep mu2e::IntensityInfo*_*_*_*",
+                              "keep mu2e::CaloHits_CaloHitMakerFast_caphri_*"
+                             ]
+            host_map       : [ ]
+            destinations   : { }
+
+            routing_table_config: {
+                use_routing_manager: false
+            }
+        }
+    }
+
+    physics: {
+        producers : { }
+        p1        : [ rootNetOutput ]
+        end_paths : [ p1 ]
+    }
+}
