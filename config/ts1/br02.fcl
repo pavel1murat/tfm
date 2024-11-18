@@ -5,8 +5,8 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        artdaqLabel            : "br01"
-        generator              : "TrackerBRDR"    ## defines the shared lib to load
+        generator              : TrackerBRDR      ## defines the shared lib to load
+        artdaqLabel            : "br02"
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
 
         tfmHost                : "mu2edaq22-ctrl"

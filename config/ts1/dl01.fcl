@@ -47,7 +47,7 @@ art: {
     outputs: {
         rootOutput: { module_type: RootDAQOut
             # SelectEvents      # :     # []
-            fileName            :     "/tmp/raw.mu2e.trkvst.daq22ts1.%06r_%08s.art"
+            fileName            :     "/tmp/raw.mu2e.trkvst.ts100000.%06r_%08s.art"
             # compressionLevel    :     0 ## disable compression  ## default: 7 ## 
             outputCommands      :     ["drop *_*_*_*", 
                                        "keep artdaq::Fragments_*_*_*",
