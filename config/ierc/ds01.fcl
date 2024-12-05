@@ -1,0 +1,50 @@
+# -*- mode:tcl -*-
+###########################################################
+# artdaq dispatcher fcl configuration file produced by otsdaq.
+# Creation time:                	Thu Nov 16 17:10:27 2023 CST
+# dispatcher0.fcl
+#	otsdaq-ARTDAQ dispatcher UID:	dispatcher0
+###########################################################
+daq: {
+    aggregator: {
+        is_dispatcher             : true
+        buffer_count              :   250
+        
+        expected_events_per_bunch :    1
+        print_event_store_stats   : true
+        event_queue_depth         :    2
+        event_queue_wait_time     :    1
+        onmon_event_prescale      :    1
+        overwrite_mode            : true
+        ## max_fragment_size_bytes   : 100000 ## 0x100000
+        auto_suppression_enabled  : false
+
+        sources: {}
+    }
+
+    metrics: {
+    }
+}
+
+art: {
+    process_name: DS01
+
+    services: {
+        ArtdaqSharedMemoryServiceInterface: { 
+            service_provider    : ArtdaqSharedMemoryService 
+            waiting_time        : 1
+            resume_after_timeout: true
+        }
+
+        ArtdaqFragmentNamingServiceInterface: { 
+            service_provider: ArtdaqFragmentNamingService 
+            helper_plugin   : Mu2e
+        }
+    }
+
+    outputs: {}
+
+    source: {
+        module_type: ArtdaqInput
+    }
+}
