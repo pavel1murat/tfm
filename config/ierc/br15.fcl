@@ -8,6 +8,7 @@ daq: {
         artdaqLabel            : "br15"
         generator              : "TrackerBRDR"    ## defines the shared lib to load
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
+        fragmentType           : "CRV"
 
         tfmHost                : "mu2edaq22-ctrl"
 
