@@ -5,6 +5,8 @@
 # Creation time:                  	Thu Nov 16 17:10:27 2023 CST
 #	otsdaq-ARTDAQ builder UID:	builder0
 ###########################################################
+### ... #include "otsdaq-mu2e-tracker/fcl/prolog.fcl"
+
 daq: {
     event_builder: {
         buffer_count                          : 250
@@ -43,6 +45,11 @@ art: {
             service_provider: ArtdaqFragmentNamingService helper_plugin: Mu2e
         }
 
+        TFileService: {
+            service_type: "TFileService"
+            fileName    : "tracker_dqm.%06r.hist"
+        }
+        
 #       # message   # :   # @local::default_message
 #       GeometryService   :   {
 #           inputFile         : "Offline/Mu2eG4/geom/geom_common.txt" 
@@ -90,7 +97,59 @@ art: {
 
     physics: {
         producers : { }
-        p1        : [ rootNetOutput ]
+        analyzers : {
+            TrackerDQM : { module_type:TrackerDQM
+                analyzeFragments    : 1           ## set to 0 to print only
+                interactiveMode     : 0           ## 
+                fillWfHistograms    : 0           ## 
+                plotWaveforms       : [ -1, -1]   ## nothing
+#------------------------------------------------------------------------------
+#	    diagLevel           : 2           # print one line per event
+#	    diagLevel           : 3           # print the whole event in hex
+#------------------------------------------------------------------------------
+                diagLevel           :  0          ## print all events
+                minNBytes           : -1
+                maxNBytes           : 10000000
+                maxFragmentSize     : 20000000    ## to catch obvious errors
+#------------------------------------------------------------------------------
+# old format: offset 0x00 :  0  (16 bytes = (0x00 + 0x08) in 2-byte words)
+# new format: offset 0x20 : 40  (80 bytes = (0x20 + 0x08) in 2-byte words)
+# currently redefined in beginRun
+#------------------------------------------------------------------------------
+                dataHeaderOffset    : 24
+                dumpDTCRegisters    :  0
+#------------------------------------------------------------------------------
+# reference channel to calculate dt(i) = T(0,i)-T(0,referenceChannel)
+# reference channel number is run-dependent
+#------------------------------------------------------------------------------
+                activeLinks         : [ 0, 1, 2, 3, 4, 5 ]
+                refChCal            : [ 0 , 91, 91, 91, 91, 91 ]
+                refChHV             : [ 0 , 94, 94, 94, 94, 94 ]
+#------------------------------------------------------------------------------
+# if rootMacro is non-empty, it defines the name of a ROOT macro to be executed 
+# in interpreted mode in the art event loop
+# see https://github.com/Mu2e/Stntuple/blob/muse/doc/event_display.org#plugins
+#------------------------------------------------------------------------------
+                timeWindow          : 2000
+                pulserFrequency     :  250
+                nSamplesBL          : 10
+                minPulseHeight      : 5.
+                port                : 8877
+            }
+#            TrackerDQM : { @table::otsdaq_mu2e_tracker.TrackerDQM 
+#                analyzeFragments    : 1           ## set to 0 to print only
+#                interactiveMode     : 0
+#                plotWaveforms       : [ -1, -1]   ## nothing
+#                fillWfHistograms    : 0
+#                diagLevel           : 0           ## print all events
+#            }
+        }
+
+#        p1        : [ rootNetOutput ]
+        p1        : [ TrackerDQM, rootNetOutput ]
         end_paths : [ p1 ]
     }
 }
+
+services.scheduler.wantSummary : true
+fileName    : "trackerDQM_%06r.root"
