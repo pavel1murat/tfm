@@ -59,10 +59,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 "Problem parsing the calculated version of artdaq, %s" % (version)
             )
 
-        majorver = res.group(1)
-        minorver = res.group(2)
+        majorver   = res.group(1)
+        minorver   = res.group(2)
         minorerver = res.group(3)
-        extension = res.group(4)
+        extension  = res.group(4)
 
         passes_requirement = False
 
@@ -200,7 +200,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
             if re.search(r"\n\s*sends_no_fragments\s*:\s*[Tt]rue", procinfo.fhicl_used):
                 generated_fragments_per_event = 0
-                reader_ids = []
+                reader_ids                    = []
 
             if self.advanced_memory_usage:
                 list_of_one_fragment_size = [
@@ -314,7 +314,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
 
                     assert res, make_paragraph(
-                        "artdaq's FHiCL requirements have changed since this code was written (TFM expects a parameter called 'buffer_count' in %s, but this doesn't appear to exist -> TFM code needs to be changed to accommodate this)"
+                        "artdaq's FHiCL requirements have changed since this code was written"+
+                        " (TFM expects a parameter called 'buffer_count' in %s, but this doesn't appear"+
+                        " to exist -> TFM code needs to be changed to accommodate this)"
                         % (self.procinfos[i_proc].label)
                     )
 
@@ -327,14 +329,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         ),
                         self.procinfos[i_proc].fhicl_used,
                     )
-    
-    # Check for places where Fragment IDs need to be filled in
-
+#------------------------------------------------------------------------------
+# Check for places where Fragment IDs need to be filled in
+#------------------------------------------------------------------------------
     for i_proc in range(len(self.procinfos)):
-        if (
-            "BoardReader" not in self.procinfos[i_proc].name
-            and "RoutingManager" not in self.procinfos[i_proc].name
-        ):
+        if ("BoardReader"    not in self.procinfos[i_proc].name and 
+            "RoutingManager" not in self.procinfos[i_proc].name    ):
             if re.search(
                 r"\n[^#]*fragment_ids\s*:\s*\[[0-9, ]*\]",
                 self.procinfos[i_proc].fhicl_used,
@@ -345,10 +345,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     % (", ".join([str(i) for i in fragment_ids[self.procinfos[i_proc].subsystem]])),
                     self.procinfos[i_proc].fhicl_used,
                 )
-
-    # Construct the host map string needed in the sources and destinations
-    # tables in artdaq process FHiCL
-
+#------------------------------------------------------------------------------
+# Construct the host map string needed in the sources and destinations
+# tables in artdaq process FHiCL
+#------------------------------------------------------------------------------
     proc_hosts = []
 
     procinfos_sorted_by_rank = sorted(
@@ -356,8 +356,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     )
     for procinfo in procinfos_sorted_by_rank:
 
-        if procinfo.name == "RoutingManager":
-            continue
+        if procinfo.name == "RoutingManager": continue
 
         if procinfo.host == "localhost":
             host_to_display = os.environ["HOSTNAME"]
@@ -377,9 +376,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         procinfo, nodetype, max_event_size, inter_subsystem_transfer=False
     ):
 
-        if nodetype == "sources":
+        if   (nodetype == "sources"):
             prefix = "s"
-        elif nodetype == "destinations":
+        elif (nodetype == "destinations"):
             prefix = "d"
         else:
             assert (
@@ -406,10 +405,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             elif "EventBuilder" not in procinfo.name or nodetype != "sources":
                 buffer_size_words = max_event_size / 8
             else:
-                pass  # For the EventBuilder, there's a different buffer size from each source, namely either
-                # the max fragment size coming from its corresponding BoardReader or, if the source is an EventBuilder
-                # from a parent subsystem, the relevant set of BoardReaders for the parent subsystem. We can't use just a single variable.
-
+                pass
+#---------------^--------------------------------------------------------------
+# For the EventBuilder, there's a different buffer size from each source, namely either
+# the max fragment size coming from its corresponding BoardReader or, if the source is an EventBuilder
+# from a parent subsystem, the relevant set of BoardReaders for the parent subsystem. We can't use just a single variable.
+#-------v----------------------------------------------------------------------
         else:  # Not self.advanced_memory_usage
             if "BoardReader" in procinfo.name:
                 buffer_size_words = self.max_fragment_size_bytes / 8
@@ -425,16 +426,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 pass  # Same comment for the advanced memory usage case above applies here
 
         procinfo_subsystem_has_dataloggers = True
-        if (
-            len(
-                [
-                    pi
-                    for pi in self.procinfos
-                    if pi.subsystem == procinfo.subsystem and pi.name == "DataLogger"
-                ]
-            )
-            == 0
-        ):
+        if (len([pi for pi in self.procinfos if pi.subsystem == procinfo.subsystem and pi.name == "DataLogger" ]) == 0):
             procinfo_subsystem_has_dataloggers = False
 
         procinfos_for_string = []
@@ -570,9 +562,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         else:
             return None
 
-    router_process_info = {}
+    router_process_info                   = {}
     router_process_info["RoutingManager"] = {"location": "child_subsystem"}
-    router_process_info["DFO"] = {"location": "parent_subsystem"}
+    router_process_info["DFO"           ] = {"location": "parent_subsystem"}
     subsystems_without_dataloggers = (
         []
     )  # Used when routing to Dispatchers, if no DataLoggers, then route from
@@ -603,10 +595,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         )
                     )
                 )
-
-        # There shouldn't be a RoutingManager in a subsystem with a parent
-        # subsystem which contains a DFO
-
+#---------------^--------------------------------------------------------------
+# There shouldn't be a RoutingManager in a subsystem with a parent
+# subsystem which contains a DFO
+#-------v----------------------------------------------------------------------
         if get_router_process_identifier(procinfo) == "DFO":
             rogue_routingmanagers = [
                 pi.label
@@ -1164,10 +1156,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
 # 11-Apr-2018, KAB: changed the substition to only apply to the text in the rootoutput_table, 
 # and avoid picking up earlier fileName parameter strings in the document.
+# 2024-12-23 P.Murat: enforce consistency
+#   and make sure self.data_directory_override doesn't need a '/' in the end
 #-------------------v----------------------------------------------------------
                     rootoutput_table = re.sub(
                         r"(.*fileName\s*:[\s\"]*)/[^\s]+/",
-                        r"\1" + self.data_directory_override,
+                        r"\1" + self.data_directory_override+"/",
                         rootoutput_table,
                     )
 

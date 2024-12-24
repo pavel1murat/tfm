@@ -17,6 +17,7 @@ import tfm.rc.control.run_control_state as run_control_state
 import TRACE
 TRACE_NAME="component.py"
 
+import midas.client;
 #------------------------------------------------------------------------------
 # use simplistic implementation of the XMLRPC server thread
 # Restrict to RPC2
@@ -63,6 +64,7 @@ class Component(ContextObject):
 
     def __init__(self,
                  name         = "toycomponent",
+                 odb_client   = None,
                  rpc_host     = "localhost",
                  control_host = "localhost",
                  synchronous  = False,
@@ -77,7 +79,8 @@ class Component(ContextObject):
         self.name        = name
         self.synchronous = synchronous
         self.__state     = "stopped"
-        self.__rpc_host  = rpc_host
+        self.fClient     = odb_client;
+        self.__rpc_host  = self.fClient.odb_get("/Mu2e/ActiveConfig/DAQ/Tfm/RpcHost");
         self.run_params  = None
         self.__dummy_val = 0
         self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);

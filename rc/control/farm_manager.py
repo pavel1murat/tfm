@@ -17,6 +17,8 @@ import threading, time, traceback
 
 import  TRACE
 TRACE_NAME="farm_manager"
+
+import midas.client
 #------------------------------------------------------------------------------
 # debugging printout
 #------------------------------------------------------------------------------
@@ -362,6 +364,7 @@ class FarmManager(Component):
     def __init__(self,
                  name             = "toycomponent",
                  config_dir       = None          ,
+                 odb_client       = None          , 
                  rpc_host         = "localhost"   ,
                  control_host     = "localhost"   ,
                  synchronous      = True          ,
@@ -372,10 +375,11 @@ class FarmManager(Component):
 
         Component.__init__(self,
                            name         = name,
+                           odb_client   = odb_client,
                            rpc_host     = rpc_host,
                            control_host = control_host,
                            synchronous  = synchronous,
-#                           rpc_port     = rpc_port,
+#                           rpc_port    = rpc_port,
                            skip_init    = False)
 
         self.reset_variables()
@@ -714,9 +718,32 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # one day, this will go away and the initialization will become an execution 
 # of a python script. Expand env vars right away
+# 2024-12-23 P.Murat: start using ODB
+#   there is no practical need to have a freedom of placing different kinds
+#   of output directories in random places
 #---v--------------------------------------------------------------------------
     def read_settings(self):
 
+        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+        self.log_directory           = self.top_output_dir+'/logs';
+        self.record_directory        = self.top_output_dir+'/run_records';
+        self.data_directory_override = self.top_output_dir+'/data';
+        
+        for subdir in [self.log_directory, self.record_directory, self.data_directory_override]:
+            if (not os.path.exists(subdir)): os.makedirs(subdir)
+            if (subdir == self.record_directory):
+#------------------------------------------------------------------------------
+# P.M. as a matter of some kind of [inherited] safety, add the dot file.. 
+#      ... not sure what kind of safety that is
+#      the dot file, '.record_directory_info', contains the number of the first 
+#      directory inode 
+#------------------------------------------------------------------------------
+                inode = os.stat(subdir).st_ino
+                fn    = subdir+'/.record_directory_info'
+                with open(fn,"w") as f: f.write("inode: %s" % inode);
+#---------------^--------------------------------------------------------------
+# here the file reading part starts - it will get reduced down to zero soon
+#-------v----------------------------------------------------------------------
         fn = self.settings_filename();
 
         TRACE.TRACE(7,":001:START fn=%s exists=%i"%(fn,os.path.exists(fn)))
@@ -727,9 +754,9 @@ class FarmManager(Component):
         num_expected_processes = 0
         num_actual_processes   = 0
 
-        input_lines = inf.readlines();
+        input_lines            = inf.readlines();
         TRACE.TRACE(7,":0025: inf.readlines.len: %i"%(len(input_lines)))
-        print("---- read_settings : emoe\n");
+        # print("---- read_settings : emoe\n");
         for line in input_lines:
             TRACE.TRACE(17,":0026: line: %s"%line)
             line = os.path.expandvars(line).strip()
@@ -892,10 +919,10 @@ class FarmManager(Component):
                 self.daq_setup_script = data;
                 self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
 
-            elif "data_directory_override" in line or "data directory override" in line:
-                self.data_directory_override = data
-                if self.data_directory_override[-1] != "/":
-                    self.data_directory_override = self.data_directory_override + "/"
+#..            elif "data_directory_override" in line or "data directory override" in line:
+#..                self.data_directory_override = data
+#..                if self.data_directory_override[-1] != "/":
+#..                    self.data_directory_override = self.data_directory_override + "/"
 
             elif (key == "debug_level"):
                 self.debug_level = int(data)
@@ -936,38 +963,38 @@ class FarmManager(Component):
                 res = re.search(r"[Tt]rue",data)
                 if res: self.fake_messagefacility = True
 
-            elif "log_directory" in line or "log directory" in line:
-                self.log_directory = line.split()[-1].strip()
-
-            elif (key == "top_output_dir"):  
-#------------------------------------------------------------------------------
-# make sure output directories exist
-#------------------------------------------------------------------------------
-                self.top_output_dir = data
-                for subdir in ['logs','data','run_records']:
-                    path = self.top_output_dir+'/'+subdir
-                    if (not os.path.exists(path)):
-                        os.makedirs(path)
-                        if (subdir == 'run_records'):
-#------------------------------------------------------------------------------
-# P.M. as a matter of some kind of [inherited] safety, add the dot file.. 
-#      ... not sure what kind of safety that is
-#      the dot file, '.record_directory_info', contains the number of the first 
-#      directory inode 
-#------------------------------------------------------------------------------
-                            inode = os.stat(path).st_ino
-                            fn    = path+'/.record_directory_info'
-                            with open(fn,"w") as f: 
-                                f.write("inode: %s" % inode);
+#..            elif "log_directory" in line or "log directory" in line:
+#..                self.log_directory = line.split()[-1].strip()
+#..
+#..            elif (key == "top_output_dir"):  
+#..#------------------------------------------------------------------------------
+#..# make sure output directories exist
+#..#------------------------------------------------------------------------------
+#..                self.top_output_dir = data
+#..                for subdir in ['logs','data','run_records']:
+#..                    path = self.top_output_dir+'/'+subdir
+#..                    if (not os.path.exists(path)):
+#..                        os.makedirs(path)
+#..                        if (subdir == 'run_records'):
+#..#------------------------------------------------------------------------------
+#..# P.M. as a matter of some kind of [inherited] safety, add the dot file.. 
+#..#      ... not sure what kind of safety that is
+#..#      the dot file, '.record_directory_info', contains the number of the first 
+#..#      directory inode 
+#..#------------------------------------------------------------------------------
+#..                            inode = os.stat(path).st_ino
+#..                            fn    = path+'/.record_directory_info'
+#..                            with open(fn,"w") as f: f.write("inode: %s" % inode);
             elif (key == "manage_processes"):
                 if (data.upper() == "TRUE"): self.manage_processes = True
                 else                       : self.manage_processes = False
 
-            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
-                self.productsdir = data
+# no more ups
+#            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
+#                self.productsdir = data
 
-            elif "record_directory" in line or "record directory" in line:
-                self.record_directory = line.split()[-1].strip()
+#..            elif "record_directory" in line or "record directory" in line:
+#..                self.record_directory = line.split()[-1].strip()
 
             elif (key == "request_address"): self.request_address = data
 
@@ -1290,7 +1317,7 @@ class FarmManager(Component):
         cmds            = []
         port_to_replace = 30000
         msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (self.partition(),self.fUser)
-        cmds += rcu.get_setup_commands(self.productsdir, self.spackdir)
+        cmds           += rcu.get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append("which msgviewer")
         cmds.append("cp $ARTDAQ_MFEXTENSIONS_DIR/fcl/msgviewer.fcl %s" % (msgviewer_fhicl))
@@ -2823,8 +2850,6 @@ class FarmManager(Component):
 
         self.fState = run_control_state.transition("init");
         self.fState.set_completed(0);
-
-#        os.chdir(self.base_dir)
 #------------------------------------------------------------------------------
 # See the Procinfo.__lt__ function for details on sorting
 #-------v----------------------------------------------------------------------
@@ -2894,8 +2919,9 @@ class FarmManager(Component):
 # after adding TRACE functionality to your setup script; 
 # while a cost, the benefit here seems to outweight the cost.
 #
-# P.Murat: it is ok to validate the setup script once in a while - on a scale of 
-#          transition times, it is rather time consuming
+# P.Murat: it is ok to validate the setup script once in a while,
+#          however doing that every time could be an overkill:
+#          on a scale of transition times, the check is rather time consuming
 #-------v----------------------------------------------------------------------
         if self.manage_processes:
             hosts        = [procinfo.host for procinfo in self.procinfos]
