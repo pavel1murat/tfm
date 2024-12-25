@@ -80,7 +80,7 @@ class Component(ContextObject):
         self.synchronous = synchronous
         self.__state     = "stopped"
         self.fClient     = odb_client;
-        self.__rpc_host  = self.fClient.odb_get("/Mu2e/ActiveConfig/DAQ/Tfm/RpcHost");
+        self.__rpc_host  = self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/Tfm/RpcHost");
         self.run_params  = None
         self.__dummy_val = 0
         self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
