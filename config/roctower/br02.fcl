@@ -8,9 +8,6 @@ daq: {
         artdaqLabel            : "br02"
         generator              : "TrackerBRDR"    ## defines the shared lib to load
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
-
-        tfmHost                : "mu2edaq22-ctrl"
-
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         readoutMode            : 0                ## 0:read digis
         max_fragment_size_bytes: 1048576          ## = 0x100000
@@ -20,7 +17,7 @@ daq: {
         fragment_ids                 : [ 0 ]      ## , 11 ]  ## fake data + registers   
 
         nEventsDbg                   : 10         ## don't need to dump more
-        debugLevel                   : 1
+        debugLevel                   : 0
         printFreq                    : 10000
 #------------------------------------------------------------------------------
 # DAQ part 

@@ -432,6 +432,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
+        self.midas_server_host                   = None
         self.log_directory                       = None
         self.record_directory                    = None
         self.package_hashes_to_save              = []
@@ -724,6 +725,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def read_settings(self):
 
+        self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
         self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
         self.log_directory           = self.top_output_dir+'/logs';
         self.record_directory        = self.top_output_dir+'/run_records';

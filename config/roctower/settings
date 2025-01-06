@@ -15,10 +15,10 @@
 debug_level                    : 4
 daq_setup_script               : $MU2E_DAQ_DIR/setup_daq.sh
 spack_root_for_bash_scripts    : $MU2E_DAQ_DIR/spack
-top_output_dir                 : $DAQ_OUTPUT_TOP
-log_directory                  : $DAQ_OUTPUT_TOP/logs
-data_directory_override        : $DAQ_OUTPUT_TOP/data
-record_directory               : $DAQ_OUTPUT_TOP/run_records
+# top_output_dir                 : $DAQ_OUTPUT_TOP
+# log_directory                  : $DAQ_OUTPUT_TOP/logs
+# data_directory_override        : $DAQ_OUTPUT_TOP/data
+# record_directory               : $DAQ_OUTPUT_TOP/run_records
 #
 # request_address  : 
 # manage_processes :   True/False
@@ -32,10 +32,10 @@ Subsystem:    2      none        none          False
 #                                                           processors
 #-------------------------------------------------------------------------------------
 BoardReader : br01           mu2edaq22-ctrl  21101      2      -1         none    none
-# BoardReader : br02           mu2edaq22-ctrl  21102      2      -1         none    none
+BoardReader : br02           mu2edaq22-ctrl  21102      2      -1         none    none
 EventBuilder: eb01           mu2edaq22-ctrl  21201      2    "0-63"       none    none
 DataLogger  : dl01           mu2edaq22-ctrl  21301      2    "0-63"       none    none
-Dispatcher  : ds01           mu2edaq22-ctrl  10500      2    "0-63"       none    none
+Dispatcher  : ds01           mu2edaq22-ctrl  21401      2    "0-63"       none    none
 #--------------------------------------------------------------------------------
 package_hashes_to_save              : []  # [artdaq]   # useless
 
