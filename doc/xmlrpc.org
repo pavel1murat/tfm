@@ -70,6 +70,56 @@ print(s.modl(7,3))
 # Print list of available methods
 print(s.system.listMethods())
 #+end_src
+** examples of querying the artdaq processes' stats from the command line    
+#+begin_src
+mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22.fnal.gov:21101/RPC2 daq.report stats
+Result:
+
+String: 
+  br01 run number = 105463, Sent Fragment count = 63206, br01 statistics:\n
+    Fragments read: 20002 fragments generated at 333.309 getNext calls/sec, fragment rate = 333.342 fragments/sec, monitor window = 60.0044 sec, min::max read size = 1::2 fragments Average times per fragment:  elapsed time = 0.00300022 sec\n
+    Fragment output statistics: 20002 fragments sent at 333.342 fragments/sec, effective data rate = 4.52292 MB/sec, monitor window = 60.0044 sec, min::max event size = 3.8147e-05::0.017746 MB\n
+    Input wait time = 0.00298406 s/fragment, buffer wait time = 2.3705e-06 s/fragment, request wait time = 0.00298346 s/fragment, output wait time = 1.72183e-06 s/fragment\n
+  fragment_id:0 nfragments:1 nbytes:12464 max_nf:1000 max_nb:1048576000
+mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22.fnal.gov:21201/RPC2 daq.report stats
+Result:
+
+String: 
+  eb01 statistics:\n
+    Event statistics: 20200 events released at 336.643 events/sec, effective data rate = 4.58106 MB/sec, monitor window = 60.0043 sec, min::max event size = 0.00899506::0.0177841 MB\n
+    Average time per event:  elapsed time = 0.00297051 sec\n
+    Fragment statistics: 20200 fragments received at 336.643 fragments/sec, effective data rate = 4.56822 MB/sec, monitor window = 60.0043 sec, min::max fragment size = 0.00895691::0.017746 MB\n
+    Event counts: Run -- 108600 Total, 0 Incomplete.  Subrun -- 0 Total, 0 Incomplete. \n
+  shm_nbb :250:1153440:250:0:0:0\n
+mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22.fnal.gov:21301/RPC2 daq.report stats
+Result:
+
+String: 
+  dl01 statistics:\n
+    Event statistics: 20000 events released at 333.308 events/sec, effective data rate = 4.8357 MB/sec, monitor window = 60.0045 sec, min::max event size = 0.00989532::0.0186844 MB\n
+    Average time per event:  elapsed time = 0.00300023 sec\n
+    Fragment statistics: 20000 fragments received at 333.308 fragments/sec, effective data rate = 4.82298 MB/sec, monitor window = 60.0045 sec, min::max fragment size = 0.00985718::0.0186462 MB\n
+    Event counts: Run -- 115200 Total, 0 Incomplete.  Subrun -- 0 Total, 0 Incomplete. \n
+  shm_nbb :250:1153440:250:0:0:0\n
+mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22.fnal.gov:21401/RPC2 daq.report stats
+Result:
+
+String: 
+  ds01 statistics:\n
+    Event statistics: 20200 events released at 336.642 events/sec, effective data rate = 4.95845 MB/sec, monitor window = 60.0044 sec, min::max event size = 0.00865173::0.0189056 MB\n
+    Average time per event:  elapsed time = 0.00297052 sec\n
+    Fragment statistics: 20200 fragments received at 336.642 fragments/sec, effective data rate = 4.94561 MB/sec, monitor window = 60.0044 sec, min::max fragment size = 0.00861359::0.0188675 MB\n
+    Event counts: Run -- 137598 Total, 0 Incomplete.  Subrun -- 0 Total, 0 Incomplete. \n
+  shm_nbb :250:1153440:0:0:250:0\n
+m#+end_src
+
+** example of a comamnd line query of the TFM
+#+begin_src
+mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22-ctrl.fnal.gov:21000/RPC2  get_state  daqint
+Result:
+
+String: 'running:100'
+#+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]
 * ------------------------------------------------------------------------------
