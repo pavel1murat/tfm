@@ -113,12 +113,17 @@ String:
   shm_nbb :250:1153440:0:0:250:0\n
 m#+end_src
 
-** example of a comamnd line query of the TFM
+** example of a comamnd line query of the TFM                                
+- however, doesn't work (as expected) with the URL specified as "http://mu2edaq22.fnal.gov:21000/RPC2"
 #+begin_src
 mu2etrk@mu2edaq22:~/test_stand/pasha_031>xmlrpc http://mu2edaq22-ctrl.fnal.gov:21000/RPC2  get_state  daqint
 Result:
 
 String: 'running:100'
+mu2etrk@mu2edaq13:~/test_stand/pasha_031>xmlrpc http://mu2edaq22-ctrl.fnal.gov:21000/RPC2 get_state daqint 
+Result:
+
+String: 'stopped:100'
 #+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]
