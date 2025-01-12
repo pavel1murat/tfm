@@ -3787,9 +3787,9 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
 
-    pn = None;
-    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
-    if (x) : pn = int(x);
+#    pn = None;
+#    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
+#    if (x) : pn = int(x);
 
     parser = argparse.ArgumentParser(description="FarmManager")
 

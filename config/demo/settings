@@ -1,14 +1,14 @@
 # -*- mode:tcl -*-
 #------------------------------------------------------------------------------
 # [2024-03-02 P.M.] configuration: ARTDAQ demo
-# 2 BRs, 2 EBs, 1 DL, and 1 DS, all running on 'localhost'
+# 2 BRs, 2 EBs, 1 DL, and 1 DS, all running on 'localhost' = 'mu2edaq22-ctrl'
 # DQM client
 #
 # status: validated
 #
 # don't set debug_level to zero - smth is going on
 #------------------------------------------------------------------------------
-debug_level                  : 1                           # debug_level ranges from 1 to 4 in increasing level of verbosity
+debug_level                  : 4                           # debug_level ranges from 1 to 4 in increasing level of verbosity
 daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh  # location of the ARTDAQ setup script
 spack_root_for_bash_scripts  : $MU2E_DAQ_DIR/spack
 top_output_dir               : $DAQ_OUTPUT_TOP
@@ -31,39 +31,21 @@ Subsystem   :  1     none         none          none
 #            label     host       port subsystem  allowed   prepend target
 #                                              processors
 #------------------------------------------------------------------------------
-BoardReader : br01  mu2edaq09-ctrl  -1    1          -1       none    none
-BoardReader : br02  mu2edaq09-ctrl  -1    1          -1       none    none
+BoardReader : br01  mu2edaq22-ctrl  21101    1          -1       none    none
+BoardReader : br02  mu2edaq22-ctrl  21102    1          -1       none    none
 #
-EventBuilder: eb01  mu2edaq09-ctrl  -1    1          -1       none    none
-EventBuilder: eb02  mu2edaq09-ctrl  -1    1          -1       none    none
+EventBuilder: eb01  mu2edaq22-ctrl  21201    1          -1       none    none
+EventBuilder: eb02  mu2edaq22-ctrl  21202    1          -1       none    none
 #
-DataLogger  : dl01  mu2edaq09-ctrl  -1    1          -1       none    none
+DataLogger  : dl01  mu2edaq22-ctrl  21301    1          -1       none    none
 #
-Dispatcher  : ds01  mu2edaq09-ctrl  -1    1          -1       none    none
+Dispatcher  : ds01  mu2edaq22-ctrl  21401    1          -1       none    none
 #------------------------------------------------------------------------------
-# JCF, Sep-16-2017
-
-# This file is an example of a settings file which would work with an
-# artdaq-demo installation, assuming the installation was performed
-# with artdaq-demo's quick-mrb-start.sh script. It is valid as of
-# artdaq-demo v2_10_02; more details on artdaq-demo installation can
-# be found in
-# https://cdcvs.fnal.gov/redmine/projects/artdaq-demo/wiki. Note that
-# the user will need to (A) make sure that a directory called
-# $HOME/run_records has been created and (B) make sure to set the
-# productsdir_for_bash_scripts variable, below, to a products
-# directory containing the xmlrpc_c package (needed for DAQInterface
-# to receive commands)
-
 # For more information on these variables and what they mean, see the
 # relevant section of the DAQInterface wiki,
 # https://cdcvs.fnal.gov/redmine/projects/artdaq-utilities/wiki/The_settings_file_reference
 #
 # default values are commented out
-#------------------------------------------------------------------------------
-# to be merged with boot.txt
-# P.M. OTS_USER_STUB and REMOTE_PRODUCTS_DIR are defined in setup_ots.sh
-#      TFM_CONFIG_NAME - the name of active configuration, has to be defined separately
 #------------------------------------------------------------------------------
 package_hashes_to_save       : [] # no need to save hashes in a so intensive way [ artdaq-demo, artdaq ]
 
