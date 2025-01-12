@@ -2793,7 +2793,7 @@ class FarmManager(Component):
             TRACE.TRACE(7,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
 
             if not found_fhicl:
-                TRACE.ERROR(1,f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
+                TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
                 self.print_log("e",rcu.make_paragraph(
                     f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
                 )
@@ -2978,6 +2978,10 @@ class FarmManager(Component):
 
         self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
                        (self.run_number," ".join(self.subconfigs_for_run)))
+        msg = 'CONFIG transition underway'+ f'run_number:{self.run_number}'+ \
+            f'config_name:{" ".join(self.subconfigs_for_run)}'
+        TRACE.TRACE(4,msg,TRACE_NAME)
+                   
 #------------------------------------------------------------------------------
 # what this is needed for ?
 #------------------------------------------------------------------------------
