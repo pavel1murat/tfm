@@ -83,7 +83,8 @@ class Component(ContextObject):
         self.__rpc_host  = self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/Tfm/RpcHost");
         self.run_params  = None
         self.__dummy_val = 0
-        self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
+        #self.__partition = int(os.environ["ARTDAQ_PARTITION_NUMBER"]);
+        self.__partition = self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/PartitionID");
         self.__rpc_port  = 10000+1000*self.__partition;
         self.__messages  = [];
 

@@ -494,6 +494,7 @@ class FarmManager(Component):
                     "FarmManager will exit. Look at the messages above, make any necessary "
                     "changes, and restart.\n")
             )
+            TRACE.TRACE(7,f"An exception was thrown when trying to read FarmManager settings;","FarmManager")
             sys.exit(1)
 
         if self.use_messagefacility:
@@ -725,7 +726,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def read_settings(self):
 
-        self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
+        self.midas_server_host       = os.environ["MIDAS_SERVER_HOST"] if "MIDAS_SERVER_HOST" in os.environ else "localhost"
         self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
         self.log_directory           = self.top_output_dir+'/logs';
         self.record_directory        = self.top_output_dir+'/run_records';
