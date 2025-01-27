@@ -53,37 +53,18 @@ def save_run_record_base(self):
                         % (__file__,getframeinfo(currentframe()).lineno,new_fn))
         return
 
-#    Popen(
-#        "cp -p " + self.daq_setup_script + " " + outdir + "/setup.txt",
-#        shell=True,
-#        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-#    ).wait()
-
-#    if not os.path.exists(outdir + "/setup.txt"):
-#        self.alert_and_recover("Problem creating file %s/setup.txt" % (outdir))
-
     self.print_log("d", "%s:save_record_base 003" % (__file__),2)
 
-    settings_fn = self.settings_filename();
-    # assert os.path.exists(settings_fn)
-
-    new_settings_fn = outdir + "/settings";
-    try:
-        shutil.copy2(settings_fn,new_settings_fn);
-    except Exception:
-        raise Exception("%s::save_run_record_base:%d problem creating %s"
-                        % (__file__,getframeinfo(currentframe()).lineno,new_settingsfn))
-        return
-
-#    Popen(
-#        "cp -p " + settings_fn + " " + outdir + "/settings.txt",
-#        shell=True,
-#        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-#    ).wait()
-#
-#    if not os.path.exists(outdir + "/settings.txt"):
-#        self.alert_and_recover("Problem creating file " + outdir + "/settings.txt")
-
+##      settings_fn = self.settings_filename();
+##      # assert os.path.exists(settings_fn)
+##  
+##      new_settings_fn = outdir + "/settings";
+##      try:
+##          shutil.copy2(settings_fn,new_settings_fn);
+##      except Exception:
+##          raise Exception("%s::save_run_record_base:%d problem creating %s"
+##                          % (__file__,getframeinfo(currentframe()).lineno,new_settingsfn))
+##          return
 #------------------------------------------------------------------------------
 # save information about ARTDAQ processes, ordered by rank 
 # P.M. better to ahve it first ordered by the host
