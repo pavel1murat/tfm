@@ -198,7 +198,10 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
 #------------------------------------------------------------------------------
 # make sure that MU2E_DAQ_DIR is defined when commands are executed on remote host
+# $MIDAS_SERVER_HOST is needed for ARTDAQ processes to connect to ODB
+# it is set by the $MU2E_DAQ_DIR/setup_daq.sh
 #------------------------------------------------------------------------------
+            launch_commands_to_run_on_host[p.host].append("export MIDAS_SERVER_HOST=%s"  % self.midas_server_host);
             launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % os.environ.get("MU2E_DAQ_DIR"))
             launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
             launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))

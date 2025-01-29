@@ -358,6 +358,26 @@ class FarmManager(Component):
         self.print_log("i", "%s::validate_setup_script done (%.1f seconds)." % (__file__,endtime - starttime),2)
 
 #------------------------------------------------------------------------------
+# ODB help functions
+#------------------------------------------------------------------------------
+    def odb_get_int(self,path,default=None):
+        if (self.fClient.odb_exists(path)):
+            return int(self.fClient.odb_get(path));
+        else:
+            return default;
+
+    def odb_get_bool(self,path,default=False):
+        if (self.fClient.odb_exists(path)):
+            return bool(self.fClient.odb_get(path));
+        else:
+            return default;
+
+    def odb_get_string(self,path,default=None):
+        if (self.fClient.odb_exists(path)):
+            return str(self.fClient.odb_get(path));
+        else:
+            return default;
+#------------------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
 #---v--------------------------------------------------------------------------
@@ -389,27 +409,37 @@ class FarmManager(Component):
         self.config_dir       = config_dir
         self.transfer         = "Autodetect"
 
-        self.config_name             = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
-        config_path                  = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Tfm/";
-        boardreader_timeout     = odb_client.odb_get(config_path+"boardreader_timeout")
+        self.config_name      = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
+        config_path           = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Tfm/";
+        boardreader_timeout   = odb_client.odb_get(config_path+"boardreader_timeout")
        
-        message_viewer = odb_client.odb_get(config_path+"use_messageviewer")
+        message_viewer        = odb_client.odb_get(config_path+"use_messageviewer")
        
-        config_path2                  = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Nodes/mu2edaq11/Artdaq";
+        config_path2          = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Nodes/mu2edaq22/Artdaq";
+        enabled = odb_client.odb_get(config_path2+'/Enabled')
+        # if (enabled == 1) :  # for future..
+
         subdir =odb_client.odb_get(config_path2+"/")
         if subdir:
             for key_name,key_value in subdir.items():
-                key_path = f"{config_path2}/{key_name}"
-                subdir2 =odb_client.odb_get(key_path)
+                if (key_name == 'Enabled') or (key_name == 'Status') : continue;
+                key_path = f'{config_path2}/{key_name}'
+#------------------------------------------------------------------------------
+# at this point, expect 'key_name; to be a process label and skip disabled processes
+#---------------v--------------------------------------------------------------
+                enabled = odb_client.odb_get(key_path+'/Enabled')
+                if (enabled == 0) : continue;
+                
+                subdir2 = odb_client.odb_get(key_path) # a loop over the processes on this node
                 for name,value in subdir2.items():
                     if(name == "Rank"):
                         rank = int(value)
                     if(name == "Host"):
                         host = str(value)
-                    if(name == "Port"):
+                    if(name == "XmlrpcPort"):
                         port = str(value)
-                    if(name == "Name"):
-                        pname = str(value)
+#                    if(name == "Name"):
+#                        pname = str(value)
                     if(name == "Subsystem"):
                         subsystem = str(value)
                     if(name == "AllowedProcessors"):
@@ -418,8 +448,18 @@ class FarmManager(Component):
                         target = str(value)                        
                     if(name == "Prepend"):
                         prepend = str(value)
-               
-                p = Procinfo(name               = pname ,
+
+                pname = 'undefined'
+                if   (key_name[0:2] == 'br') : pname = 'BoardReader'
+                elif (key_name[0:2] == 'dl') : pname = 'DataLogger'
+                elif (key_name[0:2] == 'ds') : pname = 'Dispatcher'
+                elif (key_name[0:2] == 'eb') : pname = 'EventBuilder'
+                elif (key_name[0:2] == 'rm') : pname = 'RoutingManager'
+                else:
+                    raise Exception(f'ERROR: undefined process type:{label} for {host}')
+
+                host = 'mu2edaq22-ctrl' # it is a hack anyway
+                p = Procinfo(name                = pname ,
                               rank               = rank     ,
                               host               = host,
                               port               = port     ,
@@ -480,10 +520,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
-        self.log_directory           = self.top_output_dir+'/logs' #None
-        self.record_directory        = self.top_output_dir+'/run_records' #None
-        self.data_directory_override = self.top_output_dir+'/data' #None
+        self.midas_server_host                   = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
+        self.top_output_dir                      = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+        self.log_directory                       = self.top_output_dir+'/logs' #None
+        self.record_directory                    = self.top_output_dir+'/run_records' #None
+        self.data_directory_override             = self.top_output_dir+'/data' #None
         self.package_hashes_to_save              = []
         self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
@@ -502,7 +543,7 @@ class FarmManager(Component):
         self.attempt_existing_pid_kill           = bool(odb_client.odb_get(config_path+"kill_existing_processes"))
         self.max_configurations_to_list          = 1000000
         self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(config_path+"disable_unique_rootfile_labels"))
-        self.disable_private_network_bookkeeping = bool(odb_client.odb_get(config_path+"disable_network_bookkeeping"))
+        self.disable_private_network_bookkeeping = bool(odb_client.odb_get(config_path+"disable_pn_bookkeeping"))
         self._validate_setup_script              = odb_client.odb_get(config_path+"validate_setup_script")
         self.allowed_processors                  = None
 
