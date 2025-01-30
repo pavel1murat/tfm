@@ -42,7 +42,6 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # For good measure, let's also save the DAQ setup script
 # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
-# P.M. no boot.txt file anymore - everything is in 'settings'
 # - why on earth using Popen when there is copy2 ?
 #---v--------------------------------------------------------------------------
     new_fn = outdir + "/setup.txt";
@@ -54,17 +53,6 @@ def save_run_record_base(self):
         return
 
     self.print_log("d", "%s:save_record_base 003" % (__file__),2)
-
-##      settings_fn = self.settings_filename();
-##      # assert os.path.exists(settings_fn)
-##  
-##      new_settings_fn = outdir + "/settings";
-##      try:
-##          shutil.copy2(settings_fn,new_settings_fn);
-##      except Exception:
-##          raise Exception("%s::save_run_record_base:%d problem creating %s"
-##                          % (__file__,getframeinfo(currentframe()).lineno,new_settingsfn))
-##          return
 #------------------------------------------------------------------------------
 # save information about ARTDAQ processes, ordered by rank 
 # P.M. better to ahve it first ordered by the host
@@ -108,7 +96,7 @@ def save_run_record_base(self):
     outf.write("TFM directory: %s:%s\n" % (os.environ["HOSTNAME"], os.getcwd()))
     outf.write("TFM logfile  : %s:%s\n" % (os.environ["HOSTNAME"],os.environ["TFM_LOGFILE"]))
 
-    # Now save the commit hashes / versions of the packages listed in the settings file
+    # Now save the commit hashes / versions of the packages
 
     # JCF, Jul-9-2019
     # Add additional info along with that described above, as per Redmine Issue #22777

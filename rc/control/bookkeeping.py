@@ -100,7 +100,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # Start calculating values (fragment counts, memory sizes, etc.)
     # which will need to appear in the FHiCL
 
-    # If advanced_memory_usage is set to true in the settings file,
+    # If advanced_memory_usage is set to true,
     # read in the max fragment size meant to be provided by each
     # boardreader FHiCL
 
@@ -129,7 +129,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     raise Exception(
                         make_paragraph(
                             ('Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; '
-                             'this is needed since "advanced_memory_usage" is set to true in the settings file')
+                             'this is needed since "advanced_memory_usage" is set to true')
                             % (procinfo.label)
                         )
                     )
@@ -930,7 +930,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 else:
                     self.print_log("w",make_paragraph
                                    ('Warning: disable_private_network_bookkeeping isn\'t set to true '
-                                    'in the TFM settings file -- it defaults to false if unset -- '
+                                    '-- it defaults to false if unset -- '
                                     'but no private network was found visible to all the processes involved '
                                     'in data requests for subsystem %s: %s'
                                     % (str(subsystem_id),", ".join(processes_involved_in_requests)))

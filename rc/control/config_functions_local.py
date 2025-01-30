@@ -70,13 +70,6 @@ def put_config_info_on_stop_base(self):
     pass
 
 #------------------------------------------------------------------------------
-# default input function - reads boot.txt file
-# no need to do this any longer - all input parameters come from the 'settings' file
-#------------------------------------------------------------------------------
-# def get_boot_info_base(self, boot_filename):
-#     return
-
-#------------------------------------------------------------------------------
 def listconfigs_base(self):
     subdirs = next(os.walk(self.get_config_parentdir()))[1]
     configs = [subdir for subdir in subdirs if subdir != "common_code"]
@@ -93,7 +86,7 @@ def listconfigs_base(self):
     print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
     print(rcu.make_paragraph(
         "Please note that for the time being, the optional max_configurations_to_list variable "
-        "which may be set in the settings file is only applicable when working with the database")
+        "is only applicable when working with the database")
     )
 
     # print(flush=True)

@@ -154,19 +154,22 @@ class FarmManager(Component):
                     print(printstr, flush=True)
                     print("%MSG", flush=True)
                 else:
-
+                    frame = sys._getframe(1)
+                    fn    = frame.f_code.co_filename.split('/')[-1];
+                    ln    = frame.f_lineno
+                    fn_ln = fn+f':{ln}'
+                    
                     if not newline:
-                        sys.stdout.write("%s %s" % (date_time, printstr))
+                        sys.stdout.write("%s %-25s %s" % (date_time, fn_ln, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s " % (date_time), printstr, flush=True)
+                        print("%s  %-25s" % (date_time,fn_ln), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
 
 # The purpose of reset_variables is to reset those members that 
-# (A) aren't necessarily persistent to the process (thus excluding the parameters 
-#     in the settings file (self.settings_filename()) and 
+# (A) aren't necessarily persistent to the process and
 # (B) won't necessarily be set explicitly during the transitions up from the "stopped" state. 
 #
 # E.g., you wouldn't want to return to the "stopped" state with self.exception == True 
@@ -377,6 +380,141 @@ class FarmManager(Component):
             return str(self.fClient.odb_get(path));
         else:
             return default;
+
+
+#------------------------------------------------------------------------------
+# 'public names' = short names , i.e. 'mu2edaq22'
+#------------------------------------------------------------------------------
+    def hostname_on_private_subnet(self,public_hostname):
+        hname = 'undefined'
+        if (self.private_subnet == '192.168.157'):
+            hname = public_hostname+'-ctrl'
+        elif (self.private_subnet == '131.225.237'):
+            hname = public_hostname
+
+        return hname;
+
+#------------------------------------------------------------------------------
+    def init_artdaq_processes(self):
+
+        self.print_log('i',f'--- START',3)
+        nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
+        nodes_dir  = self.fClient.odb_get(nodes_path);
+        self.print_log('i',f'nodes_dir:{nodes_dir}',3)
+        TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
+#------------------------------------------------------------------------------
+# in this directory, expect only nodes (labels)
+#-------v----------------------------------------------------------------------
+#        for short_node_name,node_value in nodes_dir:
+        for short_node_name in nodes_dir.keys():
+            node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
+            enabled = self.fClient.odb_get(node_artdaq_path+'/Enabled')
+            if (enabled == 0):  continue ;
+
+            node_artdaq_dir = self.fClient.odb_get(node_artdaq_path)
+            for key_name,key_value in node_artdaq_dir.items():
+                if (key_name == 'Enabled') or (key_name == 'Status') : continue;
+                process_path = f'{node_artdaq_path}/{key_name}'
+                TRACE.TRACE(7,f'process_path:{process_path}',TRACE_NAME)
+#------------------------------------------------------------------------------
+# at this point, expect 'key_name; to be a process label and skip disabled processes
+#---------------v--------------------------------------------------------------
+                enabled = self.fClient.odb_get(process_path+'/Enabled')
+                if (enabled == 0) : continue;
+                
+                subdir2 = self.fClient.odb_get(process_path) # a loop over the processes on this node
+                for name,value in subdir2.items():
+                    if(name == "Rank"):
+                        rank = int(value)
+                    if(name == "XmlrpcPort"):
+                        port = str(value)
+                    if(name == "Subsystem"):
+                        subsystem = str(value)
+                    if(name == "AllowedProcessors"):
+                        allowed_processors = str(value)
+                    if(name == "Target"):
+                        target = str(value)                        
+                    if(name == "Prepend"):
+                        prepend = str(value)
+
+                pname = 'undefined'
+                if   (key_name[0:2] == 'br') : pname = 'BoardReader'
+                elif (key_name[0:2] == 'dl') : pname = 'DataLogger'
+                elif (key_name[0:2] == 'ds') : pname = 'Dispatcher'
+                elif (key_name[0:2] == 'eb') : pname = 'EventBuilder'
+                elif (key_name[0:2] == 'rm') : pname = 'RoutingManager'
+                else:
+                    raise Exception(f'ERROR: undefined process type:{label} for {host}')
+
+                host = self.hostname_on_private_subnet(short_node_name)
+                
+                p = Procinfo(name               = pname,
+                             rank               = rank ,
+                             host               = host ,    # at this point, store long (with '-ctrl' names)
+                             port               = port     ,
+                             label              = key_name  ,
+                             subsystem          = subsystem,
+                             allowed_processors = None,
+                             target             = "none",
+                             prepend            = ""
+                             )
+                p.print();
+                self.procinfos.append(p)
+
+        self.print_log('i',f'--- END')
+        return;
+#-------^----------------------------------------------------------------------
+# there should be at least one subsystem defined
+# in a configuration, subsystems are described under "DAQ/Subsystems" 
+#---v--------------------------------------------------------------------------
+    def init_artdaq_subsystems(self):
+
+        self.subsystems = {}
+        
+        self.print_log('i','---START')
+
+        path     = self.daq_conf_path + "/Subsystems"
+
+        self.print_log('i',f'path:{path}');
+
+#------------------------------------------------------------------------------
+# expect only subssytem definitions in this subdirectory
+#------------------------------------------------------------------------------
+        dir      = self.fClient.odb_get(path)
+        for (ss_id,data) in dir.items():
+            
+            self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
+
+            subdir_path=path+f'/{ss_id}'
+            self.print_log('i',f'subdir_path:{subdir_path}')
+            
+            s     = Subsystem(ss_id);
+            # assume sources to be a comma-separated list
+            if ('Sources' in data.keys()): 
+                for x in data['Sources'].split(','):
+                    s.sources.append(x)
+                    
+            if ('Destination'  in data.keys()): s.destination  = data['Destination' ];
+            if ('FragmentMode' in data.keys()): s.fragmentMode = data['FragmentMode'];
+#------------------------------------------------------------------------------
+# associative array - a dict, so subsystem ID is a string !
+#------------------------------------------------------------------------------
+            s.print()
+            self.subsystems[s.id] = s
+#-----------^------------------------------------------------------------------
+# associative array - a dict, so subsystem ID is a string !
+#-------v----------------------------------------------------------------------
+        self.print_log('i',f'N subsystems:{len(self.subsystems.keys())}')
+        
+        for k,v in self.subsystems.items():
+            print('k,type  = ',k,type(k))
+            print('v,type  = ',v,type(v))
+            v.print();
+            
+        self.print_log('i','--- END')
+        
+        return
+
 #------------------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
@@ -404,76 +542,28 @@ class FarmManager(Component):
 
         self.reset_variables()
 
-        self.fUser            = os.environ.get("USER");
-        self.fKeepRunning     = True
-        self.config_dir       = config_dir
-        self.transfer         = "Autodetect"
+        self.fUser                   = os.environ.get("USER");
+        self.mu2e_daq_dir            = os.path.expandvars(self.fClient.odb_get('/Mu2e/MU2E_DAQ_DIR'));
+        self.spackdir                = self.mu2e_daq_dir + '/spack'
+        self.daq_setup_script        = os.path.expandvars(self.fClient.odb_get('/Mu2e/DaqSetupScript'))
 
-        self.config_name      = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
-        config_path           = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Tfm/";
-        boardreader_timeout   = odb_client.odb_get(config_path+"boardreader_timeout")
-       
-        message_viewer        = odb_client.odb_get(config_path+"use_messageviewer")
-       
-        config_path2          = "/Mu2e/RunConfigurations/"+self.config_name+"/DAQ/Nodes/mu2edaq22/Artdaq";
-        enabled = odb_client.odb_get(config_path2+'/Enabled')
-        # if (enabled == 1) :  # for future..
+        self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
+        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+        self.log_directory           = self.top_output_dir+'/logs'        # None
+        self.record_directory        = self.top_output_dir+'/run_records' # None
+        self.data_directory_override = self.top_output_dir+'/data'        # None
+        self.productsdir             = None
 
-        subdir =odb_client.odb_get(config_path2+"/")
-        if subdir:
-            for key_name,key_value in subdir.items():
-                if (key_name == 'Enabled') or (key_name == 'Status') : continue;
-                key_path = f'{config_path2}/{key_name}'
-#------------------------------------------------------------------------------
-# at this point, expect 'key_name; to be a process label and skip disabled processes
-#---------------v--------------------------------------------------------------
-                enabled = odb_client.odb_get(key_path+'/Enabled')
-                if (enabled == 0) : continue;
-                
-                subdir2 = odb_client.odb_get(key_path) # a loop over the processes on this node
-                for name,value in subdir2.items():
-                    if(name == "Rank"):
-                        rank = int(value)
-                    if(name == "Host"):
-                        host = str(value)
-                    if(name == "XmlrpcPort"):
-                        port = str(value)
-#                    if(name == "Name"):
-#                        pname = str(value)
-                    if(name == "Subsystem"):
-                        subsystem = str(value)
-                    if(name == "AllowedProcessors"):
-                        allowed_processors = str(value)
-                    if(name == "Target"):
-                        target = str(value)                        
-                    if(name == "Prepend"):
-                        prepend = str(value)
-
-                pname = 'undefined'
-                if   (key_name[0:2] == 'br') : pname = 'BoardReader'
-                elif (key_name[0:2] == 'dl') : pname = 'DataLogger'
-                elif (key_name[0:2] == 'ds') : pname = 'Dispatcher'
-                elif (key_name[0:2] == 'eb') : pname = 'EventBuilder'
-                elif (key_name[0:2] == 'rm') : pname = 'RoutingManager'
-                else:
-                    raise Exception(f'ERROR: undefined process type:{label} for {host}')
-
-                host = 'mu2edaq22-ctrl' # it is a hack anyway
-                p = Procinfo(name                = pname ,
-                              rank               = rank     ,
-                              host               = host,
-                              port               = port     ,
-                              label              = key_name  ,
-                              subsystem          = subsystem,
-                              allowed_processors = None,
-                              target             = "none",
-                              prepend            = ""
-                              )
-                p.print()
-                self.procinfos.append(p)
-        else:
-            print(f"Subdirectory {config_path2} not found.")
-        
+        self.fKeepRunning            = True
+        self.config_dir              = config_dir
+        self.transfer                = "Autodetect"
+                                     
+        self.config_name             = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
+        self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
+        self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
+        self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
+        self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
+              
 
         self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
@@ -505,69 +595,61 @@ class FarmManager(Component):
 
         self.do_trace_get_boolean   = False
         self.do_trace_set_boolean   = False
+        self.printlock              = threading.RLock()
+        self.subconfigs_for_run     = []         # not sure what these are 
 
         self.messageviewer_sender   = None
-        self.use_messageviewer      = bool(odb_client.odb_get(config_path+"use_messageviewer"))
-        self.use_messagefacility    = bool(odb_client.odb_get(config_path+"use_messagefacility"))
-        #else
-        #   self.use_messagefacility    = False
+        self.use_messageviewer      = bool(odb_client.odb_get(self.tfm_conf_path+"/use_messageviewer"))
+        self.use_messagefacility    = bool(odb_client.odb_get(self.tfm_conf_path+"/use_messagefacility"))
         self.fake_messagefacility   = False
-        self._validate_setup_script = 1
-
-        self.printlock              = threading.RLock()
-
-        self.subconfigs_for_run     = []         # not sure what these are 
+        self._validate_setup_script = odb_client.odb_get(self.tfm_conf_path+"/validate_setup_script")
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-        self.midas_server_host                   = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
-        self.top_output_dir                      = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
-        self.log_directory                       = self.top_output_dir+'/logs' #None
-        self.record_directory                    = self.top_output_dir+'/run_records' #None
-        self.data_directory_override             = self.top_output_dir+'/data' #None
         self.package_hashes_to_save              = []
         self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
 
-        self.ssh_timeout_in_seconds              = odb_client.odb_get(config_path+"ssh_timeout_in_seconds")# 30  ## was a local var somewhere
+        self.ssh_timeout_in_seconds              = odb_client.odb_get(self.tfm_conf_path+"/ssh_timeout_in_seconds")# 30  ## was a local var somewhere
                                                 
-        self.boardreader_timeout                 = odb_client.odb_get(config_path+"boardreader_timeout")
-        self.eventbuilder_timeout                = odb_client.odb_get(config_path+"eventbuilder_timeout")
-        self.datalogger_timeout                  = odb_client.odb_get(config_path+"datalogger_timeout")
-        self.dispatcher_timeout                  = odb_client.odb_get(config_path+"dispatcher_timeout")
-        self.routingmanager_timeout              = odb_client.odb_get(config_path+"routingmanager_timeout")
+        self.boardreader_timeout                 = odb_client.odb_get(self.tfm_conf_path+"/boardreader_timeout")
+        self.eventbuilder_timeout                = odb_client.odb_get(self.tfm_conf_path+"/eventbuilder_timeout")
+        self.datalogger_timeout                  = odb_client.odb_get(self.tfm_conf_path+"/datalogger_timeout")
+        self.dispatcher_timeout                  = odb_client.odb_get(self.tfm_conf_path+"/dispatcher_timeout")
+        self.routingmanager_timeout              = odb_client.odb_get(self.tfm_conf_path+"/routingmanager_timeout")
 
-        self.advanced_memory_usage               = bool(odb_client.odb_get(config_path+"advanced_memory_usage"))
-        self.strict_fragment_id_mode             = bool(odb_client.odb_get(config_path+"strict_fragment_id_mode"))
-        self.attempt_existing_pid_kill           = bool(odb_client.odb_get(config_path+"kill_existing_processes"))
+        self.advanced_memory_usage               = bool(odb_client.odb_get(self.tfm_conf_path+"/advanced_memory_usage"))
+        self.strict_fragment_id_mode             = bool(odb_client.odb_get(self.tfm_conf_path+"/strict_fragment_id_mode"))
+        self.attempt_existing_pid_kill           = bool(odb_client.odb_get(self.tfm_conf_path+"/kill_existing_processes"))
         self.max_configurations_to_list          = 1000000
-        self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(config_path+"disable_unique_rootfile_labels"))
-        self.disable_private_network_bookkeeping = bool(odb_client.odb_get(config_path+"disable_pn_bookkeeping"))
-        self._validate_setup_script              = odb_client.odb_get(config_path+"validate_setup_script")
+        self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_unique_rootfile_labels"))
+        self.disable_private_network_bookkeeping = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_pn_bookkeeping"))
         self.allowed_processors                  = None
 
-        self.max_num_launch_procs_checks         = odb_client.odb_get(config_path+"max_num_launch_procs_checks")
-        self.launch_procs_wait_time              = odb_client.odb_get(config_path+"launch_procs_wait_time")
-        self.debug_level                         = odb_client.odb_get(config_path+"debug_level")
-        self.transfer                            = odb_client.odb_get(config_path+"transfer_plugin_to_use")
-        self.productsdir                         = None
-        self.spackdir                            = None
-        daq_setup_script                         = os.path.expandvars(self.fClient.odb_get("/Mu2e/MU2E_DAQ_DIR"))
-        self.daq_setup_script                    = daq_setup_script + '/setup_daq.sh'
-        self.daq_dir                             = os.path.dirname(daq_setup_script) + "/"
-        self.spackdir                            = daq_setup_script + '/spack'
-        config_pathsys                           = config_path + "Subsystem/"
-        print(config_pathsys)
-        s  = Subsystem();
-        s.id              = odb_client.odb_get(config_pathsys + "id")                    
-        if (str(odb_client.odb_get(config_pathsys + "source")) != "none"):
-            s.sources.append(odb_client.odb_get(config_pathsys + "source"))
-        if (str(odb_client.odb_get(config_pathsys + "destination")) != "none"):
-            s.destination     = odb_client.odb_get(config_pathsys + "destination")
-        if (str(odb_client.odb_get(config_pathsys + "fragmentmode")) != "none"):
-            s.fragmentMode    = odb_client.odb_get(config_pathsys + "fragmentmode")
-        self.subsystems[s.id] = s
+        self.max_num_launch_procs_checks         = odb_client.odb_get(self.tfm_conf_path+"/max_num_launch_procs_checks")
+        self.launch_procs_wait_time              = odb_client.odb_get(self.tfm_conf_path+"/launch_procs_wait_time")
+        self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
+        self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
+#------------------------------------------------------------------------------
+# definition of artdaq processes
+#------------------------------------------------------------------------------
+        self.init_artdaq_processes()
+#------------------------------------------------------------------------------
+# definition of subsystems
+#-------v----------------------------------------------------------------------
+        self.init_artdaq_subsystems()
+#         config_pathsys                           = self.daq_conf_path + "/Subsystems"
+#         print(config_pathsys)
+#         s  = Subsystem();
+#         s.id              = odb_client.odb_get(config_pathsys + "id")                    
+#         if (str(odb_client.odb_get(config_pathsys + "source")) != "none"):
+#             s.sources.append(odb_client.odb_get(config_pathsys + "source"))
+#         if (str(odb_client.odb_get(config_pathsys + "destination")) != "none"):
+#             s.destination     = odb_client.odb_get(config_pathsys + "destination")
+#         if (str(odb_client.odb_get(config_pathsys + "fragmentmode")) != "none"):
+#             s.fragmentMode    = odb_client.odb_get(config_pathsys + "fragmentmode")
+#         self.subsystems[s.id] = s
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 
@@ -627,8 +709,6 @@ class FarmManager(Component):
         self.print_log("i",'FarmManager lanched in partition %d and now in "%s" state, listening on port %d'
                        % (self.partition(),self.state(),self.rpc_port())
         )
-
-#        print(" >>>> FarmManager.debug_level = ",self.debug_level);
 #------------------------------------------------------------------------------
 # P.M. if debug_level is defined on the command line, override the config file settings
 #------------------------------------------------------------------------------
@@ -869,9 +949,8 @@ class FarmManager(Component):
         if self.advanced_memory_usage and self.max_fragment_size_bytes is not None:
             raise Exception(
                 rcu.make_paragraph(
-                    ("Since advanced_memory_usage is set to true in the settings file (%s), "
+                    ("Since advanced_memory_usage is set to true "
                     "max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)")
-                    % (fn)
                 )
             )
 
@@ -881,17 +960,15 @@ class FarmManager(Component):
             raise Exception(
                 rcu.make_paragraph(
                     "Unable to parse the following variable(s) meant to be set in the "
-                    "settings file, %s"
-                    % (fn + ": " + missing_vars_string)
+                    % (": " + missing_vars_string)
                 )
             )
 
         if not self.advanced_memory_usage and not self.max_fragment_size_bytes:
             raise Exception(
                 rcu.make_paragraph(
-                    "max_fragment_size_bytes isn't set in the settings file, %s; "
-                    "this needs to be set since advanced_memory_usage isn't set to true"
-                    % fn
+                    "max_fragment_size_bytes isn't set."
+                    "It needs to be set since advanced_memory_usage isn't set to true"
                 )
             )
 
@@ -904,9 +981,7 @@ class FarmManager(Component):
                 rcu.make_paragraph(
                     ('Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config",'
                      ' "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" '
-                     'are defined in %s; this is not allowed. For further information, '
-                     'take a look at "The settings file reference" in the FarmManager Manual')
-                    % (fn)
+                     'are defined in %s; this is not allowed. For further information, ')
                 )
             )
 
@@ -914,10 +989,9 @@ class FarmManager(Component):
             self.boardreader_priorities_on_config = self.boardreader_priorities
             self.boardreader_priorities_on_start = self.boardreader_priorities
             self.boardreader_priorities_on_stop = self.boardreader_priorities
-#------------------------------------------------------------------------------
-# after the 'settings' file has been read in, check that everything is in place
+
 #-------v----------------------------------------------------------------------
-        TRACE.TRACE(7,":002: before check_boot_info")
+        TRACE.TRACE(7,":002: before check_boot_info",TRACE_NAME)
         self.check_boot_info()
         return
 #------------------------------------------------------------------------------
@@ -1399,13 +1473,13 @@ class FarmManager(Component):
         elif self.debug_level      is None: undefined_var = "debug_level"
 
         if undefined_var :
-            raise Exception(rcu.make_paragraph('Error: "%s" undefined in FarmManager settings file' % (undefined_var)))
+            raise Exception(rcu.make_paragraph('Error: "%s" undefined' % (undefined_var)))
 
         if self.debug_level == 0:
             self.print_log("w",rcu.make_paragraph(
-                ('"debug_level" is set to 0 in the settings file, %s; while this isn\'t an error '
+                ('"debug_level" is set to 0; while this isn\'t an error '
                  'due to reasons of backwards compatibility, use of this debug level is highly discouraged')
-                % (self.settings_filename()))
+                )
             )
 
         if not os.path.exists(self.daq_setup_script):
@@ -1415,7 +1489,7 @@ class FarmManager(Component):
 
         if num_requested_routingmanagers > len(self.subsystems):
             raise Exception(rcu.make_paragraph(
-                ("%d RoutingManager processes defined in the settings file provided; "
+                ("%d RoutingManager processes defined ; "
                  "you can't have more than the number of subsystems (%d)")
                 % (num_requested_routingmanagers, len(self.subsystems)))
             )
@@ -1428,7 +1502,7 @@ class FarmManager(Component):
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
             raise Exception(rcu.make_paragraph(
                     ("At least one of your desired artdaq processes has a duplicate label; "
-                     "please check the settings file to ensure that each process gets a unique label"))
+                     "please ensure that each process gets a unique label"))
             )
 
 #------------------------------------------------------------------------------
@@ -2129,8 +2203,8 @@ class FarmManager(Component):
                         raise Exception(
                             rcu.make_paragraph(
                                 ('Error: the process label "%s" didn\'t match with any of the regular expressions'
-                                 ' used to rank transition priorities in the settings file, %s')
-                                % (p.label,self.settings_filename())
+                                 ' used to rank transition priorities'
+                                 )
                             )
                         )
                 else:
@@ -2208,8 +2282,8 @@ class FarmManager(Component):
                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
                         raise Exception(
                             rcu.make_paragraph(
-                                'Unable to find fhiclcpp ups product in products directory "%s" provided in the FarmManager settings file, "%s"'
-                                % (self.productsdir, self.settings_filename())
+                                'Unable to find fhiclcpp ups product in products directory "%s" '
+                                % (self.productsdir)
                             )
                         )
 
@@ -2339,7 +2413,7 @@ class FarmManager(Component):
                     self.print_log("e",
                                    rcu.make_paragraph(
                                     ('In order to investigate what happened, you can try re-running with "debug level"'
-                                     ' in your settings file set to 4. If that doesn\'t help, you can directly recreate'
+                                     ' set to 4. If that doesn\'t help, you can directly recreate'
                                      ' what FarmManager did by doing the following:')
                                    ),
                     )
