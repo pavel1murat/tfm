@@ -7,15 +7,20 @@
 # - a mode in which it handles the artdaq fragments
 #-----------------------------------------------------------------------------
 class Subsystem(object):
-    def __init__(self):
-        self.id           =  -1
-        self.sources      = []       # list of strings ? integers ?
-        self.destination  = None
-        self.fragmentMode = None
+    __index = 0;                            # subsystem number counter
+
+    def __init__(self,ss_id):
+        self.id           = ss_id           # ss_id is a string
+        self.index        = Subsystem.__index;        # 
+        self.sources      = []              # list of strings ? integers ?
+        self.destination  = None            # string 
+        self.fragmentMode = None            #
+
+        Subsystem.__index += 1;                       # increment the counter
         
     def __lt__(self, other):
-        if self.id != other.id:
-            
+        if self.index != other.index:
+                                            # both destination and id are strings (names)
             if self.destination == other.id:  
                 # 'self' provides input for 'other', should go before in the ordered list
                 return True
@@ -26,7 +31,8 @@ class Subsystem(object):
 
     def print(self):
         print ("---- subsystem ID:",self.id,
-               " sources:"    ,self.sources,
-               " destination:",self.destination,
-               "fragmentMode:",self.fragmentMode);
+               " index:"           ,self.index,
+               " sources:"         ,self.sources,
+               " destination:"     ,self.destination,
+               "fragmentMode:"     ,self.fragmentMode);
 #------------------------------------------------------------------------------

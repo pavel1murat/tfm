@@ -154,19 +154,22 @@ class FarmManager(Component):
                     print(printstr, flush=True)
                     print("%MSG", flush=True)
                 else:
-
+                    frame = sys._getframe(1)
+                    fn    = frame.f_code.co_filename.split('/')[-1];
+                    ln    = frame.f_lineno
+                    fn_ln = fn+f':{ln}'
+                    
                     if not newline:
-                        sys.stdout.write("%s %s" % (date_time, printstr))
+                        sys.stdout.write("%s %-25s %s" % (date_time, fn_ln, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s " % (date_time), printstr, flush=True)
+                        print("%s  %-25s" % (date_time,fn_ln), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
 
 # The purpose of reset_variables is to reset those members that 
-# (A) aren't necessarily persistent to the process (thus excluding the parameters 
-#     in the settings file (self.settings_filename()) and 
+# (A) aren't necessarily persistent to the process and
 # (B) won't necessarily be set explicitly during the transitions up from the "stopped" state. 
 #
 # E.g., you wouldn't want to return to the "stopped" state with self.exception == True 
@@ -358,6 +361,180 @@ class FarmManager(Component):
         self.print_log("i", "%s::validate_setup_script done (%.1f seconds)." % (__file__,endtime - starttime),2)
 
 #------------------------------------------------------------------------------
+# ODB help functions
+#------------------------------------------------------------------------------
+    def odb_get_int(self,path,default=None):
+        if (self.fClient.odb_exists(path)):
+            return int(self.fClient.odb_get(path));
+        else:
+            return default;
+
+    def odb_get_bool(self,path,default=False):
+        if (self.fClient.odb_exists(path)):
+            return bool(self.fClient.odb_get(path));
+        else:
+            return default;
+
+    def odb_get_string(self,path,default=None):
+        if (self.fClient.odb_exists(path)):
+            return str(self.fClient.odb_get(path));
+        else:
+            return default;
+
+
+#------------------------------------------------------------------------------
+# 'public names' = short names , i.e. 'mu2edaq22'
+#------------------------------------------------------------------------------
+    def hostname_on_private_subnet(self,public_hostname):
+        hname = 'undefined'
+        if (self.private_subnet == '192.168.157'):
+            hname = public_hostname+'-ctrl'
+        elif (self.private_subnet == '131.225.237'):
+            hname = public_hostname
+
+        return hname;
+
+#------------------------------------------------------------------------------
+    def init_artdaq_processes(self):
+
+        self.print_log('i',f'--- START',3)
+        nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
+        nodes_dir  = self.fClient.odb_get(nodes_path);
+        # self.print_log('i',f'nodes_dir:{nodes_dir}',3)
+        # TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
+#------------------------------------------------------------------------------
+# in this directory, expect only nodes (labels)
+#-------v----------------------------------------------------------------------
+#        for short_node_name,node_value in nodes_dir:
+        for short_node_name in nodes_dir.keys():
+            node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
+            enabled = self.fClient.odb_get(node_artdaq_path+'/Enabled')
+            if (enabled == 0):  continue ;
+
+            node_artdaq_dir = self.fClient.odb_get(node_artdaq_path)
+            for key_name,key_value in node_artdaq_dir.items():
+                if (key_name == 'Enabled') or (key_name == 'Status') : continue;
+                process_path = f'{node_artdaq_path}/{key_name}'
+                TRACE.TRACE(8+1,f'process_path:{process_path}',TRACE_NAME)
+#------------------------------------------------------------------------------
+# at this point, expect 'key_name; to be a process label and skip disabled processes
+#---------------v--------------------------------------------------------------
+                enabled = self.fClient.odb_get(process_path+'/Enabled')
+                if (enabled == 0) : continue;
+                
+                subdir2 = self.fClient.odb_get(process_path) # a loop over the processes on this node
+                for name,value in subdir2.items():
+                    if (name == "Rank"):
+                        rank = int(value)
+                    if (name == "XmlrpcPort"):
+                        port = str(value)
+                    if (name == "Subsystem"):
+                        subsystem = str(value)
+                    if (name == "AllowedProcessors"):
+                        allowed_processors = str(value)
+                    if (name == "Target"):
+                        target = str(value)                        
+                    if (name == "Prepend"):
+                        prepend = str(value)
+
+                timeout = 30;                 # seconds
+                pname   = 'undefined';
+#------------------------------------------------------------------------------
+# PM: this naming is something to get rid of - a Procinfo thing has a type, so a
+# name is an overkill
+#------------------------------------------------------------------------------
+                if   (key_name[0:2] == 'br') :
+                    pname   = 'BoardReader'
+                    timeout = self.boardreader_timeout;
+                elif (key_name[0:2] == 'dl') :
+                    pname   = 'DataLogger'
+                    timeout = self.datalogger_timeout;
+                elif (key_name[0:2] == 'ds') :
+                    pname   = 'Dispatcher'
+                    timeout = self.dispatcher_timeout;
+                elif (key_name[0:2] == 'eb') :
+                    pname   = 'EventBuilder'
+                    timeout = self.eventbuilder_timeout;
+                elif (key_name[0:2] == 'rm') :
+                    pname   = 'RoutingManager'
+                    timeout = self.routingmanager_timeout;
+                else:
+                    raise Exception(f'ERROR: undefined process type:{label} for {host}')
+
+                host = self.hostname_on_private_subnet(short_node_name)
+                
+                p = Procinfo(name               = pname,
+                             rank               = rank ,
+                             host               = host ,    # at this point, store long (with '-ctrl' names)
+                             port               = port     ,
+                             timeout            = timeout,
+                             label              = key_name  ,
+                             subsystem          = subsystem,
+                             allowed_processors = None,
+                             target             = "none",
+                             prepend            = ""
+                             )
+                if (p.server == None):
+                    self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
+                else:
+                    p.print();
+                    self.procinfos.append(p)
+
+        self.print_log('i',f'--- END')
+        return;
+#-------^----------------------------------------------------------------------
+# there should be at least one subsystem defined
+# in a configuration, subsystems are described under "DAQ/Subsystems" 
+#---v--------------------------------------------------------------------------
+    def init_artdaq_subsystems(self):
+
+        self.subsystems = {}
+        
+        self.print_log('i','---START')
+
+        path     = self.daq_conf_path + "/Subsystems"
+
+        self.print_log('i',f'path:{path}');
+
+#------------------------------------------------------------------------------
+# expect only subssytem definitions in this subdirectory
+#------------------------------------------------------------------------------
+        dir      = self.fClient.odb_get(path)
+        for (ss_id,data) in dir.items():
+            
+            self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
+
+            subdir_path=path+f'/{ss_id}'
+            self.print_log('i',f'subdir_path:{subdir_path}')
+            
+            s     = Subsystem(ss_id);
+            # assume sources to be a comma-separated list
+            if ('Sources' in data.keys()): 
+                for x in data['Sources'].split(','):
+                    s.sources.append(x)
+                    
+            if ('Destination'  in data.keys()): s.destination  = data['Destination' ];
+            if ('FragmentMode' in data.keys()): s.fragmentMode = data['FragmentMode'];
+#------------------------------------------------------------------------------
+# associative array - a dict, so subsystem ID is a string !
+#------------------------------------------------------------------------------
+            s.print()
+            self.subsystems[s.id] = s
+#-----------^------------------------------------------------------------------
+# associative array - a dict, so subsystem ID is a string !
+#-------v----------------------------------------------------------------------
+        self.print_log('i',f'N subsystems:{len(self.subsystems.keys())}')
+        
+        for k,v in self.subsystems.items():
+            print('k,type  = ',k,type(k))
+            print('v,type  = ',v,type(v))
+            v.print();
+            
+        self.print_log('i','--- END')
+        
+        return
+
+#------------------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
 #---v--------------------------------------------------------------------------
@@ -384,10 +561,30 @@ class FarmManager(Component):
 
         self.reset_variables()
 
-        self.fUser            = os.environ.get("USER");
-        self.fKeepRunning     = True
-        self.config_dir       = config_dir
-        self.transfer         = "Autodetect"
+        self.fUser                   = os.environ.get("USER");
+        self.mu2e_daq_dir            = os.path.expandvars(self.fClient.odb_get('/Mu2e/MU2E_DAQ_DIR'));
+        self.spackdir                = self.mu2e_daq_dir + '/spack'
+        self.daq_setup_script        = os.path.expandvars(self.fClient.odb_get('/Mu2e/DaqSetupScript'))
+
+        self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
+        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+
+        TRACE.TRACE(7,f'top_output_dir:{self.top_output_dir}',TRACE_NAME);
+        self.log_directory           = self.top_output_dir+'/logs'        # None
+        self.record_directory        = self.top_output_dir+'/run_records' # None
+        self.data_directory_override = self.top_output_dir+'/data'        # None
+        self.productsdir             = None
+
+        self.fKeepRunning            = True
+        self.config_dir              = config_dir
+        self.transfer                = "Autodetect"
+                                     
+        self.config_name             = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
+        self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
+        self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
+        self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
+        self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
+              
 
         self.boardreader_priorities           = None
         self.boardreader_priorities_on_config = None
@@ -419,50 +616,56 @@ class FarmManager(Component):
 
         self.do_trace_get_boolean   = False
         self.do_trace_set_boolean   = False
+        self.printlock              = threading.RLock()
+        self.subconfigs_for_run     = []         # not sure what these are 
 
         self.messageviewer_sender   = None
-        self.use_messageviewer      = True
-        self.use_messagefacility    = True
+        self.use_messageviewer      = bool(odb_client.odb_get(self.tfm_conf_path+"/use_messageviewer"))
+        self.use_messagefacility    = bool(odb_client.odb_get(self.tfm_conf_path+"/use_messagefacility"))
         self.fake_messagefacility   = False
-        self._validate_setup_script = 1
-
-        self.printlock              = threading.RLock()
-
-        self.subconfigs_for_run     = []         # not sure what these are 
+        self._validate_setup_script = odb_client.odb_get(self.tfm_conf_path+"/validate_setup_script")
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-        self.midas_server_host                   = None
-        self.log_directory                       = None
-        self.record_directory                    = None
         self.package_hashes_to_save              = []
         self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
 
-        self.ssh_timeout_in_seconds              = 30  ## was a local var somewhere
+        self.ssh_timeout_in_seconds              = odb_client.odb_get(self.tfm_conf_path+"/ssh_timeout_in_seconds")# 30  ## was a local var somewhere
                                                 
-        self.boardreader_timeout                 = 30
-        self.eventbuilder_timeout                = 30
-        self.datalogger_timeout                  = 30
-        self.dispatcher_timeout                  = 30
-        self.routingmanager_timeout              = 30
+        self.boardreader_timeout                 = odb_client.odb_get(self.tfm_conf_path+"/boardreader_timeout")
+        self.eventbuilder_timeout                = odb_client.odb_get(self.tfm_conf_path+"/eventbuilder_timeout")
+        self.datalogger_timeout                  = odb_client.odb_get(self.tfm_conf_path+"/datalogger_timeout")
+        self.dispatcher_timeout                  = odb_client.odb_get(self.tfm_conf_path+"/dispatcher_timeout")
+        self.routingmanager_timeout              = odb_client.odb_get(self.tfm_conf_path+"/routingmanager_timeout")
 
-        self.advanced_memory_usage               = False
-        self.strict_fragment_id_mode             = False
-        self.attempt_existing_pid_kill           = False
-        self.data_directory_override             = None
+        self.advanced_memory_usage               = bool(odb_client.odb_get(self.tfm_conf_path+"/advanced_memory_usage"))
+        self.strict_fragment_id_mode             = bool(odb_client.odb_get(self.tfm_conf_path+"/strict_fragment_id_mode"))
+        self.attempt_existing_pid_kill           = bool(odb_client.odb_get(self.tfm_conf_path+"/kill_existing_processes"))
         self.max_configurations_to_list          = 1000000
-        self.disable_unique_rootfile_labels      = False
-        self.disable_private_network_bookkeeping = False
+        self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_unique_rootfile_labels"))
+        self.disable_private_network_bookkeeping = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_pn_bookkeeping"))
         self.allowed_processors                  = None
 
-        self.max_num_launch_procs_checks         = 20
-        self.launch_procs_wait_time              = 40
-
-        self.productsdir                         = None
-        self.spackdir                            = None
-
+        self.max_num_launch_procs_checks         = odb_client.odb_get(self.tfm_conf_path+"/max_num_launch_procs_checks")
+        self.launch_procs_wait_time              = odb_client.odb_get(self.tfm_conf_path+"/launch_procs_wait_time")
+        self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
+        self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
+#------------------------------------------------------------------------------
+# definition of subsystems
+#-------v----------------------------------------------------------------------
+        self.init_artdaq_subsystems()
+#------------------------------------------------------------------------------
+# definition of artdaq processes.. processes know about their subsystems
+#------------------------------------------------------------------------------
+        self.init_artdaq_processes()
+#------------------------------------------------------------------------------
+# P.M. so far, intentionally, handle only one source and one destination - haven't 
+#      seen any configuration with a subsystem having two sources. 
+#      however, 'sources is an array, so this may need to be changed
+#------------------------------------------------------------------------------            
+              
         # Here, states refers to individual artdaq process states, not the FarmManager state
         self.target_states = {
             "Init"    : "Ready",
@@ -517,8 +720,6 @@ class FarmManager(Component):
         self.print_log("i",'FarmManager lanched in partition %d and now in "%s" state, listening on port %d'
                        % (self.partition(),self.state(),self.rpc_port())
         )
-
-#        print(" >>>> FarmManager.debug_level = ",self.debug_level);
 #------------------------------------------------------------------------------
 # P.M. if debug_level is defined on the command line, override the config file settings
 #------------------------------------------------------------------------------
@@ -726,12 +927,6 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def read_settings(self):
 
-        self.midas_server_host       = os.environ["MIDAS_SERVER_HOST"] if "MIDAS_SERVER_HOST" in os.environ else "localhost"
-        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
-        self.log_directory           = self.top_output_dir+'/logs';
-        self.record_directory        = self.top_output_dir+'/run_records';
-        self.data_directory_override = self.top_output_dir+'/data';
-        
         for subdir in [self.log_directory, self.record_directory, self.data_directory_override]:
             if (not os.path.exists(subdir)): os.makedirs(subdir)
             if (subdir == self.record_directory):
@@ -744,370 +939,6 @@ class FarmManager(Component):
                 inode = os.stat(subdir).st_ino
                 fn    = subdir+'/.record_directory_info'
                 with open(fn,"w") as f: f.write("inode: %s" % inode);
-#---------------^--------------------------------------------------------------
-# here the file reading part starts - it will get reduced down to zero soon
-#-------v----------------------------------------------------------------------
-        fn = self.settings_filename();
-
-        TRACE.TRACE(7,":001:START fn=%s exists=%i"%(fn,os.path.exists(fn)))
-
-        if not os.path.exists(fn): raise Exception('Unable to find settings file %s'%fn)
-
-        inf                    = open(fn)
-        num_expected_processes = 0
-        num_actual_processes   = 0
-
-        input_lines            = inf.readlines();
-        TRACE.TRACE(7,":0025: inf.readlines.len: %i"%(len(input_lines)))
-        # print("---- read_settings : emoe\n");
-        for line in input_lines:
-            TRACE.TRACE(17,":0026: line: %s"%line)
-            line = os.path.expandvars(line).strip()
-            line = line.split('#')[0];
-#------------------------------------------------------------------------------
-# skip empty and comment-only lines
-# each line is supposed to have a 'key:data' format
-# try to order the keywords alphabetically - that simplifies their management
-#-----------v------------------------------------------------------------------
-            if (line == '') :                               continue
-
-            words = line.split(':');
-            key   = words[0].strip()
-            data  = words[1].strip()
-            par   = data.split();
-            npar  = len(par)
-
-            if "advanced_memory_usage" in line or "advanced memory usage" in line:
-                res = re.search(r"[Tt]rue",data)
-                if res: self.advanced_memory_usage = True
-
-            elif "allowed_processors" in line or "allowed processors" in line:
-                self.allowed_processors = line.split()[-1].strip()
-
-#------------------------------------------------------------------------------
-# P.Murat: 'BoardReader label host port subsystem allowed_processors prepend'
-#          if the value of 'allowed_processors' is undefined (-1), set it to None
-#          prepend is smth prepenced to the boardreader launch command, looks 
-#          like a debugging tool
-#          set it to '' 
-#          assume no prepend for others 
-#          assume boardreaders are defined first
-# TODO it looks that initialization of BoardReader's and other components 
-#      (EventBuilder's and friends) can be combined in one function
-#-----------v------------------------------------------------------------------
-            elif (key == "BoardReader"):
-                assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
-            
-                num_actual_processes += 1
-                rank                 = num_actual_processes-1
-            
-                label                = par[0]
-                host                 = par[1];
-                port                 = par[2];
-                if (port == "-1"): 
-                    port = str(self.component_port_number(rank));
-
-                subsystem            = par[3];
-
-                ap                   = None            # None = "allow all processors"
-                if (par[4] != "-1"  ): ap = par[4];
-
-                prepend              = "";
-                if (par[5] != "none"): prepend = par[5];
-            
-                target             = par[6];
-
-                p = Procinfo(name               = key      ,
-                             rank               = rank     ,
-                             host               = host     ,
-                             port               = port     ,
-                             label              = label    ,
-                             subsystem          = subsystem,
-                             allowed_processors = ap       ,
-                             target             = target   ,
-                             prepend            = prepend
-                    )
-                # p.print()
-                self.procinfos.append(p);
-
-            elif "boardreader_priorities:" in line or "boardreader priorities:" in line:
-                res = re.search(r"^\s*boardreader[ _]priorities\s*:\s*(.*)", line)
-                if res:
-                    self.boardreader_priorities = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s'%(line.strip(),fn))
-            elif ("boardreader_priorities_on_config:" in line or "boardreader priorities on config:" in line):
-                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]config:\s*(.*)", line)
-                if res:
-                    self.boardreader_priorities_on_config = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_config
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-            elif (
-                "boardreader_priorities_on_start:" in line or "boardreader priorities on start:" in line):
-                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]start:\s*(.*)", line)
-                if res:
-                    self.boardreader_priorities_on_start = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_start
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-
-            elif ("boardreader_priorities_on_stop:" in line or "boardreader priorities on stop:" in line):
-                res = re.search(r"^\s*boardreader[ _]priorities[ _]on[ _]stop:\s*(.*)", line)
-                if res:
-                    self.boardreader_priorities_on_stop = [
-                        regexp.strip() for regexp in res.group(1).split()
-                    ]
-                    # print self.boardreader_priorities_on_stop
-                else:
-                    raise Exception('Incorrectly formatted line "%s" in %s' % (line.strip(),fn))
-
-            elif "boardreader_timeout" in line or "boardreader timeout" in line:
-                self.boardreader_timeout = int(line.split()[-1].strip())
-
-            elif ((key == "DataLogger"    ) or 
-                  (key == "Dispatcher"    ) or 
-                  (key == "EventBuilder"  ) or 
-                  (key == "RoutingManager")    ):
-
-                assert (npar == 7), "ERROR reading the line:%s, npar=%i" % (line,npar)
-#------------------------------------------------------------------------------
-# here, components are ranked dynamically , in the sequence they are introduced
-#------------------------------------------------------------------------------
-                num_actual_processes += 1
-                rank                  = num_actual_processes - 1
-
-                label                 = par[0]
-                host                  = par[1]
-                port                  = par[2]
-                if (port == "-1"): 
-                    port = str(self.component_port_number(rank));
-                    
-                subsystem             = par[3]
-
-                ap                    = None            # None = "allow all processors"
-                if (par[4] != "-1"): ap = par[4]
-
-                prepend               = "";
-                if (par[5] != "none"): prepend = par[5]
-
-                target                = None
-                if (par[6] != "none"): target = par[6]
-#------------------------------------------------------------------------------
-# remember, boardreaders should be defined in the input file first
-#---------------v--------------------------------------------------------------
-                p = Procinfo(name               = key      ,
-                             label              = label    ,
-                             rank               = rank     ,
-                             host               = host     ,
-                             port               = port     , 
-                             subsystem          = subsystem,
-                             allowed_processors = ap       ,
-                             target             = target   ,
-                             prepend            = prepend
-                    )
-                # p.print();
-                self.procinfos.append(p)
-
-            elif "datalogger_timeout" in line or "datalogger timeout" in line:
-                self.datalogger_timeout = int(line.split()[-1].strip())
-
-            elif (key == "daq_setup_script"):
-                self.daq_setup_script = data;
-                self.daq_dir          = os.path.dirname(self.daq_setup_script) + "/"
-
-#..            elif "data_directory_override" in line or "data directory override" in line:
-#..                self.data_directory_override = data
-#..                if self.data_directory_override[-1] != "/":
-#..                    self.data_directory_override = self.data_directory_override + "/"
-
-            elif (key == "debug_level"):
-                self.debug_level = int(data)
-
-            elif ("disable_unique_rootfile_labels" in line or "disable unique rootfile labels" in line):
-                token = line.split()[-1].strip()
-                if "true" in token or "True" in token:
-                    self.disable_unique_rootfile_labels = True
-                elif "false" in token or "False" in token:
-                    self.disable_unique_rootfile_labels = False
-                else:
-                    raise Exception(
-                        'disable_unique_rootfile_labels must be set to either [Tt]rue'
-                        ' or [Ff]alse in settings file "%s"' % (fn))
-
-            elif ("disable_private_network_bookkeeping" in line or "disable private network bookkeeping" in line):
-                token = line.split()[-1].strip()
-                if "true" in token or "True" in token:
-                    self.disable_private_network_bookkeeping = True
-                elif "false" in token or "False" in token:
-                    self.disable_private_network_bookkeeping = False
-                else:
-                    raise Exception(
-                        'disable_private_network_bookkeeping must be set '
-                        'to either [Tt]rue or [Ff]alse in settings file "%s"' % (fn))
-
-            elif (key == "disable_recovery"):
-                if (data.upper() == "TRUE"): self.disable_recovery = True
-                else                       : self.disable_recovery = False
-
-            elif "dispatcher_timeout" in line or "dispatcher timeout" in line:
-                self.dispatcher_timeout = int(line.split()[-1].strip())
-
-            elif "eventbuilder_timeout" in line or "eventbuilder timeout" in line:
-                self.eventbuilder_timeout = int(line.split()[-1].strip())
-
-            elif "fake_messagefacility" in line or "fake messagefacility" in line:
-                res = re.search(r"[Tt]rue",data)
-                if res: self.fake_messagefacility = True
-
-#..            elif "log_directory" in line or "log directory" in line:
-#..                self.log_directory = line.split()[-1].strip()
-#..
-#..            elif (key == "top_output_dir"):  
-#..#------------------------------------------------------------------------------
-#..# make sure output directories exist
-#..#------------------------------------------------------------------------------
-#..                self.top_output_dir = data
-#..                for subdir in ['logs','data','run_records']:
-#..                    path = self.top_output_dir+'/'+subdir
-#..                    if (not os.path.exists(path)):
-#..                        os.makedirs(path)
-#..                        if (subdir == 'run_records'):
-#..#------------------------------------------------------------------------------
-#..# P.M. as a matter of some kind of [inherited] safety, add the dot file.. 
-#..#      ... not sure what kind of safety that is
-#..#      the dot file, '.record_directory_info', contains the number of the first 
-#..#      directory inode 
-#..#------------------------------------------------------------------------------
-#..                            inode = os.stat(path).st_ino
-#..                            fn    = path+'/.record_directory_info'
-#..                            with open(fn,"w") as f: f.write("inode: %s" % inode);
-            elif (key == "manage_processes"):
-                if (data.upper() == "TRUE"): self.manage_processes = True
-                else                       : self.manage_processes = False
-
-# no more ups
-#            elif ("productsdir_for_bash_scripts" in line or "productsdir for bash scripts" in line):
-#                self.productsdir = data
-
-#..            elif "record_directory" in line or "record directory" in line:
-#..                self.record_directory = line.split()[-1].strip()
-
-            elif (key == "request_address"): self.request_address = data
-
-            elif (key == "routing_manager_timeout"     ): self.routingmanager_timeout = int(data)
-
-            elif ("spack_root_for_bash_scripts" in line): self.spackdir = line.split()[-1].strip()
-
-            elif "package_hashes_to_save" in line or "package hashes to save" in line:
-                res = re.search(r".*\[(.*)\].*", line)
-
-                if not res:
-                    raise Exception(rcu.make_paragraph("Unable to parse package_hashes_to_save from"+fn))
-
-                if res.group(1).strip() == "":
-                    continue
-
-                package_hashes_to_save_unprocessed = res.group(1).split(",")
-
-                for ip, package in enumerate(package_hashes_to_save_unprocessed):
-                    package = package.replace('"', "")
-                    package = package.replace(
-                        " ", ""
-                    )  # strip() doesn't seem to work here
-                    self.package_hashes_to_save.append(package)
-
-            elif "max_fragment_size_bytes" in line or "max fragment size bytes" in line:
-                max_fragment_size_bytes_token = line.split()[-1].strip()
-
-                if max_fragment_size_bytes_token[0:2] != "0x":
-                    self.max_fragment_size_bytes = int(max_fragment_size_bytes_token)
-                else:
-                    self.max_fragment_size_bytes = int(
-                        max_fragment_size_bytes_token[2:], 16
-                    )
-
-                if self.max_fragment_size_bytes % 8 != 0:
-                    raise Exception('Value of "max_fragment_size_bytes" in "%s" should be a multiple of 8' % (fn))
-
-            elif ("max_configurations_to_list" in line or "max configurations to list" in line):
-                self.max_configurations_to_list = int(data)
-
-            elif "use_messageviewer" in line or "use messageviewer" in line:
-                token = line.split()[-1].strip()
-
-                res = re.search(r"[Ff]alse", token)
-
-                if res:
-                    self.use_messageviewer = False
-            elif "use_messagefacility" in line or "use messagefacility" in line:
-                token = line.split()[-1].strip()
-
-                res = re.search(r"[Ff]alse", token)
-
-                if res:
-                    self.use_messagefacility = False
-            elif "strict_fragment_id_mode" in line or "strict fragment id mode" in line:
-                token = line.split()[-1].strip()
-
-                res = re.search(r"[Tt]rue", token)
-
-                if res:
-                    self.strict_fragment_id_mode = True
-#------------------------------------------------------------------------------
-# subsystem could have multiple sources and (?) multiple destinations 
-#-----------v------------------------------------------------------------------
-            elif (key == "Subsystem"):
-                print("key=Subsystem, pars: ",par);
-                s           = Subsystem();
-                s.id        = par[0];                        # should always be defined
-
-#------------------------------------------------------------------------------
-# P.M. so far, intentionally, handle only one source and one destination - haven't 
-#      seen any configuration with a subsystem having two sources. 
-#      however, 'sources is an array, so this may need to be changed
-#------------------------------------------------------------------------------
-                if (par[1] != "none"): s.sources.append(par[1]);
-                if (par[2] != "none"): s.destination = par[2];
-
-                s.fragmentMode = par[3];                        # should always be defined
-                
-                self.subsystems[s.id] = s                       # an associative array
-
-            elif "max_launch_checks" in line or "max launch checks" in line:
-                self.max_num_launch_procs_checks = int(data)
-
-            elif "launch_procs_wait_time" in line or "launch procs wait time" in line:
-                self.launch_procs_wait_time = int(data)
-
-            elif "kill_existing_processes" in line or "kill existing processes" in line:
-                res = re.search(r"[Tt]rue", data)
-                if res: self.attempt_existing_pid_kill = True
-
-            elif "transfer_plugin_to_use" in line or "transfer plugin to use" in line:
-                self.transfer = data
-
-            elif (key == 'validate_setup_script'):
-                self._validate_setup_script = int(data)
-            else:
-#------------------------------------------------------------------------------
-# JCF, Mar-29-2019
-# In light of the experience at ProtoDUNE, it appears necessary to allow experiments 
-# an ability to overwrite FHiCL parameters at will in the boot file. A use case that
-# came up was that a fragment generator had a parameter whose value needed to be a function 
-# of the partition, but the fragment generator had no direct knowledge of what partition it was on
-#---------------v--------------------------------------------------------------
-                self.bootfile_fhicl_overwrites[key] = data
-#------------------------------------------------------------------------------
-# end of the input loop
-# make sure all needed variables were properly initialized
-#-------v----------------------------------------------------------------------
         missing_vars = []
 
         # Must wait at least one seconds between checks
@@ -1129,9 +960,8 @@ class FarmManager(Component):
         if self.advanced_memory_usage and self.max_fragment_size_bytes is not None:
             raise Exception(
                 rcu.make_paragraph(
-                    ("Since advanced_memory_usage is set to true in the settings file (%s), "
+                    ("Since advanced_memory_usage is set to true "
                     "max_fragment_size_bytes must NOT be set (i.e., delete it or comment it out)")
-                    % (fn)
                 )
             )
 
@@ -1141,17 +971,15 @@ class FarmManager(Component):
             raise Exception(
                 rcu.make_paragraph(
                     "Unable to parse the following variable(s) meant to be set in the "
-                    "settings file, %s"
-                    % (fn + ": " + missing_vars_string)
+                    % (": " + missing_vars_string)
                 )
             )
 
         if not self.advanced_memory_usage and not self.max_fragment_size_bytes:
             raise Exception(
                 rcu.make_paragraph(
-                    "max_fragment_size_bytes isn't set in the settings file, %s; "
-                    "this needs to be set since advanced_memory_usage isn't set to true"
-                    % fn
+                    "max_fragment_size_bytes isn't set."
+                    "It needs to be set since advanced_memory_usage isn't set to true"
                 )
             )
 
@@ -1164,9 +992,7 @@ class FarmManager(Component):
                 rcu.make_paragraph(
                     ('Both "boardreader_priorities" and at least one of "boardreader_priorities_on_config",'
                      ' "boardreader_priorities_on_start", and "boardreader_priorities_on_stop" '
-                     'are defined in %s; this is not allowed. For further information, '
-                     'take a look at "The settings file reference" in the FarmManager Manual')
-                    % (fn)
+                     'are defined in %s; this is not allowed. For further information, ')
                 )
             )
 
@@ -1174,10 +1000,9 @@ class FarmManager(Component):
             self.boardreader_priorities_on_config = self.boardreader_priorities
             self.boardreader_priorities_on_start = self.boardreader_priorities
             self.boardreader_priorities_on_stop = self.boardreader_priorities
-#------------------------------------------------------------------------------
-# after the 'settings' file has been read in, check that everything is in place
+
 #-------v----------------------------------------------------------------------
-        TRACE.TRACE(7,":002: before check_boot_info")
+        TRACE.TRACE(7,":002: before check_boot_info",TRACE_NAME)
         self.check_boot_info()
         return
 #------------------------------------------------------------------------------
@@ -1659,13 +1484,13 @@ class FarmManager(Component):
         elif self.debug_level      is None: undefined_var = "debug_level"
 
         if undefined_var :
-            raise Exception(rcu.make_paragraph('Error: "%s" undefined in FarmManager settings file' % (undefined_var)))
+            raise Exception(rcu.make_paragraph('Error: "%s" undefined' % (undefined_var)))
 
         if self.debug_level == 0:
             self.print_log("w",rcu.make_paragraph(
-                ('"debug_level" is set to 0 in the settings file, %s; while this isn\'t an error '
+                ('"debug_level" is set to 0; while this isn\'t an error '
                  'due to reasons of backwards compatibility, use of this debug level is highly discouraged')
-                % (self.settings_filename()))
+                )
             )
 
         if not os.path.exists(self.daq_setup_script):
@@ -1675,7 +1500,7 @@ class FarmManager(Component):
 
         if num_requested_routingmanagers > len(self.subsystems):
             raise Exception(rcu.make_paragraph(
-                ("%d RoutingManager processes defined in the settings file provided; "
+                ("%d RoutingManager processes defined ; "
                  "you can't have more than the number of subsystems (%d)")
                 % (num_requested_routingmanagers, len(self.subsystems)))
             )
@@ -1688,7 +1513,7 @@ class FarmManager(Component):
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
             raise Exception(rcu.make_paragraph(
                     ("At least one of your desired artdaq processes has a duplicate label; "
-                     "please check the settings file to ensure that each process gets a unique label"))
+                     "please ensure that each process gets a unique label"))
             )
 
 #------------------------------------------------------------------------------
@@ -2389,8 +2214,8 @@ class FarmManager(Component):
                         raise Exception(
                             rcu.make_paragraph(
                                 ('Error: the process label "%s" didn\'t match with any of the regular expressions'
-                                 ' used to rank transition priorities in the settings file, %s')
-                                % (p.label,self.settings_filename())
+                                 ' used to rank transition priorities'
+                                 )
                             )
                         )
                 else:
@@ -2468,8 +2293,8 @@ class FarmManager(Component):
                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
                         raise Exception(
                             rcu.make_paragraph(
-                                'Unable to find fhiclcpp ups product in products directory "%s" provided in the FarmManager settings file, "%s"'
-                                % (self.productsdir, self.settings_filename())
+                                'Unable to find fhiclcpp ups product in products directory "%s" '
+                                % (self.productsdir)
                             )
                         )
 
@@ -2599,7 +2424,7 @@ class FarmManager(Component):
                     self.print_log("e",
                                    rcu.make_paragraph(
                                     ('In order to investigate what happened, you can try re-running with "debug level"'
-                                     ' in your settings file set to 4. If that doesn\'t help, you can directly recreate'
+                                     ' set to 4. If that doesn\'t help, you can directly recreate'
                                      ' what FarmManager did by doing the following:')
                                    ),
                     )
@@ -2625,28 +2450,28 @@ class FarmManager(Component):
 # 2) can have timeout a parameter of the Procinfo thing
 # P.Murat: create_time_server_proxy - make it a separate function
 #---v--------------------------------------------------------------------------
-    def create_time_server_proxy(self):
-        starttime = time.time()
-        for p in self.procinfos:
-
-            if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
-            elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
-            elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
-            elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
-            elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
-
-            try:
-                p.server = TimeoutServerProxy(p.socketstring, timeout)
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
-                return -1
-#------------------------------------------------------------------------------
-#       everything is fine
-#-------v----------------------------------------------------------------------
-        endtime = time.time()
-        self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
-        return 0
+#     def create_time_server_proxy(self):
+#         starttime = time.time()
+#         for p in self.procinfos:
+# 
+#             if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
+#             elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
+#             elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
+#             elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
+#             elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
+# 
+#             try:
+#                 p.server = TimeoutServerProxy(p.socketstring, timeout)
+#             except Exception:
+#                 self.print_log("e", traceback.format_exc())
+#                 self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
+#                 return -1
+# #------------------------------------------------------------------------------
+# #       everything is fine
+# #-------v----------------------------------------------------------------------
+#         endtime = time.time()
+#         self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
+#         return 0
 
 #------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
@@ -3076,10 +2901,10 @@ class FarmManager(Component):
         rc = self.check_launch_results();
         if (rc != 0): return;
 
-        self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
-
-        rc = self.create_time_server_proxy();
-        if (rc != 0): return;
+#         self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
+# 
+#         rc = self.create_time_server_proxy();
+#         if (rc != 0): return;
 
         self.print_log("i", "CONFIG transition 013: before self.manage_processes")
 #------------------------------------------------------------------------------
@@ -3087,11 +2912,6 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         rc = self.get_lognames();
         if (rc != 0): return;
-#------------------------------------------------------------------------------
-#  former end of DO_BOOT
-#------------------------------------------------------------------------------
-#        if (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
-#            self.add_ranks_from_ranksfile()
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submission
 #-------v----------------------------------------------------------------------
@@ -3271,23 +3091,6 @@ class FarmManager(Component):
             return
 
         self.stop_datataking()
-
-#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-#            os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition())):
-#             run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
-#             os.chmod(run_record_directory, 0o755)
-#
-#             shutil.copyfile(
-#                 "/tmp/info_to_archive_partition%d.txt" % self.partition(),
-#                 "%s/rc_info_stop.txt" % (run_record_directory),
-#             )
-#             os.chmod(run_record_directory, 0o555)
-#
-#             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
-#                 self.alert_and_recover(rcu.make_paragraph(
-#                     ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
-#                      "does original file exist?") % (self.partition(), run_record_directory))
-#                 )
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_stop)
@@ -3787,10 +3590,6 @@ class FarmManager(Component):
 # parameters are passed to the FarmManager constructor
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
-
-#    pn = None;
-#    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
-#    if (x) : pn = int(x);
 
     parser = argparse.ArgumentParser(description="FarmManager")
 

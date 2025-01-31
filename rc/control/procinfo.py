@@ -21,7 +21,11 @@
 # host and port
 #------------------------------------------------------------------------------
 import os, sys, re
-import tfm.rc.control.utilities as rcu
+import tfm.rc.control.utilities as     rcu
+from   tfm.rc.io.timeoutclient  import TimeoutServerProxy
+
+import    TRACE
+TRACE_NAME="procinfo"
 
 BOARD_READER    = 1;
 EVENT_BUILDER   = 2;
@@ -31,20 +35,20 @@ ROUTING_MANAGER = 5;
 
 class Procinfo(object):
 
-    def __init__(
-        self,
-        name,
-        rank,
-        host,
-        port,
-        label              = None,
-        subsystem          = "1",
-        allowed_processors = None,
-        target             = None,
-        prepend            = "",
-        fhicl              = None,
-        fhicl_file_path    = [],
-    ):
+    def __init__(self,
+                 name,
+                 rank,
+                 host,
+                 port,
+                 timeout            = 30,         # PM: pick some reasonable default
+                 label              = None,
+                 subsystem          = "1",
+                 allowed_processors = None,
+                 target             = None,
+                 prepend            = "",
+                 fhicl              = None,
+                 fhicl_file_path    = [],
+                 ):
         self.name               = name
         self.rank               = rank
         self.port               = port
@@ -64,6 +68,13 @@ class Procinfo(object):
         elif (name == "Dispatcher"    ) : self._type = DISPATCHER     ;
         elif (name == "RoutingManager") : self._type = ROUTING_MANAGER;
 
+        self.server = None
+        xmlrpc_url  = "http://" + self.rpc_server() + "/RPC2"
+        try:
+            self.server = TimeoutServerProxy(xmlrpc_url, timeout)
+        except Exception:
+            TRACE.TRACE(3,f'failed to create an XMLRPC server for process:{label} and socket:{xmlrpc_url}',TRACE_NAME);
+
         # FHiCL code actually sent to the process
 
         # JCF, 11/11/14 -- note that "fhicl_used" will be modified
@@ -82,7 +93,6 @@ class Procinfo(object):
         # changing the commensurate string in check_proc_transition!
 
         self.lastreturned = "FarmManager: ARTDAQ PROCESS NOT YET CALLED"
-        self.socketstring = "http://" + self.rpc_server() + "/RPC2"
         self.state        = "nonexistent"
 
 #------------------------------------------------------------------------------
@@ -92,8 +102,7 @@ class Procinfo(object):
         return self._type;
 #------------------------------------------------------------------------------
 # P.Murat: in the Edwards Center, the daq servers communicate using the private
-#          data network, where mu2edaq09 has the name of mu2edaq09-data
-#          - change host names in $ARTDAQ_CONFIG/settings
+#          data network, where mu2edaq09 has the name of mu2edaq09-ctrl
 #------------------------------------------------------------------------------
     def rpc_server(self):
 #        return self.host+'-data:'+self.port;
