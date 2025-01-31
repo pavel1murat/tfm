@@ -8,7 +8,7 @@
 #
 # don't set debug_level to zero - smth is going on
 #------------------------------------------------------------------------------
-debug_level                  : 1                           # debug_level ranges from 1 to 4 in increasing level of verbosity
+debug_level                  : 4                           # debug_level ranges from 1 to 4 in increasing level of verbosity
 daq_setup_script             : $MU2E_DAQ_DIR/setup_daq.sh  # location of the ARTDAQ setup script
 spack_root_for_bash_scripts  : $MU2E_DAQ_DIR/spack
 top_output_dir               : $DAQ_OUTPUT_TOP
@@ -31,15 +31,15 @@ Subsystem   :  1     none         none          none
 #            label     host       port subsystem  allowed   prepend target
 #                                              processors
 #------------------------------------------------------------------------------
-BoardReader : br01  mu2edaq09-ctrl  -1    1          -1       none    none
-BoardReader : br02  mu2edaq22-ctrl  -1    1          -1       none    none
+BoardReader : br22  mu2edaq11-ctrl  21122    1          -1       none    none
+BoardReader : br44  mu2edaq22-ctrl  21144    1          -1       none    none
 #
-EventBuilder: eb01  mu2edaq09-ctrl  -1    1          -1       none    none
-EventBuilder: eb02  mu2edaq22-ctrl  -1    1          -1       none    none
+EventBuilder: eb44  mu2edaq22-ctrl  21244    1          -1       none    none
+# EventBuilder: eb02  mu2edaq22-ctrl  -21202    1          -1       none    none
 #
-DataLogger  : dl01  mu2edaq09-ctrl  -1    1          -1       none    none
+DataLogger  : dl44  mu2edaq22-ctrl  21344    1          -1       none    none
 #
-Dispatcher  : ds01  mu2edaq09-ctrl  -1    1          -1       none    none
+Dispatcher  : ds44  mu2edaq22-ctrl  21444    1          -1       none    none
 #------------------------------------------------------------------------------
 # JCF, Sep-16-2017
 

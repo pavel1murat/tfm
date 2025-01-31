@@ -21,7 +21,9 @@ def launch_procs_on_host(self,host,
                          launch_commands_to_run_on_host,
                          launch_commands_to_run_on_host_background,
                          launch_commands_on_host_to_show_user):
-    self.print_log("d", "[manage_processes_direct::launch_procs_on_host]: executing commands to launch processes on %s" % (host),2)
+    oname = '"[manage_processes_direct::launch_procs_on_host]'
+    
+    self.print_log("d", oname+f': executing commands to launch processes on {host}',2)
 
     # Before we try launching the processes, let's make sure there
     # aren't any pre-existing processes listening on the same ports
@@ -33,10 +35,11 @@ def launch_procs_on_host(self,host,
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
                                 host,grepped_lines)
 
-    TRACE.TRACE(7,f":001:START len(preexisting_pids)={len(preexisting_pids)}")
+    TRACE.TRACE(4,f":001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}")
     
     if self.attempt_existing_pid_kill and len(preexisting_pids) > 0:
-        self.print_log("i", "Found existing processes on %s" % (host))
+        self.print_log("i", "Found existing processes on %s:%s" % (host,preexisting_pids))
+        TRACE.TRACE(4,f':0011: Found existing processes on {host} pids:{preexisting_pids}')
 
         kill_procs_on_host(self, host, kill_art=True, use_force=True)
 
@@ -56,6 +59,7 @@ def launch_procs_on_host(self,host,
         )
 
     if len(preexisting_pids) > 0:
+        TRACE.TRACE(4,f":003: preexisting_pids on {host}:{preexisting_pids}")
         self.print_log("e",rcu.make_paragraph(
             ("On host %s, found artdaq process(es) already existing which use the ports"
              " TFM was going to use; this may be the result of an improper cleanup from"
@@ -70,7 +74,7 @@ def launch_procs_on_host(self,host,
                  " see error message above for details"))
         )
 
-    self.print_log("d","[manage_processes_direct::launch_procs_on_host]: after check for existing processes on %s" % host,2)
+    self.print_log("d",oname+f': after check for existing processes on {host}',2)
 #------------------------------------------------------------------------------
 # each command already terminated by ampersand
 #---v--------------------------------------------------------------------------
@@ -81,15 +85,16 @@ def launch_procs_on_host(self,host,
     if not rcu.host_is_local(host):
         launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
 
-    self.print_log("d", "artdaq process launch commands to execute on %s (output will be in %s:%s):\n%s"
-                   % (host,host,self.launch_attempt_files[host],"\n".join(launch_commands_on_host_to_show_user)),
-                   2)
+    msg = oname + f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host],}\n{launchcmd}'
+    self.print_log("d",msg,2)
 
     proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
 
     out, _ = proc.communicate()
     status = proc.returncode
+
+    TRACE.TRACE(5,f'after execution on host:{host}: status:{status}')
 
     if status != 0:
         self.print_log("e",

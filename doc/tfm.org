@@ -1,18 +1,18 @@
 #+startup:fold
 * TFM : the Trigger Farm Manager                                             
-- forked from artdaq_daqinterface/fc/control/DAQInterface.py
+- initially forked from the ARTDAQ artdaq_daqinterface
 - goals : 
   - reduce the number of transitions
   - reduce the transition times
-  - encode run number in to filenames
+  - encode the run number into the filenames
   - get rid of symlinks in the logfile naming
-  - make sure that the server can provide any diagnostics information needed for 
-  - split configurations from the farm manager scripts themselves
-  - provide troubleshooting of the farm performance
+  - make sure that the server can provide any diagnostics information which is needed
+  - split running configurations from the farm manager scripts themselves
+  - provide troubleshooting information and the metrics of the farm performance
   - integrate with MIDAS as a frontend client
 
-- NOTE: at this point, significant part of the documentation below is in a "core dump" state, 
-  feel free to improve and commit back
+- NOTE: at this point, significant part of the documentation below
+  is in a "work in progress" state, feel free to improve and commit back
 
 * ------------------------------------------------------------------------------
 * [[file:./communication_with_artdaq.org][communication with artdaq]]

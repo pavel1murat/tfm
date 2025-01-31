@@ -73,13 +73,13 @@ services.message: {
 TransferPluginConfig: {
     transferPluginType : TCPSocket
     host_map           : [
-                          { rank:100 host: "localhost"},   ## tracker DQM - doesn't matter ?
-                          { rank:  5 host: "localhost"},   ## dispatcher01
-                          { rank:  4 host: "localhost"},   ## datalogger01
-                          { rank:  3 host: "localhost"},   ## eventbuilder02
-                          { rank:  2 host: "localhost"},   ## eventbuilder01
-                          { rank:  1 host: "localhost"},   ## boardreader02
-                          { rank:  0 host: "localhost"}    ## boardreader01
+                          { rank:100 host: "mu2edaq09-ctrl"},   ## tracker DQM - doesn't matter ?
+                          { rank:  5 host: "mu2edaq09-ctrl"},   ## dispatcher01
+                          { rank:  4 host: "mu2edaq09-ctrl"},   ## datalogger01
+                          { rank:  3 host: "mu2edaq09-ctrl"},   ## eventbuilder02
+                          { rank:  2 host: "mu2edaq09-ctrl"},   ## eventbuilder01
+                          { rank:  1 host: "mu2edaq09-ctrl"},   ## boardreader02
+                          { rank:  0 host: "mu2edaq09-ctrl"}    ## boardreader01
                          ]
     
     max_fragment_size_words : 1048576
@@ -89,7 +89,7 @@ TransferPluginConfig: {
 
 source: {
     module_type         : TransferInput
-    dispatcherHost      : "localhost"
+    dispatcherHost      : "mu2edaq09-ctrl"
     dispatcherPort      : 21105           ## was 10500, 21105 seems OK
     commanderPluginType : xmlrpc
     transfer_plugin     : @local::TransferPluginConfig 
@@ -208,5 +208,5 @@ physics: {
 }
 
 #------------------------------------------------------------------------------
-services.TFileService.fileName : "/scratch/mu2e/mu2etrk_pasha_020/demo/dqm/mu2e_trackerDQM_%#.root"
+services.TFileService.fileName : "/scratch/mu2e/mu2etrk_pasha_028/dqm/mu2e_trackerDQM_%#.root"
 services.scheduler.wantSummary : true

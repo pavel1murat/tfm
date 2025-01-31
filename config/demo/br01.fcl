@@ -60,7 +60,7 @@ daq: {
         sleep_on_stop_us       : 500000 
         max_fragment_size_bytes: 200000
         nADCchannels           : 50000  # 20000 # 40
-        throttle_usecs         : 100000 # 1000 # 2000 # 10000 # 100000
+        throttle_usecs         : 10 # 20 # 50 # 100 # 200 # 500 # 1000 # 2000 # 10000 # 100000
         distribution_type      : 2
         timestamp_scale_factor : 1
         
