@@ -424,25 +424,40 @@ class FarmManager(Component):
                 
                 subdir2 = self.fClient.odb_get(process_path) # a loop over the processes on this node
                 for name,value in subdir2.items():
-                    if(name == "Rank"):
+                    if (name == "Rank"):
                         rank = int(value)
-                    if(name == "XmlrpcPort"):
+                    if (name == "XmlrpcPort"):
                         port = str(value)
-                    if(name == "Subsystem"):
+                    if (name == "Subsystem"):
                         subsystem = str(value)
-                    if(name == "AllowedProcessors"):
+                    if (name == "AllowedProcessors"):
                         allowed_processors = str(value)
-                    if(name == "Target"):
+                    if (name == "Target"):
                         target = str(value)                        
-                    if(name == "Prepend"):
+                    if (name == "Prepend"):
                         prepend = str(value)
 
-                pname = 'undefined'
-                if   (key_name[0:2] == 'br') : pname = 'BoardReader'
-                elif (key_name[0:2] == 'dl') : pname = 'DataLogger'
-                elif (key_name[0:2] == 'ds') : pname = 'Dispatcher'
-                elif (key_name[0:2] == 'eb') : pname = 'EventBuilder'
-                elif (key_name[0:2] == 'rm') : pname = 'RoutingManager'
+                timeout = 30;                 # seconds
+                pname   = 'undefined';
+#------------------------------------------------------------------------------
+# PM: this naming is something to get rid of - a Procinfo thing has a type, so a
+# name is an overkill
+#------------------------------------------------------------------------------
+                if   (key_name[0:2] == 'br') :
+                    pname   = 'BoardReader'
+                    timeout = self.boardreader_timeout;
+                elif (key_name[0:2] == 'dl') :
+                    pname   = 'DataLogger'
+                    timeout = self.datalogger_timeout;
+                elif (key_name[0:2] == 'ds') :
+                    pname   = 'Dispatcher'
+                    timeout = self.dispatcher_timeout;
+                elif (key_name[0:2] == 'eb') :
+                    pname   = 'EventBuilder'
+                    timeout = self.eventbuilder_timeout;
+                elif (key_name[0:2] == 'rm') :
+                    pname   = 'RoutingManager'
+                    timeout = self.routingmanager_timeout;
                 else:
                     raise Exception(f'ERROR: undefined process type:{label} for {host}')
 
@@ -452,14 +467,18 @@ class FarmManager(Component):
                              rank               = rank ,
                              host               = host ,    # at this point, store long (with '-ctrl' names)
                              port               = port     ,
+                             timeout            = timeout,
                              label              = key_name  ,
                              subsystem          = subsystem,
                              allowed_processors = None,
                              target             = "none",
                              prepend            = ""
                              )
-                p.print();
-                self.procinfos.append(p)
+                if (p.server == None):
+                    self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
+                else:
+                    p.print();
+                    self.procinfos.append(p)
 
         self.print_log('i',f'--- END')
         return;
@@ -2430,28 +2449,28 @@ class FarmManager(Component):
 # 2) can have timeout a parameter of the Procinfo thing
 # P.Murat: create_time_server_proxy - make it a separate function
 #---v--------------------------------------------------------------------------
-    def create_time_server_proxy(self):
-        starttime = time.time()
-        for p in self.procinfos:
-
-            if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
-            elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
-            elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
-            elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
-            elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
-
-            try:
-                p.server = TimeoutServerProxy(p.socketstring, timeout)
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
-                return -1
-#------------------------------------------------------------------------------
-#       everything is fine
-#-------v----------------------------------------------------------------------
-        endtime = time.time()
-        self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
-        return 0
+#     def create_time_server_proxy(self):
+#         starttime = time.time()
+#         for p in self.procinfos:
+# 
+#             if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
+#             elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
+#             elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
+#             elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
+#             elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
+# 
+#             try:
+#                 p.server = TimeoutServerProxy(p.socketstring, timeout)
+#             except Exception:
+#                 self.print_log("e", traceback.format_exc())
+#                 self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
+#                 return -1
+# #------------------------------------------------------------------------------
+# #       everything is fine
+# #-------v----------------------------------------------------------------------
+#         endtime = time.time()
+#         self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
+#         return 0
 
 #------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
@@ -2877,10 +2896,10 @@ class FarmManager(Component):
         rc = self.check_launch_results();
         if (rc != 0): return;
 
-        self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
-
-        rc = self.create_time_server_proxy();
-        if (rc != 0): return;
+#         self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
+# 
+#         rc = self.create_time_server_proxy();
+#         if (rc != 0): return;
 
         self.print_log("i", "CONFIG transition 013: before self.manage_processes")
 #------------------------------------------------------------------------------
@@ -2888,11 +2907,6 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         rc = self.get_lognames();
         if (rc != 0): return;
-#------------------------------------------------------------------------------
-#  former end of DO_BOOT
-#------------------------------------------------------------------------------
-#        if (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control"):
-#            self.add_ranks_from_ranksfile()
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submission
 #-------v----------------------------------------------------------------------

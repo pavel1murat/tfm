@@ -113,7 +113,7 @@ class Component(ContextObject):
         self._server.setDaemon(True);
         self._server.start() # server is now running
 
-        TRACE.TRACE(7,f"server should be running !","component.py")
+        TRACE.TRACE(7,f"XMLRPC server should be running !",TRACE_NAME)
 #------------------------------------------------------------------------------
 # transition "booting" leads to the "booted' state
 # states we need: 
