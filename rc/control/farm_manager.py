@@ -400,8 +400,8 @@ class FarmManager(Component):
         self.print_log('i',f'--- START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.fClient.odb_get(nodes_path);
-        self.print_log('i',f'nodes_dir:{nodes_dir}',3)
-        TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
+        # self.print_log('i',f'nodes_dir:{nodes_dir}',3)
+        # TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
@@ -415,7 +415,7 @@ class FarmManager(Component):
             for key_name,key_value in node_artdaq_dir.items():
                 if (key_name == 'Enabled') or (key_name == 'Status') : continue;
                 process_path = f'{node_artdaq_path}/{key_name}'
-                TRACE.TRACE(7,f'process_path:{process_path}',TRACE_NAME)
+                TRACE.TRACE(8+1,f'process_path:{process_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # at this point, expect 'key_name; to be a process label and skip disabled processes
 #---------------v--------------------------------------------------------------
@@ -549,6 +549,8 @@ class FarmManager(Component):
 
         self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
         self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+
+        TRACE.TRACE(7,f'top_output_dir:{self.top_output_dir}',TRACE_NAME);
         self.log_directory           = self.top_output_dir+'/logs'        # None
         self.record_directory        = self.top_output_dir+'/run_records' # None
         self.data_directory_override = self.top_output_dir+'/data'        # None
@@ -632,24 +634,13 @@ class FarmManager(Component):
         self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
         self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
 #------------------------------------------------------------------------------
-# definition of artdaq processes
-#------------------------------------------------------------------------------
-        self.init_artdaq_processes()
-#------------------------------------------------------------------------------
 # definition of subsystems
 #-------v----------------------------------------------------------------------
         self.init_artdaq_subsystems()
-#         config_pathsys                           = self.daq_conf_path + "/Subsystems"
-#         print(config_pathsys)
-#         s  = Subsystem();
-#         s.id              = odb_client.odb_get(config_pathsys + "id")                    
-#         if (str(odb_client.odb_get(config_pathsys + "source")) != "none"):
-#             s.sources.append(odb_client.odb_get(config_pathsys + "source"))
-#         if (str(odb_client.odb_get(config_pathsys + "destination")) != "none"):
-#             s.destination     = odb_client.odb_get(config_pathsys + "destination")
-#         if (str(odb_client.odb_get(config_pathsys + "fragmentmode")) != "none"):
-#             s.fragmentMode    = odb_client.odb_get(config_pathsys + "fragmentmode")
-#         self.subsystems[s.id] = s
+#------------------------------------------------------------------------------
+# definition of artdaq processes.. processes know about their subsystems
+#------------------------------------------------------------------------------
+        self.init_artdaq_processes()
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 
@@ -3082,23 +3073,6 @@ class FarmManager(Component):
 
         self.stop_datataking()
 
-#         if os.environ["TFM_PROCESS_MANAGEMENT_METHOD"] == "external_run_control" and \
-#            os.path.exists("/tmp/info_to_archive_partition%d.txt" % (self.partition())):
-#             run_record_directory = "%s/%s" % (self.record_directory,str(self.run_number))
-#             os.chmod(run_record_directory, 0o755)
-#
-#             shutil.copyfile(
-#                 "/tmp/info_to_archive_partition%d.txt" % self.partition(),
-#                 "%s/rc_info_stop.txt" % (run_record_directory),
-#             )
-#             os.chmod(run_record_directory, 0o555)
-#
-#             if not os.path.exists("%s/rc_info_stop.txt" % (run_record_directory)):
-#                 self.alert_and_recover(rcu.make_paragraph(
-#                     ("Problem copying /tmp/info_to_archive_partition%d.txt into %s/rc_info_stop.txt; "
-#                      "does original file exist?") % (self.partition(), run_record_directory))
-#                 )
-
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_stop)
 
@@ -3597,10 +3571,6 @@ class FarmManager(Component):
 # parameters are passed to the FarmManager constructor
 #------------------------------------------------------------------------------
 def get_args():  # no-coverage
-
-    pn = None;
-    x = os.environ.get("ARTDAQ_PARTITION_NUMBER");
-    if (x) : pn = int(x);
 
     parser = argparse.ArgumentParser(description="FarmManager")
 

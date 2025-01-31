@@ -286,7 +286,7 @@ def process_launch_diagnostics_base(self, procinfos_of_failed_processes):
 
 def kill_procs_on_host(self, host, kill_art=False, use_force=False):
 
-    artdaq_pids, labels_of_found_processes = get_pids_and_labels_on_host(host, self.procinfos)
+    artdaq_pids, labels_of_found_processes = get_pids_and_labels_on_host(self,host)
 
     if len(artdaq_pids) > 0:
         if not use_force:
@@ -552,25 +552,18 @@ def mopup_process_base(self, procinfo):
 #---^--------------------------------------------------------------------------
 # If you change what this function returns, you should rename it for obvious reasons
 #------------------------------------------------------------------------------
-def get_pids_and_labels_on_host(host, procinfos):
+def get_pids_and_labels_on_host(self,host):
     # breakpoint()
     greptoken = (
         "[0-9]:[0-9][0-9]\s\+.*\(%s\).*application_name.*partition_number:\s*%s"
-        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in procinfos])),
-            os.environ["ARTDAQ_PARTITION_NUMBER"])
+        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in self.procinfos])),
+            self.partition())
     )
     sshgreptoken = (
         "[0-9]:[0-9][0-9]\s\+ssh.*\(%s\).*application_name.*partition_number:\s*%s"
-        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in procinfos])),
-            os.environ["ARTDAQ_PARTITION_NUMBER"])
+        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in self.procinfos])),
+            self.partition())
     )
-
-    # greptoken =
-    # "[0-9]:[0-9][0-9]\s\+valgrind.*\(%s\).*application_name.*partition_number:\s*%s"
-    #% \
-    #            ("\|".join(set([bootfile_name_to_execname(procinfo.name) for
-    #            procinfo in procinfos])), \
-    # os.environ["ARTDAQ_PARTITION_NUMBER"])
 
     grepped_lines = []
     pids = rcu.get_pids(greptoken, host, grepped_lines)
@@ -601,7 +594,7 @@ def check_proc_heartbeats_base(self, requireSuccess=True):
 
     for host in set([p.host for p in self.procinfos]):
 
-        (pids,labels_of_found_processes) = get_pids_and_labels_on_host(host,self.procinfos)
+        (pids,labels_of_found_processes) = get_pids_and_labels_on_host(self,host)
 
         for procinfo in [procinfo for procinfo in self.procinfos if procinfo.host == host]:
             if procinfo.label in labels_of_found_processes:

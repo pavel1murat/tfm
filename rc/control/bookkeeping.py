@@ -19,6 +19,8 @@ from tfm.rc.control.utilities import fhicl_writes_root_file
 from tfm.rc.control.utilities import get_private_networks
 from tfm.rc.control.utilities import zero_out_last_subnet
 
+import  TRACE
+TRACE_NAME="bookkeeping"
 
 def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
@@ -28,82 +30,70 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # JCF, Nov-20-2018: update this when ready to require subsystem-compatible
     # artdaq
 
-    if os.path.exists(self.daq_dir + "/srcs/artdaq"):
-        commit_check_throws_if_failure(
-            self.daq_dir + "/srcs/artdaq",
-            "b434f3b71dd5c87da68d6b13f040701ff610fee1",
-            "July 15, 2018",
-            True,
+
+    min_majorver   = "3"
+    min_minorver   = "03"
+    min_minorerver = "00"
+
+    # ...so we'll also have a list of versions where if the artdaq
+    # version matches one of them, we'll be considered OK
+
+    other_allowed_versions = ["v3_02_01a"]
+
+    self.fill_package_versions(["artdaq"])
+    version = "v3_13_01"; # self.package_versions["artdaq"]
+
+    res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
+
+    if not res:
+        raise Exception(
+            "Problem parsing the calculated version of artdaq, %s" % (version)
         )
-    else:
-        # JCF, Sep-20-2018: not yet logic for requiring an artdaq
-        # version with a letter at the end of it (e.g., v3_02_01a as
-        # opposed to v3_02_01)
 
-        min_majorver   = "3"
-        min_minorver   = "03"
-        min_minorerver = "00"
+    majorver   = res.group(1)
+    minorver   = res.group(2)
+    minorerver = res.group(3)
+    extension  = res.group(4)
 
-        # ...so we'll also have a list of versions where if the artdaq
-        # version matches one of them, we'll be considered OK
+    passes_requirement = False
 
-        other_allowed_versions = ["v3_02_01a"]
-
-        self.fill_package_versions(["artdaq"])
-        version = "v3_13_01"; # self.package_versions["artdaq"]
-
-        res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
-
-        if not res:
-            raise Exception(
-                "Problem parsing the calculated version of artdaq, %s" % (version)
-            )
-
-        majorver   = res.group(1)
-        minorver   = res.group(2)
-        minorerver = res.group(3)
-        extension  = res.group(4)
-
-        passes_requirement = False
-
-        if int(majorver) > int(min_majorver):
+    if int(majorver) > int(min_majorver):
+        passes_requirement = True
+    elif int(majorver) == int(min_majorver):
+        if int(minorver) > int(min_minorver):
             passes_requirement = True
-        elif int(majorver) == int(min_majorver):
-            if int(minorver) > int(min_minorver):
+        elif int(minorver) == int(min_minorver):
+            if int(minorerver) >= int(min_minorerver):
                 passes_requirement = True
-            elif int(minorver) == int(min_minorver):
-                if int(minorerver) >= int(min_minorerver):
-                    passes_requirement = True
+                
+    if not passes_requirement:
+        for an_allowed_version in other_allowed_versions:
+            if version == an_allowed_version:
+                passes_requirement = True
 
-        if not passes_requirement:
-            for an_allowed_version in other_allowed_versions:
-                if version == an_allowed_version:
-                    passes_requirement = True
-
-        if not passes_requirement:
-            raise Exception(
-                make_paragraph(
-                    'Version of artdaq set up by setup script "%s" is v%s_%s_%s%s; need a version at least as recent as v%s_%s_%s'
-                    % (
-                        self.daq_setup_script,
-                        majorver,
-                        minorver,
-                        minorerver,
-                        extension,
-                        min_majorver,
-                        min_minorver,
-                        min_minorerver,
-                    )
+    if not passes_requirement:
+        raise Exception(
+            make_paragraph(
+                'Version of artdaq set up by setup script "%s" is v%s_%s_%s%s; need a version at least as recent as v%s_%s_%s'
+                % (
+                    self.daq_setup_script,
+                    majorver,
+                    minorver,
+                    minorerver,
+                    extension,
+                    min_majorver,
+                    min_minorver,
+                    min_minorerver,
                 )
             )
+        )
+#------------------------------------------------------------------------------
+# Start calculating values (fragment counts, memory sizes, etc.)
+# which will need to appear in the FHiCL
 
-    # Start calculating values (fragment counts, memory sizes, etc.)
-    # which will need to appear in the FHiCL
-
-    # If advanced_memory_usage is set to true,
-    # read in the max fragment size meant to be provided by each
-    # boardreader FHiCL
-
+# If advanced_memory_usage is set to true,
+# read in the max fragment size meant to be provided by each boardreader FHiCL
+#------------------------------------------------------------------------------
     if self.advanced_memory_usage:
 
         max_fragment_sizes = []
@@ -720,8 +710,16 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                   "expected_fragments_per_event: %d"
                                   % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
         # breakpoint()
+#------------------------------------------------------------------------------
+# P.M. this was very unprofessional: store process subssytem ID as a string, but assume,
+# that, in fact that is an integer, and rely on that assumption
+# also, that seems to be somehow convoluted with the assumptions about the subnet addresses....
+#------------------------------------------------------------------------------
         if self.request_address is None:
-            request_address = "227.128.%d.%d" % (self.partition(),128 + int(p.subsystem))
+            TRACE.TRACE(7,f'procinfo:{p}',TRACE_NAME);
+            ss = self.subsystems[p.subsystem]    # PM: 'p.subsystem' is a string
+            TRACE.TRACE(7,f'ss:{ss}',TRACE_NAME);
+            request_address = "227.128.%d.%d" % (self.partition(),128 + ss.index)
         else:
             request_address = self.request_address
 
