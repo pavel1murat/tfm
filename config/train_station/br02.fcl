@@ -5,7 +5,7 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        generator              : "TrackerBRDR"      ## defines the shared lib to load
+        generator              : "TrackerBRDR"    ## defines the shared lib to load
         artdaqLabel            : "br02"           ## 
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
 

@@ -386,18 +386,25 @@ class FarmManager(Component):
 # 'public names' = short names , i.e. 'mu2edaq22'
 #------------------------------------------------------------------------------
     def hostname_on_private_subnet(self,public_hostname):
+        self.print_log('i',f'--- {sys._getframe(0).f_code.co_name} START ',3)
         hname = 'undefined'
         if (self.private_subnet == '192.168.157'):
             hname = public_hostname+'-ctrl'
         elif (self.private_subnet == '131.225.237'):
             hname = public_hostname
+        elif (self.private_subnet == '131.225.38'):
+            hname = public_hostname
 
+        self.print_log('i',f'public_hostname:{public_hostname} self.private_subnet:{self.private_subnet} hname:{hname}',3)
+
+        self.print_log('i',f'--- END',3)
+        
         return hname;
 
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
-        self.print_log('i',f'--- START',3)
+        self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.fClient.odb_get(nodes_path);
         # self.print_log('i',f'nodes_dir:{nodes_dir}',3)
@@ -408,34 +415,31 @@ class FarmManager(Component):
 #        for short_node_name,node_value in nodes_dir:
         for short_node_name in nodes_dir.keys():
             node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
+            
+            self.print_log('i',f'node_artdaq_path:{node_artdaq_path}',3)
             enabled = self.fClient.odb_get(node_artdaq_path+'/Enabled')
             if (enabled == 0):  continue ;
 
             node_artdaq_dir = self.fClient.odb_get(node_artdaq_path)
-            for key_name,key_value in node_artdaq_dir.items():
+            for key_name,key_value in node_artdaq_dir.items():        # loop over processes on this node
+                self.print_log('i',f'key_name:{key_name}',3)
                 if (key_name == 'Enabled') or (key_name == 'Status') : continue;
                 process_path = f'{node_artdaq_path}/{key_name}'
-                TRACE.TRACE(8+1,f'process_path:{process_path}',TRACE_NAME)
+                self.print_log('i',f'process_path:{process_path}',3)
 #------------------------------------------------------------------------------
 # at this point, expect 'key_name; to be a process label and skip disabled processes
 #---------------v--------------------------------------------------------------
                 enabled = self.fClient.odb_get(process_path+'/Enabled')
                 if (enabled == 0) : continue;
                 
-                subdir2 = self.fClient.odb_get(process_path) # a loop over the processes on this node
+                subdir2 = self.fClient.odb_get(process_path)
                 for name,value in subdir2.items():
-                    if (name == "Rank"):
-                        rank = int(value)
-                    if (name == "XmlrpcPort"):
-                        port = str(value)
-                    if (name == "Subsystem"):
-                        subsystem = str(value)
-                    if (name == "AllowedProcessors"):
-                        allowed_processors = str(value)
-                    if (name == "Target"):
-                        target = str(value)                        
-                    if (name == "Prepend"):
-                        prepend = str(value)
+                    if (name == "Rank"):              rank      = int(value)
+                    if (name == "XmlrpcPort"):        port      = str(value)
+                    if (name == "Subsystem" ):        subsystem = str(value)
+                    if (name == "AllowedProcessors"): allowed_processors = str(value)
+                    if (name == "Target"):            target    = str(value)                        
+                    if (name == "Prepend"):           prepend   = str(value)
 
                 timeout = 30;                 # seconds
                 pname   = 'undefined';
@@ -446,6 +450,9 @@ class FarmManager(Component):
                 if   (key_name[0:2] == 'br') :
                     pname   = 'BoardReader'
                     timeout = self.boardreader_timeout;
+#------------------------------------------------------------------------------
+# ##TODO: boardreaders read DTC's, if a DTC is disabled, don't activate the boardreader
+#------------------------------------------------------------------------------
                 elif (key_name[0:2] == 'dl') :
                     pname   = 'DataLogger'
                     timeout = self.datalogger_timeout;
@@ -480,7 +487,7 @@ class FarmManager(Component):
                     p.print();
                     self.procinfos.append(p)
 
-        self.print_log('i',f'--- END')
+        self.print_log('i',f'{sys._getframe(0).f_code.co_name} END ')
         return;
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
