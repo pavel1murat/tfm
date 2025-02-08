@@ -124,7 +124,7 @@ def launch_procs_on_host(self,host,
 #------------------------------------------------------------------------------
 def launch_procs_base(self):
 
-    mf_fcl = rcu.obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+    mf_fcl = rcu.obtain_messagefacility_fhicl(self)
     self.create_setup_fhiclcpp_if_needed()
 
     cmds = []
@@ -207,13 +207,20 @@ def launch_procs_base(self):
 # it is set by the $MU2E_DAQ_DIR/setup_daq.sh
 #------------------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append("export MIDAS_SERVER_HOST=%s"  % self.midas_server_host);
-            launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % os.environ.get("MU2E_DAQ_DIR"))
+            launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % self.mu2e_daq_dir)
             launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
             launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
+#------------------------------------------------------------------------------
+# ##TODO: this line is dangerous, don't need external env vars to be passed... get rid of it
+#------------------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
+
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % mf_fcl)
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PARTITION_NUMBER=%s"%self.partition())
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PORTS_PER_PARTITION=%s"%self.ports_per_partition)
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_BASE_PORT_NUMBER=%s"%self.base_port_number)
             launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
 #------------------------------------------------------------------------------
 # Assume if this works, eventbuilder, etc. are also there

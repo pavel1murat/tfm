@@ -50,21 +50,6 @@ else:
 import tfm.rc.control.utilities as rcu
 
 try:
-    import python_artdaq
-    # Here, "True" means that if python_artdaq is available, it's assumed
-    # that artdaq_mfextensions is as well
-
-    messagefacility_fhicl_filename = rcu.obtain_messagefacility_fhicl(True)
-    if (not "ARTDAQ_LOG_FHICL" in os.environ):
-        raise Exception(rcu.make_paragraph(
-            ("Although the python_artdaq.swig_artdaq python module is available, "
-             "it needs the environment variable ARTDAQ_LOG_FHICL to point to %s"
-         ) % (messagefacility_fhicl_filename)))
-
-except ImportError:
-    pass  # Users shouldn't need to worry if their installations don't yet have python_artdaq available
-
-try:
     imp.find_module("daqinterface_overrides_for_experiment")
     from daqinterface_overrides_for_experiment import perform_periodic_action_base
     from daqinterface_overrides_for_experiment import start_datataking_base
@@ -236,16 +221,7 @@ class FarmManager(Component):
 # default artdaq port numbering: 10000+1000*partition+rank
 #------------------------------------------------------------------------------
     def component_port_number(self,rank):
-        base_port = 10000;
-
-        if os.environ.get("ARTDAQ_BASE_PORT") :
-            base_port = int(os.environ["ARTDAQ_BASE_PORT"]);
-            
-        ports_per_partition = 1000; 
-        if os.environ.get("ARTDAQ_PORTS_PER_PARTITION") :
-            ports_per_partition = int(os.environ.get("ARTDAQ_PORTS_PER_PARTITION"))
-            
-        port = base_port+100 + self.partition()*ports_per_partition+rank
+        port = self.base_port_number+self.partition()*self.ports_per_partition+100+rank
         return port
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
@@ -584,6 +560,8 @@ class FarmManager(Component):
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
         self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
         self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
+        self.ports_per_partition     = 1000
+        self.base_port_number        = 10000
               
 
         self.boardreader_priorities           = None
@@ -2328,7 +2306,7 @@ class FarmManager(Component):
     def do_fhiclcpp_stuff(self):
 
         self.create_setup_fhiclcpp_if_needed()
-        rcu.obtain_messagefacility_fhicl(self.have_artdaq_mfextensions())
+        rcu.obtain_messagefacility_fhicl(self)
 
         self.print_log("i", "%s::do_fhiclcpp_stuff 001" %(__file__),2)
 

@@ -681,9 +681,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     for i_proc in range(len(self.procinfos)):
 
-        router_process_identifier = get_router_process_identifier(
-            self.procinfos[i_proc]
-        )
+        router_process_identifier = get_router_process_identifier(self.procinfos[i_proc])
 
         if router_process_identifier is not None:
             router_process_target = self.procinfos[i_proc].target
