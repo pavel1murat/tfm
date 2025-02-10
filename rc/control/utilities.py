@@ -839,7 +839,9 @@ def get_messagefacility_template_filename():
 # P.Murat: not only this function returns the filename, it also writes out the file 
 # itself. This is how the MessageFacility log filenames are formed
 #------------------------------------------------------------------------------
-def obtain_messagefacility_fhicl(have_artdaq_mfextensions):
+def obtain_messagefacility_fhicl(tfm):
+
+    have_artdaq_mfextensions = tfm.have_artdaq_mfextensions();
 
     messagefacility_fhicl_filename = get_messagefacility_template_filename()
 
@@ -876,8 +878,8 @@ udp : { type : "UDP" threshold : "DEBUG"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN
             outf_mf.write(default_contents)
 
     processed_messagefacility_fhicl_filename = (
-        "/tmp/messagefacility_partition%s_%s.fcl"
-        % (os.environ["ARTDAQ_PARTITION_NUMBER"], os.environ["USER"])
+        "/tmp/messagefacility_partition%d_%s.fcl"
+        % (tfm.partition(), os.environ["USER"])
     )
 
     with open(messagefacility_fhicl_filename) as inf_mf:
@@ -888,16 +890,7 @@ udp : { type : "UDP" threshold : "DEBUG"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN
                     outf_mf.write(line)
                 elif have_artdaq_mfextensions:
                     outf_mf.write(
-                        re.sub(
-                            "port\s*:\s*\S+",
-                            "port: %d"
-                            % (
-                                10005
-                                + int(os.environ["ARTDAQ_PARTITION_NUMBER"])
-                                * 1000
-                            ),
-                            line,
-                        )
+                        re.sub("port\s*:\s*\S+","port: %d"%(10005+tfm.partition()*1000),line,)
                     )
                 else:  # Note that a completely-empty (i.e., free even of comments) messagefacility fhicl filename will cause an error...
                     outf_mf.write(
@@ -1237,10 +1230,6 @@ def get_setup_commands(productsdir=None, spackdir=None, log_file=None):
     return output
 
 def kill_tail_f():
-#     tail_pids = get_pids(
-#         "%s.*tail -f %s"
-#         % (os.environ["TFM_TTY"], os.environ["TFM_LOGFILE"])
-#     )
     
     tail_pids = ""; # P.Murat: turn it off "softly"
     
