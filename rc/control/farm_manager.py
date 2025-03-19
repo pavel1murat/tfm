@@ -567,8 +567,14 @@ class FarmManager(Component):
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
         self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
         self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
+
         self.ports_per_partition     = 1000
+        if (odb_client.odb_exists(self.tfm_conf_path+"/ports_per_partition")):
+            self.ports_per_partition = odb_client.odb_get(self.tfm_conf_path+"/ports_per_partition");
+
         self.base_port_number        = 10000
+        if (odb_client.odb_exists(self.tfm_conf_path+"/base_port_number")):
+            self.base_port_number = odb_client.odb_get(self.tfm_conf_path+"/base_port_number");
               
 
         self.boardreader_priorities           = None
@@ -3092,6 +3098,10 @@ class FarmManager(Component):
         self.execute_trace_script("stop")
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
+#------------------------------------------------------------------------------
+# ARTDAQ processes stopped, query the number of events in the run, start from the data logger(s)
+#------------------------------------------------------------------------------
+        
 #------------------------------------------------------------------------------
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------
