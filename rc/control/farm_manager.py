@@ -424,11 +424,16 @@ class FarmManager(Component):
 # name is an overkill
 #------------------------------------------------------------------------------
                 if   (key_name[0:2] == 'br') :
-                    pname   = 'BoardReader'
-                    timeout = self.boardreader_timeout;
+                    pname       = 'BoardReader'
+                    timeout     = self.boardreader_timeout;
+                    dtc_enabled = self.fClient.odb_get(process_path+'/DTC/Enabled')
+                    if (dtc_enabled == 0) :
 #------------------------------------------------------------------------------
-# ##TODO: boardreaders read DTC's, if a DTC is disabled, don't activate the boardreader
+# each boardreader reads a DTC. If the DTC is disabled, don't start the boardreader
+# also, disable the boardreader
 #------------------------------------------------------------------------------
+                        self.fClient.odb_set(process_path+'/Enabled',0) ##
+                        continue
                 elif (key_name[0:2] == 'dl') :
                     pname   = 'DataLogger'
                     timeout = self.datalogger_timeout;
