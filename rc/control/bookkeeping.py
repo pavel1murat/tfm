@@ -2,7 +2,7 @@
 #
 ###############################################################################
 from __future__ import print_function
-import os, sys
+import os, sys, time, subprocess
 
 sys.path.append(os.environ["TFM_DIR"])
 
@@ -30,7 +30,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # JCF, Nov-20-2018: update this when ready to require subsystem-compatible
     # artdaq
 
-
+    starttime = time.time()
+    
     min_majorver   = "3"
     min_minorver   = "03"
     min_minorerver = "00"
@@ -40,8 +41,16 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     other_allowed_versions = ["v3_02_01a"]
 
-    self.fill_package_versions(["artdaq"])
+    # self.fill_package_versions(["artdaq"])
     version = "v3_13_01"; # self.package_versions["artdaq"]
+    
+    s = subprocess.run(['spack','find', 'artdaq'],stdout=subprocess.PIPE,encoding='utf-8');
+    
+    for l in s.stdout.splitlines():
+        w = l.split('@')
+        if (w[0] == 'artdaq'):
+            version = w[1];
+            break;
 
     res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
 
@@ -87,6 +96,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 )
             )
         )
+    
+    self.print_log("i", f'step 1: took {time.time() - starttime} sec');
+    starttime = time.time();
 #------------------------------------------------------------------------------
 # Start calculating values (fragment counts, memory sizes, etc.)
 # which will need to appear in the FHiCL
@@ -141,6 +153,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                          'and then adds this parameter during bookkeeping.')
                         % (procinfo.label))
                 )
+
+    self.print_log("i", f'step 2: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     # Now loop over the boardreaders again to determine
     # subsystem-level things, such as the number of fragments per
@@ -213,6 +228,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         subsystem_fragment_space[procinfo.subsystem] += fragment_space
                         subsystem_fragment_ids[procinfo.subsystem].append(tid)
 
+    self.print_log("i", f'step 3: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     # Now using the per-subsystem info we've gathered, use recursion
     # to determine the *true* number of fragments per event and the
     # size they take up, since this quantity isn't just a function of
@@ -275,6 +293,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     for ss in self.subsystems:
         fragment_ids[ss] = calculate_subsystem_fragment_ids(ss)
 
+    self.print_log("i", f'step 4: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     # If we have advanced memory usage switched on, then make sure the
     # max_event_size_bytes gets set to the value calculated here in
     # bookkeeping, whether this involves adding the
@@ -319,6 +340,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         ),
                         self.procinfos[i_proc].fhicl_used,
                     )
+
+    self.print_log("i", f'step 5: took {time.time() - starttime} sec');
+    starttime = time.time();
 #------------------------------------------------------------------------------
 # Check for places where Fragment IDs need to be filled in
 #------------------------------------------------------------------------------
@@ -335,6 +359,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     % (", ".join([str(i) for i in fragment_ids[self.procinfos[i_proc].subsystem]])),
                     self.procinfos[i_proc].fhicl_used,
                 )
+
+    self.print_log("i", f'step 6: took {time.time() - starttime} sec');
+    starttime = time.time();
 #------------------------------------------------------------------------------
 # Construct the host map string needed in the sources and destinations
 # tables in artdaq process FHiCL
@@ -560,6 +587,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     )  # Used when routing to Dispatchers, if no DataLoggers, then route from
     # EventBuilders
 
+    self.print_log("i", f'step 7: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     # Couple of sanity checks
 
     for procinfo in self.procinfos:
@@ -609,6 +639,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         )
                     )
                 )
+
+    self.print_log("i", f'step 8: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
 
@@ -678,6 +711,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 inter_subsystem_transfer = determine_if_inter_subsystem_transfer(
                     self.procinfos[i_proc], tablename, searchstart
                 )
+
+    self.print_log("i", f'step 9: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
 
@@ -769,6 +805,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     assert (
         not self.disable_private_network_bookkeeping or len(private_networks_seen) == 0
     ), "See Aug-15-2019 comment in bookkeeping.py"
+
+    self.print_log("i", f'step 10: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     table_update_addresses = {}
     routing_base_ports = {}
@@ -932,6 +971,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                     % (str(subsystem_id),", ".join(processes_involved_in_requests)))
                     )
 
+    self.print_log("i", f'step 11: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     # JCF, Apr-18-2019
 
     # bookkeep_table_for_routing_manager takes any parameters in a
@@ -1006,6 +1048,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             + "\n"
             + self.procinfos[i_proc].fhicl_used[table_end:]
         )
+
+    self.print_log("i", f'step 12: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
 
@@ -1109,6 +1154,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     i_proc, di_subsystem, "routing_token_config", "Dispatcher"
                 )
 
+    self.print_log("i", f'step 13: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     firstLoggerRank = 9999999
 #------------------------------------------------------------------------------
 # if a BoardReader writes an output file, update firstLoggerRank as well
@@ -1207,6 +1255,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         return False
 
+    self.print_log("i", f'step 14: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     for subsystem_id, subsystem in self.subsystems.items():
 
         init_fragment_counts = {}
@@ -1273,6 +1324,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 procinfo.fhicl_used,
             )
 
+    self.print_log("i", f'step 5: took {time.time() - starttime} sec');
+    starttime = time.time();
+    return
 
 def bookkeeping_for_fhicl_documents_artdaq_v4_base(self):
     pass

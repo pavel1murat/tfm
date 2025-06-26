@@ -17,11 +17,8 @@
 * ------------------------------------------------------------------------------
 * [[file:./communication_with_artdaq.org][communication with artdaq]]
 * configuration                                                              
-** the TFM configuration is defined in a subdirectory containing the following files :
-1) [[file:settings.org][settings]] : defines the farm configuration - components (executables)     
-   and additional configuration parameters               
-
-2) .FCL files : 
+** the TFM configuration is defined in ODB subtree /Mu2e/ActiveRunConfiguration/DAQ/Tfm
+1) .FCL files of the ARTDAQ jobs: 
 
 - long term: created starting from ODB
 - one FCL file ber component
@@ -119,9 +116,7 @@ script get_next_run_number
   self.launch_attempt_files[p.host] : PMT log file (used in manage_processes_direct.py
   
 - all art processes have their COUT redirected to the PMT log file
-
-- however, messages by message_facility go into individual log files, one per 
-art process
+- however, messages by message_facility go into individual log files, one per art process
 * open port map                                                              
   - from daq13, can use port 18000 to talk to daq09                          
   mu2etrk@mu2edaq13:~/test_stand/pasha_020>xmlrpc http://mu2edaq09.fnal.gov:18000/RPC2 get_state daqint

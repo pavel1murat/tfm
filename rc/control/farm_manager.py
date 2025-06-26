@@ -334,7 +334,8 @@ class FarmManager(Component):
 
 
         endtime = time.time()
-        self.print_log("i", "%s::validate_setup_script done (%.1f seconds)." % (__file__,endtime - starttime),2)
+#        self.print_log("i", "%s::validate_setup_script done (%.1f seconds)." % (__file__,endtime - starttime),2)
+        self.print_log("i", "validate_setup_script done (%.1f seconds)." % (endtime - starttime),2)
 
 #------------------------------------------------------------------------------
 # ODB help functions

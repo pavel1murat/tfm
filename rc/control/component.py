@@ -253,7 +253,6 @@ class Component(ContextObject):
         self.shutdown()
         return "farm_manager: performing complete shutdown";
 
-
     def message(self, msg_type, message):
         self.print_log("i","rpc message type:%s message:'%s'" % (msg_type, message));
         self.__messages.append([msg_type, message])

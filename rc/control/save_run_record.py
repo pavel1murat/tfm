@@ -252,7 +252,8 @@ def save_run_record_base(self):
 # make the directory read-only
 #------------------------------------------------------------------------------
     os.chmod(outdir, 0o555)
-    self.print_log("d","%s: Saved run record in %s"%(__file__,outdir),2)
+    # self.print_log("d","%s: Saved run record in %s"%(__file__,outdir),2)
+    self.print_log("d","Saved run record in %s"%(outdir),2)
 
     return
 
