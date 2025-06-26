@@ -2053,7 +2053,7 @@ class FarmManager(Component):
         if self.exception:
             raise Exception(rcu.make_paragraph("An exception was thrown during the %s transition." % (command)))
 
-        time.sleep(1)
+        # time.sleep(1)  # PM : is sleep really needed ? - try to turn it off
 
         endtime = time.time()
         self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." 
@@ -2992,7 +2992,7 @@ class FarmManager(Component):
 #    and this is the end of the config step - run number is known ! 
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(99);
-        time.sleep(1)
+        # time.sleep(1)
         self.fState = run_control_state.state("configured")
 
         self.print_log("i", "CONFIG transition 018: completed")
@@ -3060,7 +3060,7 @@ class FarmManager(Component):
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
         self.fState.set_completed(100);
-        time.sleep(1);
+        # time.sleep(1);   # PM : I inserted that, was that really needed ? 
         self.fState = run_control_state.state("running")
 
         self.print_log("i","START transition 005: complete, run=%d" % (self.run_number))
