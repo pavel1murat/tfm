@@ -50,8 +50,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         w = l.split('@')
         if (w[0] == 'artdaq'):
             version = w[1];
+            if (version == 'develop'): version = 'v9_99_99';
             break;
-
+        
     res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
 
     if not res:
