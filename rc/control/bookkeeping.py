@@ -746,7 +746,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                   % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
         # breakpoint()
 #------------------------------------------------------------------------------
-# P.M. this was very unprofessional: store process subssytem ID as a string, but assume,
+# P.M. this was very unprofessional: store process subsystem ID as a string, but assume,
 # that, in fact that is an integer, and rely on that assumption
 # also, that seems to be somehow convoluted with the assumptions about the subnet addresses....
 #------------------------------------------------------------------------------
@@ -1260,7 +1260,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     starttime = time.time();
 
     for subsystem_id, subsystem in self.subsystems.items():
-
         init_fragment_counts = {}
 
         for procinfo in [pi for pi in self.procinfos if pi.subsystem == subsystem_id]:
@@ -1268,7 +1267,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             if procinfo.name not in init_fragment_counts:
 
                 possible_event_senders = []
-                init_fragment_count = 0
+                init_fragment_count    = 0
 
                 if procinfo.name == "EventBuilder":
                     for ss_source in subsystem.sources:
@@ -1277,20 +1276,16 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                             for pi in self.procinfos
                             if pi.subsystem == ss_source and pi.name == "EventBuilder"
                         ]:
-                            if sends_to_via_RootNetOutput(
-                                possible_sender_procinfo, procinfo
-                            ):
+                            if sends_to_via_RootNetOutput(possible_sender_procinfo, procinfo):
                                 init_fragment_count += 1
                 elif procinfo.name == "DataLogger":
                     for possible_sender_procinfo in [
                         pi
                         for pi in self.procinfos
-                        if pi.subsystem == procinfo.subsystem
+                        if  pi.subsystem == procinfo.subsystem
                         and pi.name == "EventBuilder"
                     ]:
-                        if sends_to_via_RootNetOutput(
-                            possible_sender_procinfo, procinfo
-                        ):
+                        if sends_to_via_RootNetOutput(possible_sender_procinfo, procinfo):
                             init_fragment_count += 1
                 elif procinfo.name == "Dispatcher":
                     for possible_sender_procinfo in [
@@ -1299,31 +1294,30 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         if pi.subsystem == procinfo.subsystem
                         and pi.name == "DataLogger"
                     ]:
-                        if sends_to_via_RootNetOutput(
-                            possible_sender_procinfo, procinfo
-                        ):
+                        if sends_to_via_RootNetOutput(possible_sender_procinfo, procinfo):
                             init_fragment_count += 1
-                    if (
-                        init_fragment_count == 0
-                    ):  # Dispatcher will _always_ receive init Fragments, this probably means we're running without DataLoggers
+                    if (init_fragment_count == 0):
+                        # Dispatcher will _always_ receive init Fragments, this probably means we're running without DataLoggers
                         for possible_sender_procinfo in [
                             pi
                             for pi in self.procinfos
                             if pi.subsystem == procinfo.subsystem
                             and pi.name == "EventBuilder"
                         ]:
-                            if sends_to_via_RootNetOutput(
-                                possible_sender_procinfo, procinfo
-                            ):
+                            if sends_to_via_RootNetOutput(possible_sender_procinfo, procinfo):
                                 init_fragment_count += 1
 
                 init_fragment_counts[procinfo.name] = init_fragment_count
-
-            procinfo.fhicl_used = re.sub(
-                "init_fragment_count\s*:\s*\S+",
-                "init_fragment_count: %d" % init_fragment_counts[procinfo.name],
-                procinfo.fhicl_used,
-            )
+#------------------------------------------------------------------------------
+# define 'init_fragment_count' if it is > 0 and is not defined explicitly
+#------------------------------------------------------------------------------
+#             self.print_log("i", f'procinfo.name:{procinfo.name} init_fragment_counts[procinfo.name]:{init_fragment_counts[procinfo.name]}');
+#             if (init_fragment_count[procinfo.name] > 0) and (not 'init_fragment_count' in procinfo.fhicl_used):
+#                 procinfo.fhicl_used = re.sub(
+#                     "init_fragment_count\s*:\s*\S+",
+#                     "init_fragment_count: %d" % init_fragment_counts[procinfo.name],
+#                     procinfo.fhicl_used,
+#                 )
 
     self.print_log("i", f'step 5: took {time.time() - starttime} sec');
     starttime = time.time();
