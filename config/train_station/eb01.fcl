@@ -9,15 +9,12 @@
 
 daq: {
     event_builder: {
-        buffer_count                          : 250
+        buffer_count                          : 50
+        art_analyzer_count                    : 1          ## what is that ?
         verbose                               : true
 
-        expected_fragments_per_event          : 10
+        expected_fragments_per_event          : 5
         use_art                               : true
-        print_event_store_stats               : true
-        events_expected_in_SimpleQueueReader  : 5
-        end_of_data_wait_s                    : 600
-        art_analyzer_count                    : 1          ## what is that ?
         expected_art_event_processing_time_us : 30000000
         # max_fragment_size_bytes               : 100000     ## 0x100000
         broadcast_buffer_size                 : 100000     ## 0x6400000
@@ -26,13 +23,16 @@ daq: {
             use_routing_manager : false
         }
         sources: {}
+        # print_event_store_stats               : true
+        # events_expected_in_SimpleQueueReader  : 5
+        # end_of_data_wait_s                    : 600
     }
 
     metrics: {}
 }
 
 art: {
-    process_name: EventBuilder0
+    process_name: eb01
 
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
@@ -100,29 +100,40 @@ art: {
         analyzers : {
             TrackerDQM : { module_type:TrackerDQM
                 analyzeFragments    : 1           ## set to 0 to print only
-                interactiveMode     : 0           ## 
+                interactiveMode     : 0           ##
+                fillHistograms      : 1
                 fillWfHistograms    : 0           ## 
                 plotWaveforms       : [ -1, -1]   ## nothing
+                validateADCPatterns : 0           ## no validation by default
+                
+                trkfCollTag         : "daq:TRK"
 #------------------------------------------------------------------------------
 #	    diagLevel           : 2           # print one line per event
 #	    diagLevel           : 3           # print the whole event in hex
 #------------------------------------------------------------------------------
                 diagLevel           :  0          ## print all events
+                debugBits           : [
+                                       "bit0:0",
+                                       "bit1:0"
+                                      ]
                 minNBytes           : -1
                 maxNBytes           : 10000000
                 maxFragmentSize     : 20000000    ## to catch obvious errors
+                nADCPackets         : 1
+                minNErrors          : 100
+                errorCode           : 258
 #------------------------------------------------------------------------------
 # old format: offset 0x00 :  0  (16 bytes = (0x00 + 0x08) in 2-byte words)
 # new format: offset 0x20 : 40  (80 bytes = (0x20 + 0x08) in 2-byte words)
 # currently redefined in beginRun
 #------------------------------------------------------------------------------
-                dataHeaderOffset    : 24
                 dumpDTCRegisters    :  0
 #------------------------------------------------------------------------------
 # reference channel to calculate dt(i) = T(0,i)-T(0,referenceChannel)
 # reference channel number is run-dependent
 #------------------------------------------------------------------------------
-                activeLinks         : [ 0, 1, 2, 3, 4, 5 ]
+                activeLinks_0       : [ 0 , 1, 2, 3, 4, 5]
+                activeLinks_1       : [ 0 , 1, 2, 3, 4, 5]
                 refChCal            : [ 0 , 91, 91, 91, 91, 91 ]
                 refChHV             : [ 0 , 94, 94, 94, 94, 94 ]
 #------------------------------------------------------------------------------
@@ -145,8 +156,8 @@ art: {
 #            }
         }
 
-#        p1        : [ rootNetOutput ]
-        p1        : [ TrackerDQM, rootNetOutput ]
+        p1        : [ rootNetOutput ]
+#        p1        : [ TrackerDQM, rootNetOutput ]
         end_paths : [ p1 ]
     }
 }

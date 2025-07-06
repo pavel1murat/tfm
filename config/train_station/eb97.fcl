@@ -9,16 +9,17 @@
 
 daq: {
     event_builder: {
-        buffer_count                          :  250
-        art_analyzer_count                    :   4 ## 2  ## 1      ## number of art processes
+        buffer_count                          : 250
+        art_analyzer_count                    :   4 ## 4 ## 1 ## the number of art processes ?
         verbose                               : true
 
         expected_fragments_per_event          : 5
         use_art                               : true
         expected_art_event_processing_time_us : 30000000
         # max_fragment_size_bytes               : 100000     ## 0x100000
-        broadcast_buffer_size                 : 100000       ## 0x6400000
-        art_index_offset                      : 4
+        broadcast_buffer_size                 : 100000     ## 0x6400000
+        # art_index_offset                      : 4
+
         routing_token_config: {
             use_routing_manager : false
         }
@@ -33,7 +34,7 @@ daq: {
 }
 
 art: {
-    process_name: eb99
+    process_name: eb97
 
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
@@ -1169,68 +1170,22 @@ art: {
 
     physics: {
         producers : {
-            makeSD: { module_type: StrawDigisFromArtdaqFragments
-                diagLevel     : 0                        ## not used yet
-                debugMode     : 0                        ##
-                debugBits     : [ "bit0:0", "bit1:0" ]   ## 100 in total, configure printout details
-                saveWaveforms : true                     ## default: false
-                dtcHeaderPresent: true                     ## present for runs > 107246
-                geography     : []                       ## for now, a real job should include a real map
-            }
-            
-            makeSH : { module_type: StrawHitReco
-                MinimumTime                       : 0          ## 400.0 # ns configuration for OnSpill
-                MaximumTime                       : 200000.    ## 1710.0 # ns
-                MinimumEnergy                     : 0.0001 # MeV
-                MaximumEnergy                     : 0.005 # MeV
-                MinimumRadius                     : 350.0 # mm
-                MaximumRadius                     : 750.0 # mm
-                FitType                           : 1
-                FilterHits                        : false
-                WriteStrawHitCollection           : true
-                ProtonBunchTimeTag                : "EWMProducer"
-                StrawDigiCollectionTag            : "makeSD" ## "makeSD"
-                StrawDigiADCWaveformCollectionTag : "makeSD" ## "makeSD"
-                EventWindowMarker                 : "EWMProducer"
-                UseCalorimeter                    : false
-                clusterDt                         : 100.0 # ns
-                CaloClusterCollectionTag          : "notUsed"
-                FlagCrossTalk                     : false
-                crossTalkEnergy                   : 0.007 # MeV
-                crossTalkMinimumTime              : -1 # ns
-                crossTalkMaximumTime              : 100 # ns
-            }
-
-            EWMProducer: {
-                InitialPhaseShift: 0
-                RecoFromMCTruth: false
-                RecoFromMCTruthErr: 0
-                SpillType: 0
-                module_label: "EWMProducer"
-                module_type: "EventWindowMarkerProducer"
-            }
         }
         
         filters   : {
-            StrawHitFilter : { module_type : StrawHitFilter
-                shCollTag           : "makeSH"
-                minNGoodHits        : 1
-                maxDt               : 40.
-                minEDep             : 0.00012   ## <- debugging 0.0006  ## 0.0006 ## in MeV 
-                debugMode           : false
-                debugBits           : [ "bit0:0" ]
-                fillHistograms      : false
+            RandomPrescaleFilter : { module_type : RandomPrescaleFilter
+                nPrescale : 20 ## 100 ## 10
             }
         }
         
         analyzers : {
         }
 
-        p1        : [ EWMProducer, makeSD, makeSH, StrawHitFilter ] 
+        p1        : [ RandomPrescaleFilter ] 
         e1        : [ rootNetOutput ]
         #        e1        : [ TrackerDQM, rootNetOutput ]
         trigger_paths : [ p1 ]
-        end_paths : [ e1 ]
+        end_paths     : [ e1 ]
     }
 
 }
