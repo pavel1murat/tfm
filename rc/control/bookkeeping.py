@@ -738,15 +738,17 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     for p in self.procinfos:
         if ("DataLogger" in p.name) or ("Dispatcher" in p.name) :
-            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
-                                  "expected_fragments_per_event: 1",p.fhicl_used)
+            # P.M. comment out one more smartness!
+            # p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
+            #                      "expected_fragments_per_event: 1",p.fhicl_used)
+            x = 0
         else:
             p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
                                   "expected_fragments_per_event: %d"
                                   % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
         # breakpoint()
 #------------------------------------------------------------------------------
-# P.M. this was very unprofessional: store process subsystem ID as a string, but assume,
+# P.M. this was very dangerous: store process subsystem ID as a string, but assume,
 # that, in fact that is an integer, and rely on that assumption
 # also, that seems to be somehow convoluted with the assumptions about the subnet addresses....
 #------------------------------------------------------------------------------
