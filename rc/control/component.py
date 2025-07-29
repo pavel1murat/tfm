@@ -76,11 +76,11 @@ class Component(ContextObject):
         self.name        = name
         self.synchronous = synchronous
         self.__state     = "stopped"
-        self.fClient     = odb_client;
-        self.__rpc_host  = self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/Tfm/RpcHost");
+        self.client      = odb_client;
+        self.__rpc_host  = self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/Tfm/RpcHost");
         self.run_params  = None
         self.__dummy_val = 0
-        self.__partition = self.fClient.odb_get('/Mu2e/ActiveRunConfiguration/DAQ/PartitionID');
+        self.__partition = self.client.odb_get('/Mu2e/ActiveRunConfiguration/DAQ/PartitionID');
         self.__rpc_port  = 10000+1000*self.__partition;
         self.__messages  = [];
 
@@ -218,6 +218,9 @@ class Component(ContextObject):
     def listconfigs(self):
         assert False, "This version of the function should not be called"
 
+    def odb_cmd_path(self):
+        return 'undefined'
+
     # JCF, Jun-29-2018
 
     # While print_log here seemingly does nothing, this can be
@@ -252,10 +255,26 @@ class Component(ContextObject):
         print(" >>> complete_shutdown Requested");
         self.shutdown()
         return "farm_manager: performing complete shutdown";
-
+#------------------------------------------------------------------------------
+# when TFM receives a message from a frontend requesting an END_OF_RUN,
+# if msg_type = 'alarm', trigger execution of the tfm_fe END_OF_RUN command
+#------------------------------------------------------------------------------
     def message(self, msg_type, message):
-        self.print_log("i","rpc message type:%s message:'%s'" % (msg_type, message));
+        self.print_log("i",f'rpc message type:{msg_type} message:{message}');
         self.__messages.append([msg_type, message])
+
+        x = (msg_type == 'alarm');
+        
+        self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
+        
+        if (msg_type == 'alarm'):
+            self.print_log("i",f'self.cmd_top_path:{self.odb_cmd_path()}');
+            
+            self.client.odb_set(self.odb_cmd_path()+'/Name','stop_run');
+            self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
+            self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
+            self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
+            
         return "return"
 
     def get_messages(self, dummy):

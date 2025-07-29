@@ -124,6 +124,12 @@ mu2etrk@mu2edaq13:~/test_stand/pasha_031>xmlrpc http://mu2edaq22-ctrl.fnal.gov:2
 Result:
 
 String: 'stopped:100'
+mu2etrk@mu2edaq09:~/test_stand/daquser_001>xmlrpc http://mu2edaq09.fnal.gov:21000/RPC2  get_messages  daqint
+Result:
+
+String: 
+  info:br02:TrackerBRDR::getNext: 1\n
+  info:br01:TrackerBRDR::getNext: 1
 #+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]

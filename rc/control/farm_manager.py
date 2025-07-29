@@ -233,6 +233,10 @@ class FarmManager(Component):
     
     def settings_filename(self):
         return os.path.expandvars(self.config_dir+'/settings')
+
+    def odb_cmd_path(self):
+        return self._cmd_path;
+    
 #------------------------------------------------------------------------------
 # WK 8/31/21
 # Startup msgviewer early. check on it later
@@ -341,20 +345,20 @@ class FarmManager(Component):
 # ODB help functions
 #------------------------------------------------------------------------------
     def odb_get_int(self,path,default=None):
-        if (self.fClient.odb_exists(path)):
-            return int(self.fClient.odb_get(path));
+        if (self.client.odb_exists(path)):
+            return int(self.client.odb_get(path));
         else:
             return default;
 
     def odb_get_bool(self,path,default=False):
-        if (self.fClient.odb_exists(path)):
-            return bool(self.fClient.odb_get(path));
+        if (self.client.odb_exists(path)):
+            return bool(self.client.odb_get(path));
         else:
             return default;
 
     def odb_get_string(self,path,default=None):
-        if (self.fClient.odb_exists(path)):
-            return str(self.fClient.odb_get(path));
+        if (self.client.odb_exists(path)):
+            return str(self.client.odb_get(path));
         else:
             return default;
 
@@ -383,7 +387,7 @@ class FarmManager(Component):
 
         self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
-        nodes_dir  = self.fClient.odb_get(nodes_path);
+        nodes_dir  = self.client.odb_get(nodes_path);
         # self.print_log('i',f'nodes_dir:{nodes_dir}',3)
         # TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
 #------------------------------------------------------------------------------
@@ -394,10 +398,10 @@ class FarmManager(Component):
             node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
             
             self.print_log('i',f'node_artdaq_path:{node_artdaq_path}',3)
-            enabled = self.fClient.odb_get(node_artdaq_path+'/Enabled')
+            enabled = self.client.odb_get(node_artdaq_path+'/Enabled')
             if (enabled == 0):  continue ;
 
-            node_artdaq_dir = self.fClient.odb_get(node_artdaq_path)
+            node_artdaq_dir = self.client.odb_get(node_artdaq_path)
             for key_name,key_value in node_artdaq_dir.items():        # loop over processes on this node
                 self.print_log('i',f'key_name:{key_name}',3)
                 if (key_name == 'Enabled') or (key_name == 'Status') : continue;
@@ -406,10 +410,10 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # at this point, expect 'key_name; to be a process label and skip disabled processes
 #---------------v--------------------------------------------------------------
-                enabled = self.fClient.odb_get(process_path+'/Enabled')
+                enabled = self.client.odb_get(process_path+'/Enabled')
                 if (enabled == 0) : continue;
                 
-                subdir2 = self.fClient.odb_get(process_path)
+                subdir2 = self.client.odb_get(process_path)
                 for name,value in subdir2.items():
                     if (name == "Rank"):              rank      = int(value)
                     if (name == "XmlrpcPort"):        port      = str(value)
@@ -427,13 +431,13 @@ class FarmManager(Component):
                 if   (key_name[0:2] == 'br') :
                     pname       = 'BoardReader'
                     timeout     = self.boardreader_timeout;
-                    dtc_enabled = self.fClient.odb_get(process_path+'/DTC/Enabled')
+                    dtc_enabled = self.client.odb_get(process_path+'/DTC/Enabled')
                     if (dtc_enabled == 0) :
 #------------------------------------------------------------------------------
 # each boardreader reads a DTC. If the DTC is disabled, don't start the boardreader
 # also, disable the boardreader
 #------------------------------------------------------------------------------
-                        self.fClient.odb_set(process_path+'/Enabled',0) ##
+                        self.client.odb_set(process_path+'/Enabled',0) ##
                         continue
                 elif (key_name[0:2] == 'dl') :
                     pname   = 'DataLogger'
@@ -488,7 +492,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # expect only subssytem definitions in this subdirectory
 #------------------------------------------------------------------------------
-        dir      = self.fClient.odb_get(path)
+        dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
             
             self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
@@ -536,27 +540,27 @@ class FarmManager(Component):
                  synchronous      = True          ,
                  debug_level      = -1
     ):
-
-        # Initialize Component, the base class of FarmManager
-
+#------------------------------------------------------------------------------
+# Initialize Component, the base class of FarmManager
+# P.M.not sur why the base class is needed at all - nothing else inherits from it
+#------------------------------------------------------------------------------
         Component.__init__(self,
                            name         = name,
                            odb_client   = odb_client,
                            rpc_host     = rpc_host,
                            control_host = control_host,
                            synchronous  = synchronous,
-#                           rpc_port    = rpc_port,
                            skip_init    = False)
 
         self.reset_variables()
 
         self.fUser                   = os.environ.get("USER");
-        self.mu2e_daq_dir            = os.path.expandvars(self.fClient.odb_get('/Mu2e/MU2E_DAQ_DIR'));
+        self.mu2e_daq_dir            = os.path.expandvars(self.client.odb_get('/Mu2e/MU2E_DAQ_DIR'));
         self.spackdir                = self.mu2e_daq_dir + '/spack'
-        self.daq_setup_script        = os.path.expandvars(self.fClient.odb_get('/Mu2e/DaqSetupScript'))
+        self.daq_setup_script        = os.path.expandvars(self.client.odb_get('/Mu2e/DaqSetupScript'))
 
-        self.midas_server_host       = os.path.expandvars(self.fClient.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
-        self.top_output_dir          = os.path.expandvars(self.fClient.odb_get("/Mu2e/OutputDir"));
+        self.midas_server_host       = os.path.expandvars(self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
+        self.top_output_dir          = os.path.expandvars(self.client.odb_get("/Mu2e/OutputDir"));
 
         TRACE.TRACE(7,f'top_output_dir:{self.top_output_dir}',TRACE_NAME);
         self.log_directory           = self.top_output_dir+'/logs'        # None
@@ -571,6 +575,7 @@ class FarmManager(Component):
         self.config_name             = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
         self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
+        self._cmd_path               = '/Mu2e/Commands/DAQ/Tfm';
         self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
         self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
 

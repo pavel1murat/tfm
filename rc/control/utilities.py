@@ -829,9 +829,9 @@ def fhiclize_document(filename):
 
 def get_messagefacility_template_filename():
     if "TFM_MESSAGEFACILITY_FHICL" in os.environ.keys():
-        messagefacility_fhicl_filename = os.environ["TFM_MESSAGEFACILITY_FHICL"]
+        messagefacility_fhicl_filename = os.environ.get("TFM_MESSAGEFACILITY_FHICL")
     else:
-        messagefacility_fhicl_filename = os.getcwd() + "/MessageFacility.fcl"
+        messagefacility_fhicl_filename = os.environ.get("MU2E_DAQ_DIR")+"/config/MessageFacility.fcl"
 
     return messagefacility_fhicl_filename
 
