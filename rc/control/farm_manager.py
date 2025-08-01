@@ -3013,6 +3013,7 @@ class FarmManager(Component):
         self.fState = run_control_state.transition("start")
 
         self.check_run_record_integrity()
+        self.set_stop_requested(False);
 #------------------------------------------------------------------------------
 # step X) put_config_info
 #-------v------------------------------------------------------------------------------

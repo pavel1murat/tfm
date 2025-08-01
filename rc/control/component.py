@@ -36,14 +36,6 @@ class ServerThread(threading.Thread):
         for name, func in funcs.items():
             self.server.register_function(func, name)
 
-    def serve_forever(self):
-        self.quit = 0
-        while not self.quit:
-            self.handle_request()
-            
-        TRACE.TRACE(7,"quitting",TRACE_NAME)
-        return
-
     def kill(self):
         self.server.quit = 1
 
@@ -52,6 +44,15 @@ class ServerThread(threading.Thread):
 
     def run(self):
          self.server.serve_forever()
+
+    def serve_forever(self):
+        self.quit = 0
+        while not self.quit:
+            self.handle_request()
+            
+        TRACE.TRACE(7,"quitting",TRACE_NAME)
+        return
+
 #------------------------------------------------------------------------------
 # P.M. why we're inheriting from something with LBNE in the name ?
 #------------------------------------------------------------------------------
@@ -74,7 +75,7 @@ class Component(ContextObject):
             raise ValueError("Name 'daq' is not allowed for individual components")
 
         self.name           = name
-        self.stop_requested = 0;
+        self.stop_requested = False;
         
         self.synchronous = synchronous
         self.__state     = "stopped"
@@ -233,6 +234,9 @@ class Component(ContextObject):
     def print_log(self, severity, printstr, debuglevel=-999):
         print(printstr)
 
+    def set_stop_requested(self, Flag):
+        self.stop_requested = Flag;                # boolean True/False
+
     def trace_get(self, name, trace_args):
         if name != self.name: return
         self.run_params           = trace_args
@@ -277,9 +281,9 @@ class Component(ContextObject):
 #       self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
         
         if (msg_type == 'alarm'):
-            if ((action == 'stop_run') and (self.stop_requested == 0)):
+            if ((action == 'stop_run') and (self.stop_requested == False)):
 #------------------------------------------------------------------------------
-# request stop
+# request stop just once
 #------------------------------------------------------------------------------
                 self.print_log("i",f'ALARM: REQUEST STOP RUN : self.cmd_top_path:{self.odb_cmd_path()}');
                 
@@ -287,7 +291,7 @@ class Component(ContextObject):
                 self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
                 self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
                 self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
-                self.stop_requested = 1;
+                self.stop_requested = True;
                 
         return "return"
 
