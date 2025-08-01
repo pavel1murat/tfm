@@ -73,7 +73,9 @@ class Component(ContextObject):
         if name == "daq":
             raise ValueError("Name 'daq' is not allowed for individual components")
 
-        self.name        = name
+        self.name           = name
+        self.stop_requested = 0;
+        
         self.synchronous = synchronous
         self.__state     = "stopped"
         self.client      = odb_client;
@@ -258,23 +260,35 @@ class Component(ContextObject):
 #------------------------------------------------------------------------------
 # when TFM receives a message from a frontend requesting an END_OF_RUN,
 # if msg_type = 'alarm', trigger execution of the tfm_fe END_OF_RUN command
+# do not record the same command multiple times
 #------------------------------------------------------------------------------
     def message(self, msg_type, message):
         self.print_log("i",f'rpc message type:{msg_type} message:{message}');
         self.__messages.append([msg_type, message])
 
-        x = (msg_type == 'alarm');
-        
-        self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
+        action='none'
+        for w in message.split():
+            ws = w.split(':')
+            if (ws[0] == 'action'):
+                action = ws[1];
+                break;
+
+#       x = (msg_type == 'alarm');      
+#       self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
         
         if (msg_type == 'alarm'):
-            self.print_log("i",f'self.cmd_top_path:{self.odb_cmd_path()}');
-            
-            self.client.odb_set(self.odb_cmd_path()+'/Name','stop_run');
-            self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
-            self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
-            self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
-            
+            if ((action == 'stop_run') and (self.stop_requested == 0)):
+#------------------------------------------------------------------------------
+# request stop
+#------------------------------------------------------------------------------
+                self.print_log("i",f'ALARM: REQUEST STOP RUN : self.cmd_top_path:{self.odb_cmd_path()}');
+                
+                self.client.odb_set(self.odb_cmd_path()+'/Name','stop_run');
+                self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
+                self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
+                self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
+                self.stop_requested = 1;
+                
         return "return"
 
     def get_messages(self, dummy):
@@ -323,8 +337,8 @@ class Component(ContextObject):
             self.start_running()
         if requested == "stopping":
 #------------------------------------------------------------------------------
-# stopping involves sending shutdown signal if any to the processes, no separate 
-# shutdown transition
+# stopping involves sending shutdown signal, if any, to all processes,
+# no separate shutdown transition
 #------------------------------------------------------------------------------
             self.stop_running()
         if requested == "pausing":

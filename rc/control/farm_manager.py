@@ -107,6 +107,7 @@ class FarmManager(Component):
     """
 
     def print_log(self, severity, printstr, debuglevel=-999, newline=True):
+        level = {'e':'ERR', 'w':'WRN', 'd':'DBG', 'i':'INF'};
         if self.debug_level < debuglevel:   return
 #------------------------------------------------------------------------------
 # JCF, Dec-31-2019
@@ -148,7 +149,7 @@ class FarmManager(Component):
                         sys.stdout.write("%s %-25s %s" % (date_time, fn_ln, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s  %-25s" % (date_time,fn_ln), printstr, flush=True)
+                        print("%s %3s %-25s" % (date_time,level[severity],fn_ln), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
@@ -2044,9 +2045,7 @@ class FarmManager(Component):
                     proc_threads = {}
                     for p in self.procinfos:
                         if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
-                            t = rcu.RaisingThread(
-                                target=self.process_command, args=(p, command)
-                            )
+                            t = rcu.RaisingThread(target=self.process_command, args=(p,command))
                             proc_threads   [p.label] = t
                             proc_starttimes[p.label] = time.time()
                             t.start()
@@ -3106,7 +3105,7 @@ class FarmManager(Component):
                      'to the artdaq processes; see messages above for more info'))
                 return
 
-        self.execute_trace_script("stop")
+        self.execute_trace_script ("stop"    )
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
 #------------------------------------------------------------------------------
