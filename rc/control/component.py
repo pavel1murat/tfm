@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-import argparse, datetime, os.path, os, random, threading
+import datetime, os.path, os, random, threading
 
 from   contextlib    import contextmanager
 from   xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
@@ -281,7 +281,7 @@ class Component(ContextObject):
 #       self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
         
         if (msg_type == 'alarm'):
-            if ((action == 'stop_run') and (self.stop_requested == False)):
+            if ((self.fState.get_name() == "running") and (action == 'stop_run') and (self.stop_requested == False)):
 #------------------------------------------------------------------------------
 # request stop just once
 #------------------------------------------------------------------------------
@@ -445,17 +445,3 @@ class Component(ContextObject):
         Be sure to report when your transition is complete.
         """
         self.complete_state_change("recovering")
-
-
-#def get_args():  # no-coverage
-#    parser = argparse.ArgumentParser(description="Simulated LBNE 35 ton component")
-#
-#    parser.add_argument("-n", "--name"          , type=str, dest="name"    , default="toy"      , help="Component name")
-#    parser.add_argument("-r", "--rpc-port"      , type=int, dest="rpc_port", default=6660       , help="RPC port"      )
-#    parser.add_argument("-H", "--rpc-host"      , type=str, dest="rpc_host", default="localhost", help="This hostname/IP addr")
-#    parser.add_argument("-c", "--control-host"  , type=str, dest="control_host", default="localhost", help="Control host" )
-#    parser.add_argument("-s", "--is-synchronous", action ="store_true", dest ="synchronous", default=False, 
-#                        help ="Component is synchronous (starts/stops w/ DAQ)")
-#
-#    return parser.parse_args()
-

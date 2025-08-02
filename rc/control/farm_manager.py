@@ -9,7 +9,7 @@
 # d) allow artdaq clients to message back, handle client messages
 #
 #------------------------------------------------------------------------------
-import os, sys, argparse, glob
+import os, sys, argparse, glob, inspect
 from   datetime import datetime, timezone
 
 import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
@@ -1979,6 +1979,9 @@ class FarmManager(Component):
 # at the beginning of the function, and calling "complete_state_change" at the end) is not applied.
 #---v--------------------------------------------------------------------------
     def do_command(self, command):
+        func_name = 'do_command'
+
+###        self.print_log('d',f'-- {func_name} START: command:{command}')
 
         if command != "Start" and command != "Init" and command != "Stop":
             self.print_log("i", "%s transition underway" % (command.upper()))
@@ -3074,8 +3077,9 @@ class FarmManager(Component):
 # STOP the run
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
+        func_name = inspect.currentframe().f_code.co_name;
 
-        self.print_log("i","STOP transition underway for run %d"%(self.run_number))
+        self.print_log('i',f'-- {func_name} START: STOP transition underway run:{self.run_number}')
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
@@ -3106,6 +3110,7 @@ class FarmManager(Component):
                      'to the artdaq processes; see messages above for more info'))
                 return
 
+        self.print_log('i',f'{func_name}:after do_command("Stop")')
         self.execute_trace_script ("stop"    )
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
@@ -3116,7 +3121,9 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------
+        self.print_log('i',f'{func_name}:before do_command("Shutdown")')
         self.do_command("Shutdown")
+        self.print_log('i',f'{func_name}:after do_command("Shutdown")')
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
@@ -3124,7 +3131,7 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","STOP transition complete, run=%06d" % (self.run_number))
+        self.print_log("i","-- {func_name} END: STOP transition complete, run=%06d" % (self.run_number))
         return
 #------------------------------------------------------------------------------
 #  SHUTDOWN transition - complete everything and exit
