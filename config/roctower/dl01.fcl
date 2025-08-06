@@ -5,22 +5,25 @@
 daq: {
     aggregator: {
         is_datalogger                        : true
-        buffer_count                         : 250
-        expected_fragments_per_event         :  10
-        events_expected_in_SimpleQueueReader : 5
-        end_of_data_wait_s                   : 600
-        print_event_store_stats              : true
+        init_fragment_count                  :    1 ## 4 ## 1
+        buffer_count                         :   50
+        broadcast_buffer_size                : 10000000 ## 0x6400000
+        expected_fragments_per_event         :    1 ## for DL, has to be 1
+        subrun_transition_hold_time_s        : 0.05
+#        max_subrun_lookup_table_size         : 1000 ## 100
+#        max_event_list_length                : 1000 ## 100
 
         ##        max_fragment_size_bytes      : 100000 ## 100K should be OK 0x100000
-        ##        init_fragment_count          :   1
-
-        broadcast_buffer_size                : 100000 ## 0x6400000
-        
+       
         routing_token_config: {
             use_routing_manager: false
         }
         
         sources: { }
+        # obsolete, according to Eric
+        # events_expected_in_SimpleQueueReader :    5
+        # end_of_data_wait_s                   :  600
+        # print_event_store_stats              : true
     }
     metrics: {}
 }
@@ -47,8 +50,8 @@ art: {
     outputs: {
         rootOutput: { module_type: RootDAQOut
             # SelectEvents      # :     # []
-            fileName            :     "/tmp/raw.mu2e.trkvst.roctower.%06r_%08s.art"
-            # compressionLevel    :     0 ## disable compression  ## default: 7 ## 
+            fileName      :     "/tmp/raw.mu2e.trk.vst.%06r_%06s.art"
+            compressionLevel    :     0 ## disable compression  ## default: 7 ## 
             outputCommands      :     ["drop *_*_*_*", 
                                        "keep artdaq::Fragments_*_*_*",
                                        "keep *::Mu2eFragment_*_*_*",
@@ -66,6 +69,7 @@ art: {
             fileProperties : { 
                 maxSize     : 1500000 
                 granularity :  SubRun 
+                # maxRuns     :       1  ## testing-only
             }
             checkFileName  :     false
         }
@@ -84,7 +88,7 @@ art: {
 
     physics: {
         analyzers : {}
-        e1        :   [ rootOutput, rootNetOutput ]
+        e1        :   [ rootOutput ] ## , rootNetOutput ]
         end_paths :   [ e1 ]
     }
 }

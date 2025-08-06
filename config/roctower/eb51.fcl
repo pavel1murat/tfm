@@ -30,7 +30,7 @@ daq: {
 }
 
 art: {
-    process_name: eb01
+    process_name: EventBuilder0
 
     services: {
         ArtdaqSharedMemoryServiceInterface: { 
@@ -70,8 +70,7 @@ art: {
 
     outputs: {
         rootNetOutput: { module_type : RootNetOutput
-# if the trigger path is empty, don't select on it
-            SelectEvents   : [ ]
+            SelectEvents   : [ p1 ]
             outputCommands : [
                               "drop *_*_*_*", 
                               "keep artdaq::Fragments_*_*_*",
@@ -111,7 +110,7 @@ art: {
             }
         }
         
-        p1            : [ ]    ## no filtering [ StrawDigisFromArtdaqFragments, StrawDigiFilter ]
+        p1            : [ StrawDigisFromArtdaqFragments, StrawDigiFilter ]
         trigger_paths : [ p1 ]
         e1            : [ rootNetOutput ]
         end_paths     : [ e1 ]

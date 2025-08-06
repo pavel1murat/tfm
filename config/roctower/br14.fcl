@@ -5,14 +5,15 @@
 #------------------------------------------------------------------------------
 daq: {
     fragment_receiver: {
-        artdaqLabel            : "br01"
+        artdaqLabel            : "br14"
         generator              : TrackerBRDR      ## defines the shared lib to load
         fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
         readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
         readoutMode            : 0                ## <100:read DTC  >=100:simulate data
         max_fragment_size_bytes: 1048576          ## 0x100000
-        maxEventsPerSubrun     : 5000000          ## 10K events/subrun
+        maxEventsPerSubrun     : 10000            ## 10K events/subrun
 
+        #  generated_fragments_per_event: 2          ## shouldn't need that any longer 
         fragment_ids                 : [ 0 ]      ## , 11 ]  ## fake data + registers   
 
         nEventsDbg                   : 10         ## don't need to dump more
