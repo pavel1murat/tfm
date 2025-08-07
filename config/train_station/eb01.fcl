@@ -10,7 +10,7 @@
 daq: {
     event_builder: {
         buffer_count                          : 50
-        art_analyzer_count                    : 1          ## what is that ?
+        art_analyzer_count                    : 1          ## N(artdaq filter processes)
         verbose                               : true
 
         expected_fragments_per_event          : 5
@@ -38,7 +38,7 @@ art: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : ArtdaqSharedMemoryService 
             waiting_time        : 1
-            resume_after_timeout: false
+            resume_after_timeout: true ## Eric recommends against false
         }
 
         ArtdaqFragmentNamingServiceInterface: { 

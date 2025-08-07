@@ -113,10 +113,8 @@ class FarmManager(Component):
 # JCF, Dec-31-2019
 # The swig_artdaq instance by default writes to stdout, so no explicit print call is needed
 #-----------v-------------------------------------------------------------------
-        printstr = str(printstr)
-
-        date_time = rcu.date_and_time()
-        # dummy, month, day, time, timezone, year = date_time.split()
+        printstr      = str(printstr)
+        date_time     = rcu.date_and_time()
         formatted_day = date_time.split()[0] # "%s-%s-%s" % (day, month, year)
 
         if self.use_messagefacility and self.messageviewer_sender is not None:
@@ -135,21 +133,21 @@ class FarmManager(Component):
         else:
             with self.printlock:
                 if self.fake_messagefacility:
-                    print("%%MSG-%s FarmManager %s %s %s"
-                          % (severity, formatted_day, time, timezone),flush=True)
+                    print(f'%%MSG-{severity} FarmManager {formatted_day} {time} timezone',flush=True)
                     print(printstr, flush=True)
-                    print("%MSG", flush=True)
+                    print('%MSG', flush=True)
                 else:
-                    frame = sys._getframe(1)
-                    fn    = frame.f_code.co_filename.split('/')[-1];
-                    ln    = frame.f_lineno
+                    frame = inspect.stack()[1];
+                    fn    = frame.filename.split('/')[-1];
+                    fun   = frame.function
+                    ln    = frame.lineno
                     fn_ln = fn+f':{ln}'
                     
                     if not newline:
-                        sys.stdout.write("%s %-25s %s" % (date_time, fn_ln, printstr))
+                        sys.stdout.write("%s %3s %-25s %s %s" % (date_time, level[severity], fn_ln, fun, printstr))
                         sys.stdout.flush()
                     else:
-                        print("%s %3s %-25s" % (date_time,level[severity],fn_ln), printstr, flush=True)
+                        print("%s %3s %-25s %s" % (date_time,level[severity],fn_ln,fun), printstr, flush=True)
         return;
 #------------------------------------------------------------------------------
 # JCF, Dec-16-2016
@@ -474,7 +472,7 @@ class FarmManager(Component):
                     p.print();
                     self.procinfos.append(p)
 
-        self.print_log('i',f'{sys._getframe(0).f_code.co_name} END ')
+        self.print_log('i','-- END')
         return;
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
@@ -898,6 +896,7 @@ class FarmManager(Component):
 # 
 #---v--------------------------------------------------------------------------
     def alert_and_recover(self, extrainfo=None):
+        self.print_log('i','-- START');
         self.do_recover()
 
         alertmsg = ""
@@ -920,6 +919,7 @@ class FarmManager(Component):
             ),
         )
         print
+        self.print_log('i','-- END');
         return
 #------------------------------------------------------------------------------
 # one day, this will go away and the initialization will become an execution 
@@ -3057,7 +3057,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
-        self.print_log("i", "START transition 004: [farm_manager::do_start_running] record_directory:%s run_number: %06d" 
+        self.print_log("i", "START transition 004: record_directory:%s run_number: %06d" 
                        % (self.record_directory,self.run_number))
 
         self.save_metadata_value("FarmManager start time",start_time);
@@ -3077,9 +3077,7 @@ class FarmManager(Component):
 # STOP the run
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
-        func_name = inspect.currentframe().f_code.co_name;
-
-        self.print_log('i',f'-- {func_name} START: STOP transition underway run:{self.run_number}')
+        self.print_log('i',f'-- START: STOP transition run:{self.run_number}')
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
@@ -3110,7 +3108,7 @@ class FarmManager(Component):
                      'to the artdaq processes; see messages above for more info'))
                 return
 
-        self.print_log('i',f'{func_name}:after do_command("Stop")')
+        self.print_log('i','after do_command("Stop")')
         self.execute_trace_script ("stop"    )
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
@@ -3121,9 +3119,9 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------
-        self.print_log('i',f'{func_name}:before do_command("Shutdown")')
+        self.print_log('i','before do_command("Shutdown")')
         self.do_command("Shutdown")
-        self.print_log('i',f'{func_name}:after do_command("Shutdown")')
+        self.print_log('i','after do_command("Shutdown")')
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------
@@ -3131,18 +3129,20 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","-- {func_name} END: STOP transition complete, run=%06d" % (self.run_number))
+        self.print_log("i","-- END: STOP transition run=%06d" % (self.run_number))
         return
 #------------------------------------------------------------------------------
 #  SHUTDOWN transition - complete everything and exit
 #---v--------------------------------------------------------------------------
     def do_shutdown(self):
-        print("FarmManager::do_shutdown: state=",self.fState.get_name())
+        self.print_log("i",f'-- START: run:{self.run_number:06d}')
 
         if (self.fState.get_name() == "stopped"):
             self.fKeepRunning = False
         else:
-            print("FarmManager::do_shutdown: ERROR: state=%s\n",self.fState.get_name())
+            self.print_log('i',f'ERROR: state:{self.fState.get_name()}')
+
+        self.print_log("i",f'-- END: run:{self.run_number:06d}')
         return
 #------------------------------------------------------------------------------
 #  TERMINATE transition - what does it really do ?
@@ -3242,7 +3242,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_recover(self):
         run_number_string = f" for run {self.run_number}" if self.run_number else ""
-        self.print_log("w","\n%s: RECOVER transition underway%s"%(rcu.date_and_time(),run_number_string))
+        self.print_log('i',f'{rcu.date_and_time()}: -- START: RECOVER transition, run:{run_number_string}')
 
         self.in_recovery = True
 
@@ -3478,7 +3478,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # marking the end of function
 #-------v----------------------------------------------------------------------
-        self.print_log("i","\n%s: RECOVER transition complete%s"%(rcu.date_and_time(),run_number_string))
+        self.print_log("i","%s: RECOVER transition complete%s"%(rcu.date_and_time(),run_number_string))
         return
 
 #------------------------------------------------------------------------------

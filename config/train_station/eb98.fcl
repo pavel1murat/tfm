@@ -9,23 +9,25 @@
 
 daq: {
     event_builder: {
-        buffer_count                          : 50
+        buffer_count                          :  200
+        art_analyzer_count                    :    2 ## 2  ## 1      ## number of art processes
+        art_index_offset                      :    4
+        
         verbose                               : true
 
-        expected_fragments_per_event          : 10
+        expected_fragments_per_event          : 5
         use_art                               : true
-        print_event_store_stats               : true
-        events_expected_in_SimpleQueueReader  : 5
-        end_of_data_wait_s                    : 600
-        art_analyzer_count                    : 2 ## 2  ## 1      ## what is that ? number of art processes ?
         expected_art_event_processing_time_us : 30000000
         # max_fragment_size_bytes               : 100000     ## 0x100000
-        broadcast_buffer_size                 : 100000     ## 0x6400000
-        art_index_offset                      : 4
+        broadcast_buffer_size                 : 100000       ## 0x6400000
         routing_token_config: {
             use_routing_manager : false
         }
         sources: {}
+        # obsolete, according to Eric
+        # print_event_store_stats               : true
+        # events_expected_in_SimpleQueueReader  : 5
+        # end_of_data_wait_s                    : 600
     }
 
     metrics: {}
@@ -38,7 +40,7 @@ art: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : ArtdaqSharedMemoryService 
             waiting_time        : 1
-            resume_after_timeout: false
+            resume_after_timeout: true ## Eric recommends against false
         }
 
         ArtdaqFragmentNamingServiceInterface: { 
@@ -101,12 +103,9 @@ art: {
                         PathConfiguration: {
                             limit: 0
                         }
-                        RANDOM: {
-                            limit: 0
-                        }
-                        Summary: {
-                            limit: 0
-                        }
+                        RANDOM: { limit:0  reportEvery:1 timespan:300 }
+
+                        Summary: { limit:0                  }
                         TransientBranch: {
                             limit: 0
                         }
@@ -1215,7 +1214,10 @@ art: {
                 shCollTag           : "makeSH"
                 minNGoodHits        : 1
                 maxDt               : 40.
-                minEDep             : 0.0002 ## <- debugging 0.0006  ## 0.0006 ## in MeV 
+#                minEDep             : 0.00025 ## station 0, 10 kHz, no HV, output rate ~ 400 Hz, suppression ~x20
+#                minEDep             : 0.0005 ## 0.0008 ## 0.0007 ## -1. ## 0.0003 ## 0.0002 ## 0.0006 ## in MeV 
+#                minEDep             : 0.00010 ## 0.00015 ## HV off 0.0003 ## station 0, 10 kHz: output rate ~ 25 Hz, suppression ~x400
+                 minEDep             : 0.0008 ## HV 15 mV ## 0.0008 ## HV on 10 mV 
                 debugMode           : false
                 debugBits           : [ "bit0:0" ]
                 fillHistograms      : false

@@ -280,18 +280,18 @@ class Component(ContextObject):
 #       x = (msg_type == 'alarm');      
 #       self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');
         
-        if (msg_type == 'alarm'):
-            if ((self.fState.get_name() == "running") and (action == 'stop_run') and (self.stop_requested == False)):
-#------------------------------------------------------------------------------
-# request stop just once
-#------------------------------------------------------------------------------
-                self.print_log("i",f'ALARM: REQUEST STOP RUN : self.cmd_top_path:{self.odb_cmd_path()}');
-                
-                self.client.odb_set(self.odb_cmd_path()+'/Name','stop_run');
-                self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
-                self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
-                self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
-                self.stop_requested = True;
+#         if (msg_type == 'alarm'):
+#             if ((self.fState.get_name() == "running") and (action == 'stop_run') and (self.stop_requested == False)):
+# #------------------------------------------------------------------------------
+# # request stop just once
+# #------------------------------------------------------------------------------
+#                 self.print_log("i",f'ALARM: REQUEST STOP RUN : self.cmd_top_path:{self.odb_cmd_path()}');
+#                 
+#                 self.client.odb_set(self.odb_cmd_path()+'/Name','stop_run');
+#                 self.client.odb_set(self.odb_cmd_path()+'/ParameterPath',self.odb_cmd_path()+'/stop_run');
+#                 self.client.odb_set(self.odb_cmd_path()+'/Finished',0);
+#                 self.client.odb_set(self.odb_cmd_path()+'/Run'     ,1);
+#                 self.stop_requested = True;
                 
         return "return"
 

@@ -9,8 +9,10 @@
 
 daq: {
     event_builder: {
-        buffer_count                          :  250
-        art_analyzer_count                    :   4 ## 2  ## 1      ## number of art processes
+        buffer_count                          :  200 ## 250
+        art_analyzer_count                    :    2 ## 10 ## 2  ## 1      ## number of art processes
+        art_index_offset                      :    4
+        
         verbose                               : true
 
         expected_fragments_per_event          : 5
@@ -18,7 +20,6 @@ daq: {
         expected_art_event_processing_time_us : 30000000
         # max_fragment_size_bytes               : 100000     ## 0x100000
         broadcast_buffer_size                 : 100000       ## 0x6400000
-        art_index_offset                      : 4
         routing_token_config: {
             use_routing_manager : false
         }
@@ -39,7 +40,7 @@ art: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : ArtdaqSharedMemoryService 
             waiting_time        : 1
-            resume_after_timeout: false
+            resume_after_timeout: true ## Eric recommends against false
         }
 
         ArtdaqFragmentNamingServiceInterface: { 
@@ -102,9 +103,7 @@ art: {
                         PathConfiguration: {
                             limit: 0
                         }
-                        RANDOM: {
-                            limit: 0
-                        }
+                        RANDOM: { limit:0  reportEvery:1 timespan:300 }
                         Summary: {
                             limit: 0
                         }
@@ -1216,7 +1215,10 @@ art: {
                 shCollTag           : "makeSH"
                 minNGoodHits        : 1
                 maxDt               : 40.
-                minEDep             : 0.00012   ## <- debugging 0.0006  ## 0.0006 ## in MeV 
+#                minEDep             : 0.00025 ## station 0, 10 kHz, no HV, output rate ~ 400 Hz, suppression ~x20
+#                minEDep             : 0.0005 ## 0.0008 ## 0.0007 ## -1. ## 0.0003 ## 0.0002 ## 0.0006 ## in MeV 
+#                minEDep             : 0.00010 ## 0.00015  ## 0.0003 ## station 0, 10 kHz, HV off , output rate ~ 25 Hz, suppression ~ x400
+                minEDep             : 0.0008 ## HV 15 mV ## 0.0008 ## HV on 10 mV 
                 debugMode           : false
                 debugBits           : [ "bit0:0" ]
                 fillHistograms      : false

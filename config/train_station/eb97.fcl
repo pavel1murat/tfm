@@ -40,7 +40,7 @@ art: {
         ArtdaqSharedMemoryServiceInterface: { 
             service_provider    : ArtdaqSharedMemoryService 
             waiting_time        : 1
-            resume_after_timeout: false
+            resume_after_timeout: true
         }
 
         ArtdaqFragmentNamingServiceInterface: { 
@@ -104,7 +104,7 @@ art: {
                             limit: 0
                         }
                         RANDOM: {
-                            limit: 0
+                            limit: 10
                         }
                         Summary: {
                             limit: 0
@@ -1174,7 +1174,7 @@ art: {
         
         filters   : {
             RandomPrescaleFilter : { module_type : RandomPrescaleFilter
-                nPrescale : 20 ## 100 ## 10
+                nPrescale :  50 ## 100 ## 10
             }
         }
         
