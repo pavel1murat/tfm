@@ -364,6 +364,8 @@ class FarmManager(Component):
 
 #------------------------------------------------------------------------------
 # 'public names' = short names , i.e. 'mu2edaq22'
+# TODO : this is a kludge, reimplement via :
+# ifconfig -a | grep 10.226.9 | awk '{print $2}' | nslookup | head -n 1 | awk '{print $4}' | awk -F . '{print $1}'
 #------------------------------------------------------------------------------
     def hostname_on_private_subnet(self,public_hostname):
         self.print_log('i',f'--- {sys._getframe(0).f_code.co_name} START ',3)
@@ -373,6 +375,8 @@ class FarmManager(Component):
         elif (self.private_subnet == '131.225.237'):
             hname = public_hostname
         elif (self.private_subnet == '131.225.38'):
+            hname = public_hostname
+        elif (self.private_subnet == '10.226.9'):
             hname = public_hostname
 
         self.print_log('i',f'public_hostname:{public_hostname} self.private_subnet:{self.private_subnet} hname:{hname}',3)
