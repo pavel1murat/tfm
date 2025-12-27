@@ -391,7 +391,6 @@ class FarmManager(Component):
         self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.client.odb_get(nodes_path);
-        # self.print_log('i',f'nodes_dir:{nodes_dir}',3)
         # TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
@@ -425,6 +424,7 @@ class FarmManager(Component):
                     if (name == "Target"):            target    = str(value)                        
                     if (name == "Prepend"):           prepend   = str(value)
 
+                TRACE.INFO(f'subdir2.keys:{subdir2.keys()}',TRACE_NAME)
                 timeout = 30;                 # seconds
                 pname   = 'undefined';
 #------------------------------------------------------------------------------
@@ -434,14 +434,15 @@ class FarmManager(Component):
                 if   (key_name[0:2] == 'br') :
                     pname       = 'BoardReader'
                     timeout     = self.boardreader_timeout;
-                    dtc_enabled = self.client.odb_get(process_path+'/DTC/Enabled')
-                    if (dtc_enabled == 0) :
+                    if ('DTC' in subdir2.keys()):
+                        dtc_enabled = self.client.odb_get(process_path+'/DTC/Enabled')
+                        if (dtc_enabled == 0) :
 #------------------------------------------------------------------------------
-# each boardreader reads a DTC. If the DTC is disabled, don't start the boardreader
+# a boardreader may read a DTC. If the DTC present but disabled, don't start the boardreader
 # also, disable the boardreader
 #------------------------------------------------------------------------------
-                        self.client.odb_set(process_path+'/Enabled',0) ##
-                        continue
+                            self.client.odb_set(process_path+'/Enabled',0) ##
+                            continue
                 elif (key_name[0:2] == 'dl') :
                     pname   = 'DataLogger'
                     timeout = self.datalogger_timeout;
