@@ -377,7 +377,7 @@ class FarmManager(Component):
         elif (self.private_subnet == '131.225.38'):
             hname = public_hostname
         elif (self.private_subnet == '10.226.9'):
-            hname = public_hostname
+            hname = public_hostname+'-data'
 
         self.print_log('i',f'public_hostname:{public_hostname} self.private_subnet:{self.private_subnet} hname:{hname}',3)
 
@@ -386,29 +386,36 @@ class FarmManager(Component):
         return hname;
 
 #------------------------------------------------------------------------------
+# PM: create self.procinfo's
+#------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
         self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.client.odb_get(nodes_path);
-        # TRACE.TRACE(8,f'nodes_dir:{nodes_dir}',TRACE_NAME)
+        TRACE.DEBUG(0,f'nodes_path:{nodes_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
 #        for short_node_name,node_value in nodes_dir:
         for short_node_name in nodes_dir.keys():
+            node_path    = nodes_path+'/'+short_node_name;
+            node_enabled = self.client.odb_get(node_path+'/Enabled')
+            if (node_enabled == 0) : continue;
+            
             node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
             
-            self.print_log('i',f'node_artdaq_path:{node_artdaq_path}',3)
+            TRACE.DEBUG(0,f'node_artdaq_path:{node_artdaq_path}',TRACE_NAME)
             enabled = self.client.odb_get(node_artdaq_path+'/Enabled')
+            TRACE.DEBUG(0,f'short_node_name:{short_node_name} node_artdaq_path:{node_artdaq_path} enabled:{enabled}',TRACE_NAME)
             if (enabled == 0):  continue ;
 
             node_artdaq_dir = self.client.odb_get(node_artdaq_path)
             for key_name,key_value in node_artdaq_dir.items():        # loop over processes on this node
-                self.print_log('i',f'key_name:{key_name}',3)
+                TRACE.DEBUG(0,f'key_name:{key_name} key_value:{key_value}',TRACE_NAME)
                 if (key_name == 'Enabled') or (key_name == 'Status') : continue;
                 process_path = f'{node_artdaq_path}/{key_name}'
-                self.print_log('i',f'process_path:{process_path}',3)
+                TRACE.DEBUG(0,f'process_path:{process_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # at this point, expect 'key_name; to be a process label and skip disabled processes
 #---------------v--------------------------------------------------------------
@@ -416,6 +423,7 @@ class FarmManager(Component):
                 if (enabled == 0) : continue;
                 
                 subdir2 = self.client.odb_get(process_path)
+                TRACE.DEBUG(0,f'subdir2 process_path:{process_path}',TRACE_NAME)
                 for name,value in subdir2.items():
                     if (name == "Rank"):              rank      = int(value)
                     if (name == "XmlrpcPort"):        port      = str(value)
@@ -424,7 +432,7 @@ class FarmManager(Component):
                     if (name == "Target"):            target    = str(value)                        
                     if (name == "Prepend"):           prepend   = str(value)
 
-                TRACE.INFO(f'subdir2.keys:{subdir2.keys()}',TRACE_NAME)
+                # TRACE.DEBUG(0,f'subdir2.keys:{subdir2.keys()}',TRACE_NAME)
                 timeout = 30;                 # seconds
                 pname   = 'undefined';
 #------------------------------------------------------------------------------
@@ -2033,31 +2041,38 @@ class FarmManager(Component):
             subsystems_in_order.reverse()
         
         starttime = time.time()
-        self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" 
-                       % (command.upper()),1)
+        # self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" % (command.upper()),1)
+        TRACE.INFO(f'sending command:{command.upper()} to ARTDAQ processes',TRACE_NAME);
 
         proc_starttimes = {}
         proc_endtimes   = {}
         for subsystem in subsystems_in_order:
+            TRACE.DEBUG(0,f'subsystem:{subsystem}',TRACE_NAME);
             for proctype in proctypes_in_order:
-
+                TRACE.DEBUG(0,f'proctype:{proctype}',TRACE_NAME);
                 priorities_used = {}
 
                 for p in self.procinfos:
+                    TRACE.DEBUG(0,f'  p.name:{p.name} p.priority:{p.priority} p.subsystem:{p.subsystem}',TRACE_NAME);
                     if proctype in p.name and p.subsystem == subsystem:
                         priorities_used[p.priority] = p
 
                 priority_rankings = sorted(priorities_used.keys())
+                TRACE.DEBUG(0,f'priority_rankings:{priority_rankings}',TRACE_NAME);
 
                 for priority in priority_rankings:
                     proc_threads = {}
                     for p in self.procinfos:
+                        TRACE.DEBUG(0,f'p:{p}',TRACE_NAME);
                         if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
                             proc_threads   [p.label] = t
                             proc_starttimes[p.label] = time.time()
                             t.start()
 
+                    TRACE.DEBUG(0,'printing proc_threads',TRACE_NAME)
+                    print(f'proc_threads:{proc_threads}')
+                    
                     for label in proc_threads:
                         proc_threads[label].join()
                         proc_endtimes[label] = time.time()
@@ -2073,8 +2088,11 @@ class FarmManager(Component):
 
         nfailed = len([p for p in self.procinfos if p.lastreturned != "Success" ])
 
+        TRACE.DEBUG(0,f'nfailed:{nfailed} self.debug_level:{self.debug_level}',TRACE_NAME)
         if ((self.debug_level >= 2) or (nfailed > 0)):
+            
             for p in self.procinfos:
+                if (self.debug_level > 0): p.print()
                 total_time = "%.1f" % (proc_endtimes[p.label] - proc_starttimes[p.label])
                 self.print_log("i","%s at %s:%s, after %s seconds returned string was:\n%s\n"
                                % (p.label,p.host,p.port,total_time,p.lastreturned))
@@ -2565,13 +2583,13 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
-# See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
-# refer to the same thing
+# See Issue #20803.
+# the idea is that, e.g., component01.fcl and component01_hw_cfg.fcl refer to the same thing
+# P.M. it looks that it takes all fcl files from the config directory and checks them....
 #---v--------------------------------------------------------------------------
     def check_hw_fcls(self):
 
         starttime = time.time()
-        self.print_log("i", "farm_manager::check_hw_fcls : Obtaining FHiCL documents", 2)
 
         try:
             tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
@@ -2583,10 +2601,12 @@ class FarmManager(Component):
         rootfile_cntr = 0
         fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
         
+        TRACE.INFO(f'obtaining FHiCL documents from tmpdir_for_fhicl:{tmpdir_for_fhicl} self.fhicl_file_path={self.fhicl_file_path}',TRACE_NAME)
+
         for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
             for fn in filenames:
-                self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
-                TRACE.TRACE(9,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
+                # self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
+                TRACE.TRACE(TRACE.TLVL_DEBUG,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
                 if fn.endswith(".fcl"):
                     if fn not in fn_dictionary:
                         fn_dictionary[fn] = True
@@ -2608,8 +2628,7 @@ class FarmManager(Component):
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would reupload the FCL files? 
 #-------v------------------------------------------------------------------------------
-#        TRACE.DEBUG(1,f'DEBUG: before loop over procinfos',TRACE_NAME)
-        TRACE.TRACE(7,f'DEBUG: before loop over procinfos',TRACE_NAME)
+        TRACE.DEBUG(0,f'DEBUG: before loop over procinfos',TRACE_NAME)
         for p in self.procinfos:
             matching_filenames = ["%s.fcl" % p.label]
 
@@ -2624,8 +2643,7 @@ class FarmManager(Component):
                         found_fhicl = True
 
             self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-#            TRACE.DEBUG(1,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
-            TRACE.TRACE(7,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
+            TRACE.DEBUG(0,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
 
             if not found_fhicl:
                 TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
@@ -2808,46 +2826,41 @@ class FarmManager(Component):
 
         self.fState = run_control_state.transition("configure")
 
+#------------------------------------------------------------------------------
+# check subconfigs for this run - what they are? 
+# could this be done before launching the jobs ?
+# last segment of the self.config_dir is the config name
+# not sure what it is used for...
+#-------v----------------------------------------------------------------------
+        if subconfigs_for_run: 
+            self.subconfigs_for_run = subconfigs_for_run
+        else:
+            self.subconfigs_for_run = [ os.path.basename(self.config_dir) ]
+
+        # self.subconfigs_for_run.sort()
+
         if not run_number: self.run_number = self.run_params["run_number"]
         else             : self.run_number = run_number
 
         self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
                        (self.run_number," ".join(self.subconfigs_for_run)))
-        msg = 'CONFIG transition underway'+ f'run_number:{self.run_number}'+ \
-            f'config_name:{" ".join(self.subconfigs_for_run)}'
-        TRACE.TRACE(4,msg,TRACE_NAME)
-                   
+        msg = f'CONFIG transition underway: run_number:{self.run_number} config_name:{" ".join(self.subconfigs_for_run)}'
+        TRACE.INFO(msg,TRACE_NAME)             
 #------------------------------------------------------------------------------
-# what this is needed for ?
+# what this is needed for ? - to ensure that check_hw_fcls operates in a known directory ?
 #------------------------------------------------------------------------------
         os.chdir(self.base_dir)
-#------------------------------------------------------------------------------
-# check subconfigs for this run - what they are? 
-# could this be done before launching the jobs ?
-# last segment of the self.config_dir is the config name
-#-------v----------------------------------------------------------------------
-        if subconfigs_for_run: 
-            self.subconfigs_for_run = subconfigs_for_run
-        else:
-            self.subconfigs_for_run.append(os.path.basename(self.config_dir))
-
-        self.subconfigs_for_run.sort()
-
-#        self.print_log("d", "Config name: %s" % (" ".join(self.subconfigs_for_run)),1)
 #------------------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
 # See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
-# refer to the same thing P.Murat: checks in check_hw_fcl look like nonsense - it costs nothing to keel the fcl files unique
+# refer to the same thing P.Murat: checks in check_hw_fcls look like nonsense - it costs nothing to keep the fcl files unique
 #-------v------------------------------------------------------------------------------
-#        self.print_log("i", "CONFIG transition 001 run_number:%06d config name: %s" % 
-#                       (self.run_number," ".join(self.subconfigs_for_run)))
-
         rc = self.check_hw_fcls();
         if (rc != 0): return 
 
         starttime = time.time()
-        self.print_log("i", "Reformatting FHiCL documents...", 2)
+        TRACE.INFO("Reformatting FHiCL documents...", TRACE_NAME)
         # breakpoint()
         try:
             self.create_setup_fhiclcpp_if_needed()
@@ -2881,7 +2894,7 @@ class FarmManager(Component):
 #          now, with the info on hand about the processes contained in procinfos, actually launch them
 #          this needs to be done every time
 #-------v----------------------------------------------------------------------
-        self.print_log("i", "CONFIG transition 010: before self.launch_procs")
+        TRACE.INFO("CONFIG transition 010: before self.launch_procs",TRACE_NAME)
         self.called_launch_procs = True
         self.launch_procs_time   = time.time()  # Will be used when checking logfile's timestamps
 

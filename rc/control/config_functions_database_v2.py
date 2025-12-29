@@ -59,7 +59,7 @@ else:
     print
 
 from conftool import exportConfiguration
-from conftool import getListOfAvailableRunConfigurations
+from conftool import getListOfAvailableRunConfigurationss
 from conftool import archiveRunConfiguration
 from conftool import updateArchivedRunConfiguration
 
@@ -67,7 +67,9 @@ from conftool import updateArchivedRunConfiguration
 def config_basedir(self):
     return "/tmp/database/"
 
-
+#------------------------------------------------------------------------------
+# PM: copies FHICL file to /tmp...
+#------------------------------------------------------------------------------
 def get_config_info_base(self):
 
     basedir = os.getcwd()

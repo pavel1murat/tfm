@@ -12,6 +12,8 @@ from   time       import time
 
 from   threading  import Thread
 
+import TRACE; TRACE_NAME="utilities";
+
 # from rc.control.procinfo import Procinfo
 
 bash_unsetup_command = 'upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi'
@@ -393,6 +395,7 @@ def construct_checked_command(cmds):
 #          associates the reformatted fcl's to  procinfos
 #------------------------------------------------------------------------------
 def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
+    TRACE.DEBUG(0,f'-- START',TRACE_NAME)
 
     if not os.path.exists(setup_fhiclcpp):
         raise Exception(
@@ -410,7 +413,7 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     if not re.search(r"^[0-9]+$", nprocessors):
         raise Exception(
             make_paragraph(
-                'A problem occurred when DAQInterface tried to execute "%s"; result was not an integer'
+                'A problem occurred when TFM tried to execute "%s"; result was not an integer'
                 % (cmd)
             )
         )
@@ -425,6 +428,8 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
         .stdout.readlines()[0]
         .strip()
     )
+    TRACE.DEBUG(0,f'reformat_indir :{reformat_indir}' ,TRACE_NAME);
+    TRACE.DEBUG(0,f'reformat_outdir:{reformat_outdir}',TRACE_NAME);
 
     for p in procinfos:
         fn = "%s/%s.fcl" % (reformat_indir, p.label)
@@ -447,12 +452,17 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     cmds.append(xargs_cmd)
     
     # breakpoint()
+    TRACE.DEBUG(0,f'commands:',TRACE_NAME)
+    for cmd in cmds:
+        TRACE.DEBUG(0,f'{cmd}',TRACE_NAME)
+
     proc = Popen("\n".join(cmds), shell=True, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, 
                  encoding="UTF-8")
     proc.wait()
 #------------------------------------------------------------------------------
 # to check the return code need to wait...
 #---v--------------------------------------------------------------------------
+    TRACE.DEBUG(0,f'proc.returncode:{proc.returncode}',TRACE_NAME)
     if proc.returncode != 0:
 
         if proc.stdout : print(proc.stdout)
@@ -472,6 +482,7 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     shutil.rmtree(reformat_indir)
     shutil.rmtree(reformat_outdir)
 
+    TRACE.DEBUG(0,f'-- END',TRACE_NAME)
     return # end of reformat_fhicl_documents, P.Murat: don't need to return anything
 
 #------------------------------------------------------------------------------
