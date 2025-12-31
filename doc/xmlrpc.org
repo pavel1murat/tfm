@@ -130,6 +130,17 @@ Result:
 String: 
   info:br02:TrackerBRDR::getNext: 1\n
   info:br01:TrackerBRDR::getNext: 1
+
+mu2etrk@mu2e-dl-01:~/daquser_002>xmlrpc http://mu2e-trk-07-data.fnal.gov:21114/RPC2  daq.report stats
+Result:
+
+String:
+br14 run number = 108087, Sent Fragment count = 74383, br14 statistics:\n
+Fragments read: 5959 fragments generated at 99.3108 getNext calls/sec, fragment rate = 99.3108 fragments/sec, monitor window = 60.0035 sec, min::max read size = 1::1 fragments Average times per fragment:  elapsed time = 0.0100694 sec\n
+Fragment output statistics: 5959 fragments sent at 99.3108 fragments/sec, effective data rate = 0.0121229 MB/sec, monitor window = 60.0035 sec, min::max event size = 0.00012207::0.00012207 MB\n
+Input wait time = 0.0100643 s/fragment, buffer wait time = 4.17695e-06 s/fragment, request wait time = 0.0100496 s/fragment, output wait time = 1.62599e-05 s/fragment\n
+fragment_id:3 nfragments:0 nbytes:0 max_nf:1000 max_nb:104857600
+
 #+end_src
 * ------------------------------------------------------------------------------
 * back to [[file:tfm.org]]

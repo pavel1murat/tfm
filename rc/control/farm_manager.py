@@ -81,13 +81,14 @@ from tfm.rc.control.manage_processes_direct import mopup_process_base
 
 # This is the end of if-elifs of process management methods
 
-if not "TFM_FHICL_DIRECTORY" in os.environ:
-    raise Exception(rcu.make_paragraph(
-        ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
-         "if you wish to use the database rather than the local filesystem "
-         "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
-    )
-elif os.environ["TFM_FHICL_DIRECTORY"] == "IGNORED":
+# if not "TFM_FHICL_DIRECTORY" in os.environ:
+#     raise Exception(rcu.make_paragraph(
+#         ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
+#          "if you wish to use the database rather than the local filesystem "
+#          "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
+#     )
+
+if os.getenv("TFM_FHICL_DIRECTORY") == "IGNORED":
     from tfm.rc.control.config_functions_database_v2 import get_config_info_base
     from tfm.rc.control.config_functions_database_v2 import put_config_info_base
     from tfm.rc.control.config_functions_database_v2 import put_config_info_on_stop_base
@@ -205,10 +206,11 @@ class FarmManager(Component):
         return
 #------^-----------------------------------------------------------------------
 # want run number to be always printed with 6 digits
+# called from get_config_info_base (config_functions_local.py)
 #---v--------------------------------------------------------------------------
     def get_config_parentdir(self):
         self.print_log("w","%s::get_config_parentdir: WHY IS IT CALLED ????" %(sys.modules[__name__]),2)
-        return os.environ["TFM_FHICL_DIRECTORY"]
+        return self.artdaq_config_dir; ## os.environ["TFM_FHICL_DIRECTORY"]
 
 
     def run_record_directory(self):
@@ -544,13 +546,13 @@ class FarmManager(Component):
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
 #---v--------------------------------------------------------------------------
     def __init__(self,
-                 name             = "toycomponent",
-                 config_dir       = None          ,
-                 odb_client       = None          , 
-                 rpc_host         = "localhost"   ,
-                 control_host     = "localhost"   ,
-                 synchronous      = True          ,
-                 debug_level      = -1
+                 name              = "toycomponent",
+                 artdaq_config_dir = None          ,
+                 odb_client        = None          , 
+                 rpc_host          = "localhost"   ,
+                 control_host      = "localhost"   ,
+                 synchronous       = True          ,
+                 debug_level       = -1
     ):
 #------------------------------------------------------------------------------
 # Initialize Component, the base class of FarmManager
@@ -581,10 +583,13 @@ class FarmManager(Component):
         self.productsdir             = None
 
         self.fKeepRunning            = True
-        self.config_dir              = config_dir
         self.transfer                = "Autodetect"
                                      
         self.config_name             = odb_client.odb_get("/Mu2e/ActiveRunConfiguration/Name")
+        self.artdaq_config_dir       = artdaq_config_dir;
+        self.config_dir              = artdaq_config_dir+'/'+self.config_name;
+
+        
         self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
         self._cmd_path               = '/Mu2e/Commands/DAQ/Tfm';
