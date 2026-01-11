@@ -19,8 +19,7 @@ from tfm.rc.control.utilities import fhicl_writes_root_file
 from tfm.rc.control.utilities import get_private_networks
 from tfm.rc.control.utilities import zero_out_last_subnet
 
-import  TRACE
-TRACE_NAME="bookkeeping"
+import  TRACE; TRACE_NAME="bookkeeping"
 
 def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
@@ -29,6 +28,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     # JCF, Nov-20-2018: update this when ready to require subsystem-compatible
     # artdaq
+    TRACE.INFO(f'-- START',TRACE_NAME)
 
     starttime = time.time()
     
@@ -1158,6 +1158,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 )
 
     self.print_log("i", f'step 13: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 13: took {time.time() - starttime} sec',TRACE_NAME);
+    
     starttime = time.time();
 
     firstLoggerRank = 9999999
@@ -1165,6 +1167,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # if a BoardReader writes an output file, update firstLoggerRank as well
 #------------------------------------------------------------------------------
     for p in self.procinfos:
+        TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME);
         if fhicl_writes_root_file(p.fhicl_used):
             if p.rank < firstLoggerRank:
                 firstLoggerRank = p.rank
@@ -1185,7 +1188,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
             # breakpoint()
             if ((p.type() == EVENT_BUILDER) or (p.type() == DATA_LOGGER)):
-
+                TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME)
                 if fhicl_writes_root_file(p.fhicl_used):
 #------------------------------------------------------------------------------
 # 17-Apr-2018, KAB: switched to using the "enclosing_table_range" function, 
@@ -1323,6 +1326,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     self.print_log("i", f'step 5: took {time.time() - starttime} sec');
     starttime = time.time();
+    TRACE.INFO(f'-- END',TRACE_NAME)
     return
 
 def bookkeeping_for_fhicl_documents_artdaq_v4_base(self):

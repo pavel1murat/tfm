@@ -395,7 +395,7 @@ class FarmManager(Component):
         self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.client.odb_get(nodes_path);
-        TRACE.DEBUG(0,f'nodes_path:{nodes_path}',TRACE_NAME)
+        TRACE.INFO(f'-- START nodes_path:{nodes_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
@@ -403,6 +403,7 @@ class FarmManager(Component):
         for short_node_name in nodes_dir.keys():
             node_path    = nodes_path+'/'+short_node_name;
             node_enabled = self.client.odb_get(node_path+'/Enabled')
+            TRACE.DEBUG(1,f'node_path:{node_path} node_enabled:{node_enabled}',TRACE_NAME)
             if (node_enabled == 0) : continue;
             
             node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
@@ -487,7 +488,7 @@ class FarmManager(Component):
                     p.print();
                     self.procinfos.append(p)
 
-        self.print_log('i','-- END')
+        TRACE.INFO('-- END',TRACE_NAME)
         return;
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
