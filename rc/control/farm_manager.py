@@ -221,9 +221,9 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # default artdaq port numbering: 10000+1000*partition+rank
 #------------------------------------------------------------------------------
-    def component_port_number(self,rank):
-        port = self.base_port_number+self.partition()*self.ports_per_partition+100+rank
-        return port
+#    def component_port_number(self,rank):
+#        port = self.base_port_number+self.partition()*self.ports_per_partition+100+rank
+#        return port
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
@@ -2059,7 +2059,7 @@ class FarmManager(Component):
                 priorities_used = {}
 
                 for p in self.procinfos:
-                    TRACE.DEBUG(0,f'  p.name:{p.name} p.priority:{p.priority} p.subsystem:{p.subsystem}',TRACE_NAME);
+                    TRACE.DEBUG(0,f'  p.name:{p.name} p.label:{p.label} p.priority:{p.priority} p.subsystem:{p.subsystem}',TRACE_NAME);
                     if proctype in p.name and p.subsystem == subsystem:
                         priorities_used[p.priority] = p
 
@@ -2069,7 +2069,7 @@ class FarmManager(Component):
                 for priority in priority_rankings:
                     proc_threads = {}
                     for p in self.procinfos:
-                        TRACE.DEBUG(0,f'p:{p}',TRACE_NAME);
+                        TRACE.DEBUG(0,f'p:{p.name}',TRACE_NAME);
                         if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
                             proc_threads   [p.label] = t

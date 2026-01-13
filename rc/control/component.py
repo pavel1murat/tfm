@@ -87,7 +87,7 @@ class Component(ContextObject):
         self.__rpc_port  = 10000+1000*self.__partition;
         self.__messages  = [];
 
-        TRACE.TRACE(7,f"rpc_host={self.__rpc_host} rpc_port={self.__rpc_port}",TRACE_NAME)
+        TRACE.INFO(f"rpc_host={self.__rpc_host} rpc_port={self.__rpc_port}",TRACE_NAME)
 #------------------------------------------------------------------------------
 # initialize the RPC server and commands it can execute
 # two contexts correspond to two threads
@@ -113,7 +113,7 @@ class Component(ContextObject):
         self._server.setDaemon(True);
         self._server.start() # server is now running
 
-        TRACE.TRACE(7,f"XMLRPC server should be running !",TRACE_NAME)
+        TRACE.INFO(f"XMLRPC server should be running !",TRACE_NAME)
 #------------------------------------------------------------------------------
 # transition "booting" leads to the "booted' state
 # states we need: 
@@ -267,6 +267,8 @@ class Component(ContextObject):
 # do not record the same command multiple times
 #------------------------------------------------------------------------------
     def message(self, msg_type, message):
+        TRACE.DEBUG(0,f'-- START: message type:{msg_type} message:{message}',TRACE_NAME)
+        
         self.print_log("i",f'rpc message type:{msg_type} message:{message}');
         self.__messages.append([msg_type, message])
 
@@ -276,6 +278,8 @@ class Component(ContextObject):
             if (ws[0] == 'action'):
                 action = ws[1];
                 break;
+
+        TRACE.DEBUG(0,f'-- END:',TRACE_NAME)
 
 #       x = (msg_type == 'alarm');      
 #       self.print_log("i",f'xxxxx = {x} self.tfm_cmd_path:{self.odb_cmd_path()}');

@@ -59,7 +59,7 @@ else:
     print
 
 from conftool import exportConfiguration
-from conftool import getListOfAvailableRunConfigurationss
+from conftool import getListOfAvailableRunConfigurations
 from conftool import archiveRunConfiguration
 from conftool import updateArchivedRunConfiguration
 
