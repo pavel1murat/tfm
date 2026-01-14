@@ -220,10 +220,11 @@ class FarmManager(Component):
         return "%s/metadata.txt" % (self.run_record_directory());
 #------------------------------------------------------------------------------
 # default artdaq port numbering: 10000+1000*partition+rank
+# for Mu2e, assume that the first boardreader (br01) has its rank = 101
 #------------------------------------------------------------------------------
-#    def component_port_number(self,rank):
-#        port = self.base_port_number+self.partition()*self.ports_per_partition+100+rank
-#        return port
+    def xmlrpc_port_number(self,rank):
+        port = self.base_port_number+self.partition()*self.ports_per_partition+rank
+        return port
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
@@ -410,7 +411,7 @@ class FarmManager(Component):
             
             TRACE.DEBUG(0,f'node_artdaq_path:{node_artdaq_path}',TRACE_NAME)
             enabled = self.client.odb_get(node_artdaq_path+'/Enabled')
-            TRACE.DEBUG(0,f'short_node_name:{short_node_name} node_artdaq_path:{node_artdaq_path} enabled:{enabled}',TRACE_NAME)
+            TRACE.DEBUG(0,f'short_node_name:{short_node_name} node_artdaq_path:{node_artdaq_path} enabled:{enabled}')
             if (enabled == 0):  continue ;
 
             node_artdaq_dir = self.client.odb_get(node_artdaq_path)
@@ -429,13 +430,12 @@ class FarmManager(Component):
                 TRACE.DEBUG(0,f'subdir2 process_path:{process_path}',TRACE_NAME)
                 for name,value in subdir2.items():
                     if (name == "Rank"):              rank      = int(value)
-                    if (name == "XmlrpcPort"):        port      = str(value)
+                    # if (name == "XmlrpcPort"):        port      = str(value)
                     if (name == "Subsystem" ):        subsystem = str(value)
                     if (name == "AllowedProcessors"): allowed_processors = str(value)
                     if (name == "Target"):            target    = str(value)                        
                     if (name == "Prepend"):           prepend   = str(value)
 
-                # TRACE.DEBUG(0,f'subdir2.keys:{subdir2.keys()}',TRACE_NAME)
                 timeout = 30;                 # seconds
                 pname   = 'undefined';
 #------------------------------------------------------------------------------
@@ -470,11 +470,15 @@ class FarmManager(Component):
                     raise Exception(f'ERROR: undefined process type:{label} for {host}')
 
                 host = self.hostname_on_private_subnet(short_node_name)
+
+                # to not hide 100000+1000*partition_id_rank in procinfo
+                xmlrpc_port = self.xmlrpc_port_number(rank);
                 
+                TRACE.DEBUG(0,f'name:{pname} label:{key_name} rank:{rank} port:{xmlrpc_port}')
                 p = Procinfo(name               = pname,
                              rank               = rank ,
-                             host               = host ,    # at this point, store long (with '-ctrl' names)
-                             port               = port     ,
+                             host               = host ,          # at this point, store long (with '-ctrl' names)
+                             port               = str(xmlrpc_port),
                              timeout            = timeout,
                              label              = key_name  ,
                              subsystem          = subsystem,

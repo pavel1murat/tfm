@@ -39,7 +39,7 @@ class Procinfo(object):
                  name,
                  rank,
                  host,
-                 port,
+                 port,                            # assumed to be a string
                  timeout            = 30,         # PM: pick some reasonable default
                  label              = None,
                  subsystem          = "1",
