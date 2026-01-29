@@ -79,27 +79,22 @@ from tfm.rc.control.manage_processes_direct import get_pid_for_process_base
 from tfm.rc.control.manage_processes_direct import process_launch_diagnostics_base
 from tfm.rc.control.manage_processes_direct import mopup_process_base
 
-# This is the end of if-elifs of process management methods
-
-# if not "TFM_FHICL_DIRECTORY" in os.environ:
-#     raise Exception(rcu.make_paragraph(
-#         ("\nThe TFM_FHICL_DIRECTORY environment variable must be defined; "
-#          "if you wish to use the database rather than the local filesystem "
-#          "for FHiCL document retrieval, set TFM_FHICL_DIRECTORY to IGNORED"))
-#     )
-
-if os.getenv("TFM_FHICL_DIRECTORY") == "IGNORED":
-    from tfm.rc.control.config_functions_database_v2 import get_config_info_base
-    from tfm.rc.control.config_functions_database_v2 import put_config_info_base
-    from tfm.rc.control.config_functions_database_v2 import put_config_info_on_stop_base
-    from tfm.rc.control.config_functions_database_v2 import listconfigs_base
-
-else:
-    from tfm.rc.control.config_functions_local import get_config_info_base
-    from tfm.rc.control.config_functions_local import put_config_info_base
-    from tfm.rc.control.config_functions_local import put_config_info_on_stop_base
-    from tfm.rc.control.config_functions_local import listconfigs_base
-
+#------------------------------------------------------------------------------
+# 2026-01-29 : database_v2 doesn't seem to be used... start cleaning up by renaming the
+#              imported python file 
+#------------------------------------------------------------------------------
+# if os.getenv("TFM_FHICL_DIRECTORY") == "IGNORED":
+#     from tfm.rc.control.config_functions_database_v2 import get_config_info_base
+#     from tfm.rc.control.config_functions_database_v2 import put_config_info_base
+#     from tfm.rc.control.config_functions_database_v2 import put_config_info_on_stop_base
+#     from tfm.rc.control.config_functions_database_v2 import listconfigs_base
+# 
+# else:
+#     from tfm.rc.control.config_functions_local import get_config_info_base
+#     from tfm.rc.control.config_functions_local import put_config_info_base
+#     from tfm.rc.control.config_functions_local import put_config_info_on_stop_base
+#     from tfm.rc.control.config_functions_local import listconfigs_base
+    
 class FarmManager(Component):
     """
     FarmManager: The intermediary between Run Control, the
@@ -212,7 +207,6 @@ class FarmManager(Component):
         self.print_log("w","%s::get_config_parentdir: WHY IS IT CALLED ????" %(sys.modules[__name__]),2)
         return self.artdaq_config_dir; ## os.environ["TFM_FHICL_DIRECTORY"]
 
-
     def run_record_directory(self):
         return "%s/%06i" % (self.record_directory,self.run_number);
 
@@ -231,10 +225,6 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def pmt_log_filename_format(self):
         return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
-
-    
-    def settings_filename(self):
-        return os.path.expandvars(self.config_dir+'/settings')
 
     def odb_cmd_path(self):
         return self._cmd_path;
@@ -757,10 +747,10 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # global actor functions
 #---v--------------------------------------------------------------------------
-    get_config_info                       = get_config_info_base
-    put_config_info                       = put_config_info_base
-    put_config_info_on_stop               = put_config_info_on_stop_base
-    listconfigs                           = listconfigs_base
+#    get_config_info                       = get_config_info_base
+#    put_config_info                       = put_config_info_base
+#    put_config_info_on_stop               = put_config_info_on_stop_base
+#    listconfigs                           = listconfigs_base
     save_run_record                       = save_run_record_base
     save_metadata_value                   = save_metadata_value_base
     start_datataking                      = start_datataking_base
@@ -2590,7 +2580,73 @@ class FarmManager(Component):
                 )
         return  # marks end of function
 
+#-------^----------------------------------------------------------------------
+# may be needed ???
+#---v--------------------------------------------------------------------------
+    def listconfigs(self):
+        subdirs = next(os.walk(self.get_config_parentdir()))[1]
+        configs = [subdir for subdir in subdirs if subdir != "common_code"]
+    
+        listconfigs_file = "/tmp/listconfigs_" + os.environ["USER"] + ".txt"
+    
+        outf = open(listconfigs_file, "w")
+    
+        print("\nAvailable configurations: ")
+        for config in sorted(configs):
+            print(config)
+            outf.write("%s\n" % config)
+    
+        print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
+        print(rcu.make_paragraph(
+            "Please note that for the time being, the optional max_configurations_to_list variable "
+            "is only applicable when working with the database")
+        )
+    
+        # print(flush=True)
+        sys.stdout.flush()
+
+#-------^----------------------------------------------------------------------
+# this one simply copies the FHICL files from  one place to another - why ???
 #------------------------------------------------------------------------------
+#     def get_config_info(self):
+#     
+#         TRACE.INFO(f'-- START: self.subconfigs_for_run:{self.subconfigs_for_run}',TRACE_NAME)
+#         
+#         uuidgen = (
+#             subprocess.Popen("uuidgen", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+#             .stdout.readlines()[0]
+#             .strip()
+#             .decode("utf-8")
+#         )
+#         tmpdir = "/tmp/%s" % (uuidgen)
+#         os.mkdir(tmpdir)
+#     
+#         ffp = []
+#        
+#         for subconfig in self.subconfigs_for_run:
+#             subconfig_dir = "%s/%s" % (self.get_config_parentdir(), subconfig)
+#     
+#             if os.path.exists(subconfig_dir):
+#                 tmp_subconfig_dir = "%s/%s" % (tmpdir, subconfig)
+#                 if os.path.exists(tmp_subconfig_dir): 
+#                     shutil.rmtree(tmp_subconfig_dir)
+#                 shutil.copytree(subconfig_dir, tmp_subconfig_dir)
+#                 assert os.path.exists(tmp_subconfig_dir)
+#     
+#                 for dirname, dummy, dummy in os.walk(tmp_subconfig_dir):
+#                     ffp.append(dirname)
+#             else:
+#                 raise Exception(
+#                     rcu.make_paragraph(
+#                         'Error: unable to find expected directory of FHiCL configuration files "%s"'
+#                         % (subconfig_dir)
+#                     )
+#                 )
+#     
+#         TRACE.INFO(f'-- END: tmpdir:{tmpdir} ffp:{ffp}',TRACE_NAME);
+#         return tmpdir, ffp
+
+#-------^----------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
 # See Issue #20803.
@@ -2600,61 +2656,64 @@ class FarmManager(Component):
     def check_hw_fcls(self):
 
         starttime = time.time()
-
-        try:
-            tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
-            assert "/tmp" == tmpdir_for_fhicl[:4]
-        except:
-            self.revert_failed_transition("calling get_config_info()")
-            return -1
+#------------------------------------------------------------------------------
+# get_config_info copies all FCL files from the config dir to subdirectory
+# with a single name /tmp/xxxxx. 
+# this needs to be changed to run fhicl-dump instead and only for the registered processes
+#------------------------------------------------------------------------------
+#         try:
+#             tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
+#             assert "/tmp" == tmpdir_for_fhicl[:4]
+#         except:
+#             self.revert_failed_transition("calling get_config_info()")
+#             return -1
             
         rootfile_cntr = 0
-        fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
+#        fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
         
-        TRACE.INFO(f'obtaining FHiCL documents from tmpdir_for_fhicl:{tmpdir_for_fhicl} self.fhicl_file_path={self.fhicl_file_path}',TRACE_NAME)
+        TRACE.INFO(f'-- START',TRACE_NAME)
 
-        for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
-            for fn in filenames:
-                # self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
-                TRACE.TRACE(TRACE.TLVL_DEBUG,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
-                if fn.endswith(".fcl"):
-                    if fn not in fn_dictionary:
-                        fn_dictionary[fn] = True
-        
-                        if fn.endswith("_hw_cfg.fcl"):
-                            fn_dictionary[fn.replace("_hw_cfg.fcl", ".fcl")] = True
-                        else:
-                            fn_dictionary[fn.replace(".fcl", "_hw_cfg.fcl")] = True
-                    else:
-                        raise Exception(
-                            rcu.make_paragraph(
-                                ('ERROR in farm_manager::check_hw_fcls: fn "%s"'
-                                 'found more than once given the set'
-                                 ' of requested subconfigurations "%s" (see %s)')
-                                % (fn," ".join(self.subconfigs_for_run),tmpdir_for_fhicl)
-                            )
-                        )
+#         for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
+#             for fn in filenames:
+#                 # self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
+#                 TRACE.TRACE(TRACE.TLVL_DEBUG,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
+#                 if fn.endswith(".fcl"):
+#                     if fn not in fn_dictionary:
+#                         fn_dictionary[fn] = True
+#         
+#                         if fn.endswith("_hw_cfg.fcl"):
+#                             fn_dictionary[fn.replace("_hw_cfg.fcl", ".fcl")] = True
+#                         else:
+#                             fn_dictionary[fn.replace(".fcl", "_hw_cfg.fcl")] = True
+#                     else:
+#                         raise Exception(
+#                             rcu.make_paragraph(
+#                                 ('ERROR in farm_manager::check_hw_fcls: fn "%s"'
+#                                  'found more than once given the set'
+#                                  ' of requested subconfigurations "%s" (see %s)')
+#                                 % (fn," ".join(self.subconfigs_for_run),tmpdir_for_fhicl)
+#                             )
+#                         )
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
-# which are already running ? is the idea that one would reupload the FCL files? 
+# which are already running ? is the idea that one would re-upload the FCL files?
+# self.config_dir contains only FCL files 
 #-------v------------------------------------------------------------------------------
-        TRACE.DEBUG(0,f'DEBUG: before loop over procinfos',TRACE_NAME)
+#        TRACE.DEBUG(0,f'DEBUG: before loop over procinfos',TRACE_NAME)
+        
         for p in self.procinfos:
-            matching_filenames = ["%s.fcl" % p.label]
-
-            if ("BoardReader" in p.name):  # For backwards compatibility (see Issue #20803)
-                matching_filenames.append("%s_hw_cfg.fcl" % p.label)
-
-            found_fhicl = False
-            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
-                for filename in filenames:
-                    if filename in matching_filenames:
-                        fcl = "%s/%s" % (dirname, filename)
-                        found_fhicl = True
+            filename    = f'{self.config_dir}/{p.label}.fcl';           
+            found_fhicl = os.path.exists(filename);
 
             self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-            TRACE.DEBUG(0,f'p.name={p.name} p.label={p.label}',TRACE_NAME)
-
+            TRACE.INFO(0,f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
+            
+#            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
+#                for filename in filenames:
+#                    if filename in matching_filenames:
+#                        fcl = "%s/%s" % (dirname, filename)
+#                        found_fhicl = True
+#
             if not found_fhicl:
                 TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
                 self.print_log("e",rcu.make_paragraph(
@@ -2663,12 +2722,13 @@ class FarmManager(Component):
                 self.revert_failed_transition("looking for all needed FHiCL documents")
                 return
 #------------------------------------------------------------------------------
-# update the process FHICL file
+# update the process FHICL file - start from expanding it
 #------------------------------------------------------------------------------
             try:
-                p.ffp = self.fhicl_file_path
-                p.update_fhicl(fcl)
+                p.update_fhicl(filename)
+                
             except Exception:
+                TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
                 self.print_log("e", traceback.format_exc())
                 self.alert_and_recover("farm_manager::check_hw_fcls : An exception was thrown when creating the process "
                                        "FHiCL documents; see traceback above for more info")
@@ -2689,11 +2749,11 @@ class FarmManager(Component):
         endtime = time.time()
         self.print_log("i", "CONFIG transition 002: step lasted (%.1f seconds)." % (endtime - starttime))
 
-        for p in self.procinfos:
-            assert not p.fhicl is None and not p.fhicl_used is None
+#        for p in self.procinfos:
+#            assert not p.fhicl is None and not p.fhicl_used is None
 
-        assert "/tmp" == tmpdir_for_fhicl[:4] and len(tmpdir_for_fhicl) > 4
-        shutil.rmtree(tmpdir_for_fhicl)
+#        assert "/tmp" == tmpdir_for_fhicl[:4] and len(tmpdir_for_fhicl) > 4
+#        shutil.rmtree(tmpdir_for_fhicl)
 
         return 0  # end of function
 
@@ -3046,18 +3106,18 @@ class FarmManager(Component):
         self.check_run_record_integrity()
         self.set_stop_requested(False);
 #------------------------------------------------------------------------------
-# step X) put_config_info
+# step X) put_config_info - this does nothing
 #-------v------------------------------------------------------------------------------
-        self.print_log("i", "START transition 001: before put_config_info")
-
-        try:
-            self.put_config_info()
-        except Exception:
-            self.print_log("e", traceback.format_exc())
-            self.alert_and_recover(
-                "An exception was thrown when trying to save configuration info; see traceback above for more info"
-            )
-            return
+#         self.print_log("i", "START transition 001: before put_config_info")
+# 
+#         try:
+#             self.put_config_info()
+#         except Exception:
+#             self.print_log("e", traceback.format_exc())
+#             self.alert_and_recover(
+#                 "An exception was thrown when trying to save configuration info; see traceback above for more info"
+#             )
+#             return
 #------------------------------------------------------------------------------
 # start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
@@ -3111,16 +3171,18 @@ class FarmManager(Component):
         self.fState.set_completed(0);
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
-
-        try:
-            self.put_config_info_on_stop()
-        except Exception:
-            self.print_log("e", traceback.format_exc())
-            self.alert_and_recover(
-                ("An exception was thrown when trying to save configuration info; "
-                 "see traceback above for more info")
-            )
-            return
+#------------------------------------------------------------------------------
+# 2026-01-29 PM: put_config_info does nothing
+#------------------------------------------------------------------------------
+#         try:
+#             self.put_config_info_on_stop()
+#         except Exception:
+#             self.print_log("e", traceback.format_exc())
+#             self.alert_and_recover(
+#                 ("An exception was thrown when trying to save configuration info; "
+#                  "see traceback above for more info")
+#             )
+#             return
 
         self.stop_datataking()
 

@@ -112,10 +112,16 @@ class Procinfo(object):
         print("procinfo: name:%-20s"%self.name+" type:%i"%self._type+
               " label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
 
+#------------------------------------------------------------------------------
+# place in expanded FHICL file, no more processing needed
+#------------------------------------------------------------------------------
     def update_fhicl(self, fhicl):
-        self.fhicl      = fhicl
-        self.fhicl_used = ""
-        self.recursive_include(self.fhicl)
+#        self.fhicl      = fhicl
+#        self.fhicl_used = ""
+#        self.recursive_include(self.fhicl)
+        res = subprocess.run(['fhicl-dump', filename],capture_output=True,text=True);
+        self.fhicl      = filename;
+        self.fhicl_used = res.stdout;
 
     def __lt__(self, other):
         if self.name != other.name:
@@ -143,7 +149,7 @@ class Procinfo(object):
 
         if self.fhicl is not None:
             for line in open(filename).readlines():
-
+                
                 if "#include" not in line:
                     self.fhicl_used += line
                 else:
