@@ -303,43 +303,32 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # max_event_size_bytes parameter or clobbering the existing one
 
     if self.advanced_memory_usage:
-        for i_proc in range(len(self.procinfos)):
-            if (
-                "BoardReader" not in self.procinfos[i_proc].name
-                and "RoutingManager" not in self.procinfos[i_proc].name
-            ):
-                if re.search(
-                    r"\n[^#]*max_event_size_bytes\s*:\s*[0-9\.e]+",
-                    self.procinfos[i_proc].fhicl_used,
-                ):
-                    self.procinfos[i_proc].fhicl_used = re.sub(
+        for p in self.procinfos:
+            TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+            self.print_log('i', f'-- advanced_memory_usage: p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}');
+            if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
+                if re.search(r"\n[^#]*max_event_size_bytes\s*:\s*[0-9\.e]+",p.fhicl_used,):
+                    p.fhicl_used = re.sub(
                         "max_event_size_bytes\s*:\s*[0-9\.e]+",
                         "max_event_size_bytes: %d"
-                        % (max_event_sizes[self.procinfos[i_proc].subsystem]),
-                        self.procinfos[i_proc].fhicl_used,
+                        % (max_event_sizes[p.subsystem]),
+                        p.fhicl_used,
                     )
                 else:
 
-                    res = re.search(
-                        r"\n(\s*buffer_count\s*:\s*[0-9]+)",
-                        self.procinfos[i_proc].fhicl_used,
-                    )
+                    res = re.search(r"\n(\s*buffer_count\s*:\s*[0-9]+)",p.fhicl_used)
 
                     assert res, make_paragraph(
-                        "artdaq's FHiCL requirements have changed since this code was written"+
-                        " (TFM expects a parameter called 'buffer_count' in %s, but this doesn't appear"+
+                        "artdaq FHiCL requirements have changed since this code was written"+
+                        f' (TFM expects a parameter called \'buffer_count\' in {p.label}, but this doesn\'t appear'+
                         " to exist -> TFM code needs to be changed to accommodate this)"
-                        % (self.procinfos[i_proc].label)
                     )
 
-                    self.procinfos[i_proc].fhicl_used = re.sub(
+                    p.fhicl_used = re.sub(
                         r"\n(\s*buffer_count\s*:\s*[0-9]+)",
                         "\n%s\nmax_event_size_bytes: %d"
-                        % (
-                            res.group(1),
-                            max_event_sizes[self.procinfos[i_proc].subsystem],
-                        ),
-                        self.procinfos[i_proc].fhicl_used,
+                        % (res.group(1),max_event_sizes[p.subsystem],),
+                        p.fhicl_used,
                     )
 
     self.print_log("i", f'step 5: took {time.time() - starttime} sec');
@@ -347,18 +336,15 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
 # Check for places where Fragment IDs need to be filled in
 #------------------------------------------------------------------------------
-    for i_proc in range(len(self.procinfos)):
-        if ("BoardReader"    not in self.procinfos[i_proc].name and 
-            "RoutingManager" not in self.procinfos[i_proc].name    ):
-            if re.search(
-                r"\n[^#]*fragment_ids\s*:\s*\[[0-9, ]*\]",
-                self.procinfos[i_proc].fhicl_used,
-            ):
-                self.procinfos[i_proc].fhicl_used = re.sub(
+    for p in self.procinfos:
+        TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+        if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
+            if re.search(r"\n[^#]*fragment_ids\s*:\s*\[[0-9, ]*\]",p.fhicl_used,):
+                p.fhicl_used = re.sub(
                     "fragment_ids\s*:\s*\[[0-9, ]*\]",
                     "fragment_ids: [ %s ]"
-                    % (", ".join([str(i) for i in fragment_ids[self.procinfos[i_proc].subsystem]])),
-                    self.procinfos[i_proc].fhicl_used,
+                    % (", ".join([str(i) for i in fragment_ids[p.subsystem]])),
+                    p.fhicl_used,
                 )
 
     self.print_log("i", f'step 6: took {time.time() - starttime} sec');
@@ -1187,6 +1173,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #          the string comparison every time... that also is much more error-prone
 #------------------------------------------------------------------------------
             # breakpoint()
+            self.print_log("i", f'p.label:{p.label} p.type():{p.type()}');
             if ((p.type() == EVENT_BUILDER) or (p.type() == DATA_LOGGER)):
                 TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME)
                 if fhicl_writes_root_file(p.fhicl_used):

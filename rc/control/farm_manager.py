@@ -2706,7 +2706,7 @@ class FarmManager(Component):
             found_fhicl = os.path.exists(filename);
 
             self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-            TRACE.INFO(0,f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
+            TRACE.INFO(f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
             
 #            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
 #                for filename in filenames:
@@ -2726,6 +2726,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
             try:
                 p.update_fhicl(filename)
+                self.print_log('i', f'------------------ p.fhicl_used:\n{p.fhicl_used}');
                 
             except Exception:
                 TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
