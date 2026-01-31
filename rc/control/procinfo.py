@@ -20,7 +20,7 @@
 # a given process's label is set in the boot file, alongside its
 # host and port
 #------------------------------------------------------------------------------
-import os, sys, re
+import os, sys, re, subprocess
 import tfm.rc.control.utilities as     rcu
 from   tfm.rc.io.timeoutclient  import TimeoutServerProxy
 
@@ -119,8 +119,8 @@ class Procinfo(object):
 #        self.fhicl      = fhicl
 #        self.fhicl_used = ""
 #        self.recursive_include(self.fhicl)
-        res = subprocess.run(['fhicl-dump', filename],capture_output=True,text=True);
-        self.fhicl      = filename;
+        res = subprocess.run(['fhicl-dump', fhicl],capture_output=True,text=True);
+        self.fhicl      = fhicl;
         self.fhicl_used = res.stdout;
 
     def __lt__(self, other):
