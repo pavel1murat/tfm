@@ -427,13 +427,13 @@ class FarmManager(Component):
         for x in p.list_of_sources:
             s += f' s{x.rank}: {{'
             s += f' transferPluginType: {self.transfer}'
-            s += f' destination_rank:  {x.rank}'
+            s += f' source_rank:  {x.rank}'
             s += f' max_fragment_size_words: {max_fragment_size_words}'
             
             # first destination includes the host_map
             if (x == p.list_of_sources[0]):
                 s += ' host_map: ['
-                offset = '        '
+                offset = ''
                 s += self.host_map_string(offset);
                 s += ']'
                 
