@@ -41,8 +41,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     other_allowed_versions = ["v3_02_01a"]
 
-    # self.fill_package_versions(["artdaq"])
-    version = "v3_13_01"; # self.package_versions["artdaq"]
+    version = "v3_13_01";
     
     s = subprocess.run(['spack','find', 'artdaq'],stdout=subprocess.PIPE,encoding='utf-8');
     
@@ -112,9 +111,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         max_fragment_sizes = []
 
         for procinfo in self.procinfos:
-
+            # res = the number of bytes (string)
+            print(f' ------------------------------- FHICLE file {procinfo.label} in bookkeeping')
+            print(procinfo.fhicl_used)
             res = re.findall(
-                r"\n[^#]*max_fragment_size_bytes\s*:\s*([0-9\.exabcdefABCDEF]+)",
+                r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",
                 procinfo.fhicl_used,
             )
             # breakpoint()
@@ -154,7 +155,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                          'and then adds this parameter during bookkeeping.')
                         % (procinfo.label))
                 )
-
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00001 DL01 test FCL');
+    print(dl.fhicl_used);
+    
     self.print_log("i", f'step 2: took {time.time() - starttime} sec');
     starttime = time.time();
 
@@ -307,7 +312,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
             self.print_log('i', f'-- advanced_memory_usage: p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}');
             if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
-                if re.search(r"\n[^#]*max_event_size_bytes\s*:\s*[0-9\.e]+",p.fhicl_used,):
+                if re.search(r"\n[^#]*.*max_event_size_bytes.*\s*:\s*[0-9\.e]+",p.fhicl_used,):
                     p.fhicl_used = re.sub(
                         "max_event_size_bytes\s*:\s*[0-9\.e]+",
                         "max_event_size_bytes: %d"
@@ -331,6 +336,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         p.fhicl_used,
                     )
 
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00002 DL01 test FCL');
+    print(dl.fhicl_used);
+
     self.print_log("i", f'step 5: took {time.time() - starttime} sec');
     starttime = time.time();
 #------------------------------------------------------------------------------
@@ -349,15 +359,19 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     self.print_log("i", f'step 6: took {time.time() - starttime} sec');
     starttime = time.time();
+
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00003 DL01 test FCL');
+    print(dl.fhicl_used);
 #------------------------------------------------------------------------------
 # Construct the host map string needed in the sources and destinations
 # tables in artdaq process FHiCL
 #------------------------------------------------------------------------------
     proc_hosts = []
 
-    procinfos_sorted_by_rank = sorted(
-        self.procinfos, key=lambda procinfo: procinfo.rank
-    )
+    procinfos_sorted_by_rank = sorted(self.procinfos, key=lambda procinfo: procinfo.rank)
+    
     for procinfo in procinfos_sorted_by_rank:
 
         if procinfo.name == "RoutingManager": continue
@@ -376,9 +390,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # the max event size will need to be provided; this value is used
     # to calculate the size of the buffers in the transfer plugins
 
-    def create_sources_or_destinations_string(
-        procinfo, nodetype, max_event_size, inter_subsystem_transfer=False
-    ):
+    def create_sources_or_destinations_string(procinfo, nodetype, max_event_size, inter_subsystem_transfer=False):
 
         if   (nodetype == "sources"):
             prefix = "s"
@@ -420,7 +432,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 buffer_size_words = self.max_fragment_size_bytes / 8
             elif "EventBuilder" not in procinfo.name or nodetype != "sources":
                 res = re.search(
-                    r"\n\s*max_event_size_bytes\s*:\s*([0-9\.e]+)", procinfo.fhicl_used
+                    r"\n\s*.*max_event_size_bytes*.\s*:\s*([0-9\.e]+)", procinfo.fhicl_used
                 )
                 if res:
                     max_event_size = int(float(res.group(1)))
@@ -510,13 +522,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         nodes = []
 
-        for i_procinfo_for_string, procinfo_for_string in enumerate(
-            procinfos_for_string
-        ):
+        for i_procinfo_for_string, procinfo_for_string in enumerate(procinfos_for_string):
             hms = host_map_string
-            if i_procinfo_for_string != 0 and (
-                nodetype == "sources" or nodetype == "destinations"
-            ):
+            if i_procinfo_for_string != 0 and (nodetype == "sources" or nodetype == "destinations"):
                 hms = ""
 
             if nodetype == "sources" and "EventBuilder" in procinfo.name:
@@ -579,6 +587,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     # Couple of sanity checks
 
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00004 DL01 test FCL');
+    print(dl.fhicl_used);
+
     for procinfo in self.procinfos:
 
         # A DFO shouldn't share a subsystem with any other eventbuilders
@@ -627,77 +640,53 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
                 )
 
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00005 DL01 test FCL');
+    print(dl.fhicl_used);
+
     self.print_log("i", f'step 8: took {time.time() - starttime} sec');
     starttime = time.time();
 
-    for i_proc in range(len(self.procinfos)):
+#     for p in self.procinfos:
+# 
+#         for tablename in ["sources", "destinations"]:
+# 
+#             (table_start, table_end) = table_range(p.fhicl_used, tablename)
+# 
+#             def determine_if_inter_subsystem_transfer(procinfo, table_name, table_searchstart):
+#                 for enclosing_sender_table in ["routingNetOutput","binaryNetOutput","subsystemOutput",]:
+#                     if (enclosing_table_name(procinfo.fhicl_used, table_name, table_searchstart) == enclosing_sender_table):
+#                         return True
+# 
+#                 return False
+# 
+#             searchstart = 0
+#             inter_subsystem_transfer = determine_if_inter_subsystem_transfer(p, tablename, searchstart)
+# 
+#             # 13-Apr-2018, KAB: modified this statement from an "if" test to  a "while" loop so that it will modify all of the source and
+#             # destination blocks in a file.  This was motivated by changes to configuration files to move common parameter definitions into
+#             # included files, and the subsequent creation of multiple source  and destination blocks in PROLOGs.
+#             
+#             while table_start != -1 and table_end != -1:
+#                 # PM: found table 'sources'  or 'destinations', do something
+#                 # is it an attempt to account for a potentially different max event size coming from a different subsystem ?
+#                 if (enclosing_table_name(p.fhicl_used, tablename, searchstart) != "message"):
+#                     p.fhicl_used = (p.fhicl_used[:table_start] + "\n"
+#                                     + tablename + ": { \n"
+#                                     + create_sources_or_destinations_string(p,tablename,max_event_sizes[p.subsystem],inter_subsystem_transfer,) + "\n } \n"
+#                                     + p.fhicl_used[table_end:]
+#                     )
+# 
+#                 searchstart = table_end
+#                 (table_start, table_end) = table_range(p.fhicl_used, tablename, searchstart)
+# 
+#                 inter_subsystem_transfer = determine_if_inter_subsystem_transfer(p, tablename, searchstart)
 
-        for tablename in ["sources", "destinations"]:
-
-            (table_start, table_end) = table_range(
-                self.procinfos[i_proc].fhicl_used, tablename
-            )
-
-            def determine_if_inter_subsystem_transfer(
-                procinfo, table_name, table_searchstart
-            ):
-                for enclosing_sender_table in [
-                    "routingNetOutput",
-                    "binaryNetOutput",
-                    "subsystemOutput",
-                ]:
-                    if (
-                        enclosing_table_name(
-                            procinfo.fhicl_used, table_name, table_searchstart
-                        )
-                        == enclosing_sender_table
-                    ):
-                        return True
-
-                return False
-
-            searchstart = 0
-            inter_subsystem_transfer = determine_if_inter_subsystem_transfer(
-                self.procinfos[i_proc], tablename, searchstart
-            )
-
-            # 13-Apr-2018, KAB: modified this statement from an "if" test to
-            # a "while" loop so that it will modify all of the source and
-            # destination blocks in a file.  This was motivated by changes to
-            # configuration files to move common parameter definitions into
-            # included files, and the subsequent creation of multiple source
-            # and destination blocks in PROLOGs.
-            while table_start != -1 and table_end != -1:
-
-                if (
-                    enclosing_table_name(
-                        self.procinfos[i_proc].fhicl_used, tablename, searchstart
-                    )
-                    != "message"
-                ):
-                    self.procinfos[i_proc].fhicl_used = (
-                        self.procinfos[i_proc].fhicl_used[:table_start]
-                        + "\n"
-                        + tablename
-                        + ": { \n"
-                        + create_sources_or_destinations_string(
-                            self.procinfos[i_proc],
-                            tablename,
-                            max_event_sizes[self.procinfos[i_proc].subsystem],
-                            inter_subsystem_transfer,
-                        )
-                        + "\n } \n"
-                        + self.procinfos[i_proc].fhicl_used[table_end:]
-                    )
-
-                searchstart = table_end
-                (table_start, table_end) = table_range(
-                    self.procinfos[i_proc].fhicl_used, tablename, searchstart
-                )
-
-                inter_subsystem_transfer = determine_if_inter_subsystem_transfer(
-                    self.procinfos[i_proc], tablename, searchstart
-                )
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00007 DL01 test FCL');
+    print(dl.fhicl_used);
 
     self.print_log("i", f'step 9: took {time.time() - starttime} sec');
     starttime = time.time();
@@ -721,6 +710,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                            procinfo.fhicl_used,
                         ):
                             nonsending_boardreaders.append(procinfo.label)
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00008 DL01 test FCL');
+    print(dl.fhicl_used);
 
     for p in self.procinfos:
         if ("DataLogger" in p.name) or ("Dispatcher" in p.name) :
@@ -754,6 +747,14 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+",
                               "partition_number: %d" % self.partition(),p.fhicl_used)
+#-------^----------------------------------------------------------------------
+# end of the loop
+#---v--------------------------------------------------------------------------
+
+    # debugging
+    dl = self.find_process("dl01")
+    print('------------------- 00009 DL01 test FCL');
+    print(dl.fhicl_used);
 
     # JCF, Apr-17-2019
 
@@ -932,10 +933,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 # Don't yet have a "tiebreaker" if there's more than one
                 # private network visible to all processes...
 
-                if (
-                    len(list(private_networks_seen_by_processes_involved_in_requests))
-                    > 0
-                ):
+                if (len(list(private_networks_seen_by_processes_involved_in_requests)) > 0):
                     multicast_interface_ip = list(
                         private_networks_seen_by_processes_involved_in_requests
                     )[0]
@@ -974,9 +972,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # Rename the function bookkeep_table_for_router_process, and have
     # it cover both routing_managers (RoutingManagers) and DFOs
 
-    def bookkeep_table_for_router_process(
-        i_proc, router_process_subsystem, tablename, target
-    ):
+    def bookkeep_table_for_router_process(i_proc, router_process_subsystem, tablename, target):
 
         table_start, table_end = table_range(
             self.procinfos[i_proc].fhicl_used, tablename
@@ -1125,7 +1121,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     "EventBuilder",
                 )
 
-        elif "DataLogger" in self.procinfos[i_proc].name:
+        elif (self.procinfos[i_proc].type() == DATA_LOGGER):
             dl_subsystem = self.procinfos[i_proc].subsystem
             if (dl_subsystem, "DataLogger") in router_process_hostnames:
                 bookkeep_table_for_router_process(
@@ -1135,6 +1131,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 bookkeep_table_for_router_process(
                     i_proc, dl_subsystem, "routing_table_config", "Dispatcher"
                 )
+
+            print('------------------- 00010 DL01 test FCL');
+            print(self.procinfos[i_proc].fhicl_used);
 
         elif "Dispatcher" in self.procinfos[i_proc].name:
             di_subsystem = self.procinfos[i_proc].subsystem

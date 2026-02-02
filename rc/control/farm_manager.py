@@ -9,9 +9,9 @@
 # d) allow artdaq clients to message back, handle client messages
 #
 #------------------------------------------------------------------------------
-import os, sys, argparse, glob, inspect
+import os, sys, argparse, glob, inspect, re
 from   datetime import datetime, timezone
-
+from   operator import attrgetter
 import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
 import threading, time, traceback
 
@@ -33,7 +33,7 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 #------------------------------------------------------------------------------
 import tfm.rc.control.run_control_state as     run_control_state
 from   tfm.rc.control.subsystem         import Subsystem
-from   tfm.rc.control.procinfo          import Procinfo
+from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
 
 from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
 from   tfm.rc.control.component         import Component
@@ -219,6 +219,13 @@ class FarmManager(Component):
     def xmlrpc_port_number(self,rank):
         port = self.base_port_number+self.partition()*self.ports_per_partition+rank
         return port
+
+    def find_process(self,label):
+        for p in self.procinfos:
+            if (p.label == label):
+                return p;
+
+        return None
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
@@ -288,10 +295,11 @@ class FarmManager(Component):
                        False,
                 )
 
-        cmd = "%s ; . %s for_running" % (
-            ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-            self.daq_setup_script,
-        )
+        spack_env = os.getenv('SPACK_ENV').split('/')[-1];
+        cmd = "%s ; . %s %s" % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
+                                self.daq_setup_script,spack_env)
+
+        self.print_log("i",f'cmd:"{cmd}"\n',1,False);
 
         if not rcu.host_is_local(node):
             cmd = "timeout %d ssh %s '%s'" % (self.ssh_timeout_in_seconds,node,cmd)
@@ -379,6 +387,157 @@ class FarmManager(Component):
         return hname;
 
 #------------------------------------------------------------------------------
+    def host_map_string(self,offset):
+        s = ''
+        for p in self.procinfos:
+            s += f'{offset}           {{ rank:{p.rank:3} host: "{p.host}.fnal.gov" }}';
+            if (p != self.procinfos[-1]):
+                s += ','
+
+            s += '\n'
+            
+        return s;
+
+#------------------------------------------------------------------------------
+    def destination_string(self,p,max_fragment_size_words):
+        s = ''
+        
+        for d in p.list_of_destinations:
+            s += f'    d{d.rank} : {{\n'
+            s += f'        transferPluginType     : "{self.transfer}"\n'
+            s += f'        destination_rank       :  {d.rank}\n'
+            s += f'        max_fragment_size_words:  {max_fragment_size_words}\n'
+            
+            # first destination includes the host_map
+            if (d == p.list_of_destinations[0]):
+                offset = '        '
+                s += 'host_map : [\n'
+                s += self.host_map_string(offset);
+                s += '           ]\n'
+                
+            s +=  '    }\n'
+
+        return s;
+
+#------------------------------------------------------------------------------
+    def source_string(self,p,max_fragment_size_words):
+        s  = ''
+
+        for x in p.list_of_sources:
+            s += f'    d{x.rank} : {{\n'
+            s += f'        transferPluginType     : "{self.transfer}"\n'
+            s += f'        destination_rank       :  {x.rank}\n'
+            s += f'        max_fragment_size_words:  {max_fragment_size_words}\n'
+            
+            # first destination includes the host_map
+            if (x == p.list_of_sources[0]):
+                s += 'host_map : [\n'
+                offset = '        '
+                s += self.host_map_string(offset);
+                s += '           ]\n'
+                
+            s +=  '    }\n'
+
+        return s;
+    
+#------------------------------------------------------------------------------
+# place in expanded FHICL file, no more processing needed
+# also need to replace some lines which could be process specific
+#------------------------------------------------------------------------------
+    def update_fhicl(self, procinfo, max_fragment_size_words):
+        # step 1 : read and replace - start from BRs
+        print('------ update_fhicl')
+        procinfo.print()
+        
+        with open(procinfo.fhicl,'r') as f:
+            lines = f.readlines()
+
+        new_text = []
+        if (procinfo.type() == BOARD_READER):
+            for line in lines:
+                # print(line);
+                new_text.append(line)
+                if (line.find('daq.fragment_receiver.destinations') >= 0):
+                    # always replace the line with the real string
+                    # max_fragment_size_words is calculated
+                    s = self.destination_string(procinfo,max_fragment_size_words)
+                    new_text.append(s)
+                    
+        elif (procinfo.type() == EVENT_BUILDER):
+            for line in lines:
+                # print(line);
+                new_text.append(line);
+                pattern = 'daq.event_builder.sources';
+                match = re.search(pattern,line)
+                if (match):
+                    # always replace the line with the real string
+                    # max_fragment_size_words is calculated
+                    s = self.source_string(procinfo,max_fragment_size_words)
+                    new_text.append(s)
+                    continue
+
+                pattern = r'art.outputs.([\w.-]+).destinations'
+                match = re.search(pattern,line)
+                if (match):
+                    module = match.group(1);
+                    s = self.destination_string(procinfo,max_fragment_size_words);
+                    new_text.append(s);
+                    continue;
+                    
+                pattern = r'art.outputs.([\w.-]+).host_map'
+                match = re.search(pattern,line)
+                if (match):
+                    module = match.group(1);
+                    offset = '    ' # 4 spaces (TCL indent)
+                    s = self.host_map_string(offset);
+                    new_text.append(s);
+                    continue;
+
+        elif (procinfo.type() == DATA_LOGGER):
+            for line in lines:
+                # print(line);
+                new_text.append(line);
+                pattern = 'daq.aggregator.sources';
+                match = re.search(pattern,line)
+                if (match):
+                    # always replace the line with the real string
+                    # max_fragment_size_words is calculated
+                    s = self.source_string(procinfo,max_fragment_size_words)
+                    new_text.append(s)
+                    continue
+
+                pattern = r'art.outputs.([\w.-]+).destinations'
+                match = re.search(pattern,line)
+                if (match):
+                    module = match.group(1);
+                    s = self.destination_string(procinfo,max_fragment_size_words);
+                    new_text.append(s);
+                    continue;
+                    
+                pattern = r'art.outputs.([\w.-]+).host_map'
+                match = re.search(pattern,line)
+                if (match):
+                    module = match.group(1);
+                    offset = '    ' ## 4 spaces, TCL indent
+                    s = self.host_map_string(offset);
+                    new_text.append(s);
+                    continue;
+        
+
+        #-------- write updated FCL
+        new_fn = f'/tmp/partition_{self.partition()}/{self.config_name}/{procinfo.label}.fcl'
+        with open(new_fn,'w') as f:
+            f.writelines(line for line in new_text)
+            
+        # step 2 : flatten
+        res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
+        procinfo.fhicl      = new_fn;
+        procinfo.fhicl_used = res.stdout;
+
+        print('----------------------------- end of update_fhicl')
+        print(procinfo.fhicl_used);
+
+#------------------------------------------------------------------------------
 # PM: create self.procinfo's
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
@@ -390,7 +549,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
-#        for short_node_name,node_value in nodes_dir:
         for short_node_name in nodes_dir.keys():
             node_path    = nodes_path+'/'+short_node_name;
             node_enabled = self.client.odb_get(node_path+'/Enabled')
@@ -463,6 +621,7 @@ class FarmManager(Component):
 
                 # to not hide 100000+1000*partition_id_rank in procinfo
                 xmlrpc_port = self.xmlrpc_port_number(rank);
+                fcl_fn      = f'{self.config_dir}/{key_name}.fcl';
                 
                 TRACE.DEBUG(0,f'name:{pname} label:{key_name} rank:{rank} port:{xmlrpc_port}')
                 p = Procinfo(name               = pname,
@@ -474,6 +633,7 @@ class FarmManager(Component):
                              subsystem          = subsystem,
                              allowed_processors = None,
                              target             = "none",
+                             fhicl              = fcl_fn,
                              prepend            = ""
                              )
                 if (p.server == None):
@@ -482,8 +642,14 @@ class FarmManager(Component):
                     p.print();
                     self.procinfos.append(p)
 
+        self.procinfos.sort(key=lambda x: x.rank)
+#-------^-----------^----------------------------------------------------------
+# an exersize: print host map, sort procinfos by rank anyway
+#-------v----------------------------------------------------------------------
+               
         TRACE.INFO('-- END',TRACE_NAME)
         return;
+
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
 # in a configuration, subsystems are described under "DAQ/Subsystems" 
@@ -497,9 +663,8 @@ class FarmManager(Component):
         path     = self.daq_conf_path + "/Subsystems"
 
         self.print_log('i',f'path:{path}');
-
 #------------------------------------------------------------------------------
-# expect only subssytem definitions in this subdirectory
+# expect only subsystem definitions in this subdirectory
 #------------------------------------------------------------------------------
         dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
@@ -511,12 +676,12 @@ class FarmManager(Component):
             
             s     = Subsystem(ss_id);
             # assume sources to be a comma-separated list
-            if ('Sources' in data.keys()): 
-                for x in data['Sources'].split(','):
+            if ('sources' in data.keys()): 
+                for x in data['sources'].split(','):
                     s.sources.append(x)
                     
-            if ('Destination'  in data.keys()): s.destination  = data['Destination' ];
-            if ('FragmentMode' in data.keys()): s.fragmentMode = data['FragmentMode'];
+            if ('destination'   in data.keys()): s.destination  = data['destination' ];
+            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragmentmode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #------------------------------------------------------------------------------
@@ -527,16 +692,205 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         self.print_log('i',f'N subsystems:{len(self.subsystems.keys())}')
         
-        for k,v in self.subsystems.items():
-            print('k,type  = ',k,type(k))
-            print('v,type  = ',v,type(v))
-            v.print();
-            
+        for k in self.subsystems.keys():
+#            print('k,type  = ',k,type(k))
+#            print('v,type  = ',v,type(v))
+            self.subsystems[k].print();
+
         self.print_log('i','--- END')
         
         return
 
 #------------------------------------------------------------------------------
+# define processes this p.type = BOARD_READER, BR is talking to destinations only
+#------------------------------------------------------------------------------
+    def init_br_connections(self,p):
+        
+        s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
+        if (s.max_type >= EVENT_BUILDER):
+            list_of_ebs = s.list_of_procinfos[EVENT_BUILDER]
+            for eb in list_of_ebs:
+                p.list_of_destinations.append(eb);
+                eb.list_of_sources.append(p);
+        else:
+            # check subsystem destination
+            print(f'-- [init_br_connections] p.label:{p.label} s.destination:{s.destination}')
+            if (s.destination != None):
+                # subsystem has a destination, that has to have event builders
+                sd = self.subsystems[s.destination];
+                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+                print(f'-- [init_br_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}')
+                
+                for eb in list_of_ebs:
+                    print(f'-- [init_br_connections] append {eb.label} to the destinations of {p.label}')
+                    p.list_of_destinations.append(eb);
+                    eb.list_of_sources.append(p);
+        return;
+
+#------------------------------------------------------------------------------
+# define processes for p.type = EVENT_BUILDER, 
+#------------------------------------------------------------------------------
+    def init_eb_connections(self,p):
+        # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
+        # start from checking inputs
+        s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
+        # BRs should already be covered, check for input from other EBs
+
+        if (s.sources != None):
+            for source in s.sources:
+                ss = self.subsystems[source]
+                # there should be no DLs in the source subsystem, it should end in EB
+                if (ss.max_type == EVENT_BUILDER):
+                    list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
+                    for eb in list_of_ebs:
+                        # avoid double counting
+                        if (not eb in p.list_of_sources):
+                            p.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(p);
+
+                elif (ss.max_type == BOARD_READER):
+                    list_of_brs = ss.list_of_procinfos[BOARD_READER]
+                    for br in list_of_brs:
+                        # avoid double counting
+                        if (not br in p.list_of_sources):
+                            p.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(p);
+                    
+#---------------------------^--------------------------------------------------
+# - done with the sources
+# - an EB should also have destinations - either DL's or other EB's
+#-------v----------------------------------------------------------------------
+
+        list_of_dls = s.list_of_procinfos[DATA_LOGGER]
+        if (len(list_of_dls) > 0):
+            for dl in list_of_dls:
+                dl.list_of_sources.append(p);
+                p.list_of_destinations.append(dl);
+                    
+        else:
+            # subsystem has no own data loggers, should have a destination
+            if (s.destination != None):
+                # subsystem has a destination, that has to start with EB level
+                sd = self.subsystems[s.destination]
+                if (sd.min_type < EVENT_BUILDER):
+                    # a problem, throw an exception
+                    raise Exception('EB: trouble');
+                else:
+                    # first check EBs in the destination subsystem
+                    list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+                    if (len(list_of_ebs) > 0):
+                        for eb in list_of_ebs:
+                            p.list_of_destinations.append(eb);
+                            eb.list_of_sources.append(p);
+                    else:
+                        # no EBs, look for DLs
+                        list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
+                        if (len(list_of_dls) > 0):
+                            for dl in list_of_dls:
+                                p.list_of_destinations.append(dl);
+                                dl.list_of_sources.append(p);
+                        else:
+                            # a problem , throw
+                            raise Exception('EB: no EBs/DLs in the DEST');
+        return;
+#------------------------------------------------------------------------------
+# define processes for p.type = DATA_LOGGER
+#------------------------------------------------------------------------------
+    def init_dl_connections(self,p):
+        # DL has to have inputs from either own EBs or from EBs other subsystems
+        # start from checking inputs
+        s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
+        # EBs should already be covered
+
+        if (s.sources != None):
+            for source in s.sources:
+                ss = self.subsystems[source]
+                # there should be no DLs in the source subsystem, it should end in EB
+                if (ss.min_type == DATA_LOGGER):
+                    # no EBs in the subsystem the DL handles sources
+                    list_of_ebs = ss.list_of_event_builders()
+                    for eb in list_of_ebs:
+                        # avoid double counting
+                        if (not eb in p.list_of_sources):
+                            p.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(p);
+#---------------------------^--------------------------------------------------
+# done with the sources
+# an EB should also have destinations - either DL's or other EB's
+#-------v----------------------------------------------------------------------
+        else:
+            # subsystem has no official sources, there should be local EB's
+            list_of_ebs = s.list_of_event_builders()
+            if (len(list_of_ebs) > 0):
+                for eb in list_of_ebs:
+                    if (not eb in p.list_of_sources):
+                        p.list_of_sources.append(eb);
+                        eb.list_of_destinations.append(p);
+                    
+            else:
+                # subsystem has no own EB's : trouble
+                raise Exception('DL: no EBs in the subsystem');
+        return;
+#------------------------------------------------------------------------------
+# define processes for p.type = DISPATCHER
+#------------------------------------------------------------------------------
+    def init_ds_connections(self,p):
+        # DS only has inputs ..DLs ?
+        # start from checking inputs
+        s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
+
+        if (s.sources != None):
+            # THERE ARE INPUT SUBSYSTEMS, there should not be local inputs
+            for source in s.sources:
+                ss = self.subsystems[source]
+                # there should be DLs in the source subsystem
+                if (ss.max_type >= DATA_LOGGER):
+                    # it might make sense to allow a DL to send events to DSs anywhere,
+                    # although need to check the logic
+                    plist = ss.list_of_data_loggers()
+                    for x in plist:
+                        # avoid double counting - just in case
+                        if (not x in p.list_of_sources):
+                            p.list_of_sources.append(x);
+                            x.list_of_destinations.append(p);
+                else:
+                    # ss has no DLs, check EBs 
+                    plist = ss.list_of_event_builders();
+                    for x in plist:
+                        # avoid double counting - just in case
+                        if (not x in p.list_of_sources):
+                            p.list_of_sources.append(x);
+                            x.list_of_destinations.append(p);
+#---------------------------^--------------------------------------------------
+# no input sources , check local ones
+#-------v----------------------------------------------------------------------
+        else:
+            plist = s.list_of_data_loggers()
+            if (len(plist) > 0):
+                # DLs available, local EBs should be talking to them
+                for x in plist:
+                    p.list_of_sources.append(x);
+                    x.list_of_destinations.append(p);
+                    
+            else:
+                # subsystem has no own data loggers, look for event builders
+                plist = s.list_of_event_builders()
+                if (len(plist) > 0):
+                    # DLs available, local EBs should be talking to them
+                    for x in plist:
+                        if (not x in dl.list_of_sources):
+                            p.list_of_sources.append(x);
+                            x.list_of_destinations.append(p);
+                else:
+                    # a problem , throw
+                    raise Exception('DS: no local DLs or EBs');
+        return;
+#------------------------------------------------------------------------------
+# define processes for p.type = ROUTINE_MANAGER
+#------------------------------------------------------------------------------
+    def init_rm_connections(self,p):
+        raise Exception('inti_rm_connection: not implemented yet');
+#-------^----------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
 #---v--------------------------------------------------------------------------
@@ -667,13 +1021,95 @@ class FarmManager(Component):
         self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
         self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
 #------------------------------------------------------------------------------
-# definition of subsystems
+# initialize artfaq subsystems and processes
 #-------v----------------------------------------------------------------------
         self.init_artdaq_subsystems()
-#------------------------------------------------------------------------------
-# definition of artdaq processes.. processes know about their subsystems
-#------------------------------------------------------------------------------
         self.init_artdaq_processes()
+#------------------------------------------------------------------------------
+# associate processes and subsystems
+#-------v----------------------------------------------------------------------
+        print('-------------------------- append processes to subsystems')
+        for p in self.procinfos:
+            print (f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem:{p.subsystem}')
+            s = self.subsystems[p.subsystem]
+            s.print()
+            # print('sss',s.list_of_procinfos);
+            s.list_of_procinfos[p.type()].append(p);
+            if (s.max_type < p.type()): s.max_type = p.type();
+            if (s.min_type > p.type()): s.min_type = p.type();
+
+        print('-------------------------- subsystems supposedly initialized')
+        for s in self.subsystems.values():
+            s.print()
+#------------------------------------------------------------------------------
+# for each process create lists of sources and destinations
+# BR --> EB
+#               lowest in the subsystem
+# EB --> EB
+# EB --> DL
+#
+# DL --> DS
+#------------------------------------------------------------------------------
+        print('-------------------------- init_process_connections')
+        for p in self.procinfos:
+            if (p.type() == BOARD_READER):
+                self.init_br_connections(p);
+            elif (p.type() == EVENT_BUILDER):
+                self.init_eb_connections(p);
+            elif (p.type() == DATA_LOGGER):
+                self.init_dl_connections(p);
+            elif (p.type() == DISPATCHER):
+                self.init_ds_connections(p);
+            elif (p.type() == ROUTING_MANAGER):    # shouldn't happen to us
+                self.init_rm_connections(p);
+#-------^----------------------------------------------------------------------
+# at this point, each process knows about its sources and destinations
+# so we can update the FCL file
+# replaced should be lines with
+# -- BR:
+#         daq.fragment_receiver.destinations
+# -- EB:
+#         daq.event_builder.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DL:
+#         daq.aggregator.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DS:
+#         daq.aggregator.sources
+#
+# don't forget about smth max_fragment_size_bytes....
+# want to print what we got
+#-------v----------------------------------------------------------------------
+        print(f'----------- AAA processed self.procinfos: print sources and destinations')
+        for p in self.procinfos:
+            print(f'p.subsystem:{p.subsystem} p.rank:{p.rank} p.label:{p.label}')
+            if (p.list_of_sources == None):
+                print('  -- sources: None');
+            else:
+                print('  -- sources:')
+                for p1 in p.list_of_sources:
+                    p1.print();
+
+            if (p.list_of_destinations == None):
+                print('  -- destinations: None');
+            else:
+                print('  -- destinations:')
+                for p1 in p.list_of_destinations:
+                    p1.print();
+
+        print(f'----------- excersize printing the host_map')
+        s = self.host_map_string('')
+        print(f'{s}')
+
+#------------------------------------------------------------------------------
+# now update fcls
+#------------------------------------------------------------------------------
+        max_fragment_size_words = 25000;
+        for p in self.procinfos:
+            self.update_fhicl(p,max_fragment_size_words);
+        
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 
@@ -1496,11 +1932,8 @@ class FarmManager(Component):
 
         undefined_var = None
 
-        if   self.daq_setup_script is None: undefined_var = "daq_setup_script"
-        elif self.debug_level      is None: undefined_var = "debug_level"
-
-        if undefined_var :
-            raise Exception(rcu.make_paragraph('Error: "%s" undefined' % (undefined_var)))
+        if self.daq_setup_script is None: 
+            raise Exception(rcu.make_paragraph('Error: self.daq_setup_script undefined'))
 
         if self.debug_level == 0:
             self.print_log("w",rcu.make_paragraph(
@@ -1538,7 +1971,7 @@ class FarmManager(Component):
         if (self.debug_level >= 2):
             for key in self.subsystems.keys(): self.subsystems[key].print()
 
-        for ss in self.subsystems:
+        for ss in self.subsystems:                       # ss is a string (key)
             dest = self.subsystems[ss].destination
             if dest is not None:
                 if (self.subsystems[dest] == None or ss not in self.subsystems[dest].sources):
@@ -2471,34 +2904,6 @@ class FarmManager(Component):
                     )
                     return -1
         return 0
-#------------------------------------------------------------------------------
-# this is the place where each ARTDAQ component get its XMLRPC server created
-# 1) not sure why this can't be done whem initializing the Procinfo thing
-# 2) can have timeout a parameter of the Procinfo thing
-# P.Murat: create_time_server_proxy - make it a separate function
-#---v--------------------------------------------------------------------------
-#     def create_time_server_proxy(self):
-#         starttime = time.time()
-#         for p in self.procinfos:
-# 
-#             if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
-#             elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
-#             elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
-#             elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
-#             elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
-# 
-#             try:
-#                 p.server = TimeoutServerProxy(p.socketstring, timeout)
-#             except Exception:
-#                 self.print_log("e", traceback.format_exc())
-#                 self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
-#                 return -1
-# #------------------------------------------------------------------------------
-# #       everything is fine
-# #-------v----------------------------------------------------------------------
-#         endtime = time.time()
-#         self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
-#         return 0
 
 #------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
@@ -2702,38 +3107,33 @@ class FarmManager(Component):
 #        TRACE.DEBUG(0,f'DEBUG: before loop over procinfos',TRACE_NAME)
         
         for p in self.procinfos:
-            filename    = f'{self.config_dir}/{p.label}.fcl';           
-            found_fhicl = os.path.exists(filename);
-
-            self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-            TRACE.INFO(f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
-            
-#            for dirname, dummy, filenames in os.walk(tmpdir_for_fhicl):
-#                for filename in filenames:
-#                    if filename in matching_filenames:
-#                        fcl = "%s/%s" % (dirname, filename)
-#                        found_fhicl = True
-#
-            if not found_fhicl:
-                TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
-                self.print_log("e",rcu.make_paragraph(
-                    f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
-                )
-                self.revert_failed_transition("looking for all needed FHiCL documents")
-                return
+#             filename    = f'{self.config_dir}/{p.label}.fcl';           
+#             found_fhicl = os.path.exists(filename);
+# 
+#             self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
+#             TRACE.INFO(f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
+#             
+#             if not found_fhicl:
+#                 TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
+#                 self.print_log("e",rcu.make_paragraph(
+#                     f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
+#                 )
+#                 self.revert_failed_transition("looking for all needed FHiCL documents")
+#                 return
 #------------------------------------------------------------------------------
 # update the process FHICL file - start from expanding it
+# already expanded
 #------------------------------------------------------------------------------
-            try:
-                p.update_fhicl(filename)
-                self.print_log('i', f'------------------ p.fhicl_used:\n{p.fhicl_used}');
-                
-            except Exception:
-                TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover("farm_manager::check_hw_fcls : An exception was thrown when creating the process "
-                                       "FHiCL documents; see traceback above for more info")
-                return
+#             try:
+#                 self.update_fhicl(p,filename)
+#                 self.print_log('i', f'------------------ p.fhicl_used:\n{p.fhicl_used}');
+#                 
+#             except Exception:
+#                 TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
+#                 self.print_log("e", traceback.format_exc())
+#                 self.alert_and_recover("farm_manager::check_hw_fcls : An exception was thrown when creating the process "
+#                                        "FHiCL documents; see traceback above for more info")
+#                 return
 
             if not self.disable_unique_rootfile_labels and ("EventBuilder" in p.name or "DataLogger" in p.name):
                 fhicl_before_sub     = p.fhicl_used

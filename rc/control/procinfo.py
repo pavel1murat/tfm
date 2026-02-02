@@ -61,6 +61,8 @@ class Procinfo(object):
         self.fhicl              = fhicl  # Name of the input FHiCL document
         self.ffp                = fhicl_file_path
         self.priority           = 999
+        self.list_of_sources      = [ ]
+        self.list_of_destinations = [ ]
 
         if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
         elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
@@ -74,21 +76,6 @@ class Procinfo(object):
             self.server = TimeoutServerProxy(xmlrpc_url, timeout)
         except Exception:
             TRACE.TRACE(3,f'failed to create an XMLRPC server for process:{label} and socket:{xmlrpc_url}',TRACE_NAME);
-
-        # FHiCL code actually sent to the process
-
-        # JCF, 11/11/14 -- note that "fhicl_used" will be modified
-        # during the initalization function, as bookkeeping, etc.,
-        # is performed on FHiCL parameters
-
-        if self.fhicl is not None:
-            self.fhicl_used = ""
-            self.recursive_include(self.fhicl)
-        else:
-            self.fhicl_used = None
-
-        # JCF, Jan-14-2016
-
         # Do NOT change the "lastreturned" string below without
         # changing the commensurate string in check_proc_transition!
 
@@ -109,19 +96,7 @@ class Procinfo(object):
         return self.host+':'+self.port;
 
     def print(self):
-        print("procinfo: name:%-20s"%self.name+" type:%i"%self._type+
-              " label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
-
-#------------------------------------------------------------------------------
-# place in expanded FHICL file, no more processing needed
-#------------------------------------------------------------------------------
-    def update_fhicl(self, fhicl):
-#        self.fhicl      = fhicl
-#        self.fhicl_used = ""
-#        self.recursive_include(self.fhicl)
-        res = subprocess.run(['fhicl-dump', fhicl],capture_output=True,text=True);
-        self.fhicl      = fhicl;
-        self.fhicl_used = res.stdout;
+        print(f'procinfo: subsystem:{self.subsystem:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
 
     def __lt__(self, other):
         if self.name != other.name:
