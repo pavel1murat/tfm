@@ -390,11 +390,12 @@ class FarmManager(Component):
     def host_map_string(self,offset):
         s = ''
         for p in self.procinfos:
-            s += f'{offset}           {{ rank:{p.rank:3} host: "{p.host}.fnal.gov" }}';
+#            s += f'{offset} {{ rank:{p.rank:3} host: "{p.host}" }}';
+            s += f' {{ rank:{p.rank:3} host: "{p.host}"}}';
             if (p != self.procinfos[-1]):
                 s += ','
 
-            s += '\n'
+#            s += '\n'
             
         return s;
 
@@ -403,19 +404,19 @@ class FarmManager(Component):
         s = ''
         
         for d in p.list_of_destinations:
-            s += f'    d{d.rank} : {{\n'
-            s += f'        transferPluginType     : "{self.transfer}"\n'
-            s += f'        destination_rank       :  {d.rank}\n'
-            s += f'        max_fragment_size_words:  {max_fragment_size_words}\n'
+            s += f' d{d.rank}: {{'
+            s += f' transferPluginType: {self.transfer}'
+            s += f' destination_rank:  {d.rank}'
+            s += f' max_fragment_size_words: {max_fragment_size_words}'
             
             # first destination includes the host_map
             if (d == p.list_of_destinations[0]):
                 offset = '        '
-                s += 'host_map : [\n'
+                s += ' host_map: ['
                 s += self.host_map_string(offset);
-                s += '           ]\n'
+                s += ']'
                 
-            s +=  '    }\n'
+            s +=  '}\n'
 
         return s;
 
@@ -424,19 +425,19 @@ class FarmManager(Component):
         s  = ''
 
         for x in p.list_of_sources:
-            s += f'    d{x.rank} : {{\n'
-            s += f'        transferPluginType     : "{self.transfer}"\n'
-            s += f'        destination_rank       :  {x.rank}\n'
-            s += f'        max_fragment_size_words:  {max_fragment_size_words}\n'
+            s += f' s{x.rank}: {{'
+            s += f' transferPluginType: {self.transfer}'
+            s += f' destination_rank:  {x.rank}'
+            s += f' max_fragment_size_words: {max_fragment_size_words}'
             
             # first destination includes the host_map
             if (x == p.list_of_sources[0]):
-                s += 'host_map : [\n'
+                s += ' host_map: ['
                 offset = '        '
                 s += self.host_map_string(offset);
-                s += '           ]\n'
+                s += ']'
                 
-            s +=  '    }\n'
+            s +=  '}\n'
 
         return s;
     
@@ -670,7 +671,8 @@ class FarmManager(Component):
         for (ss_id,data) in dir.items():
             
             self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
-
+            if (data['Enabled'] == 0): continue ;
+            
             subdir_path=path+f'/{ss_id}'
             self.print_log('i',f'subdir_path:{subdir_path}')
             
@@ -680,7 +682,10 @@ class FarmManager(Component):
                 for x in data['sources'].split(','):
                     s.sources.append(x)
                     
-            if ('destination'   in data.keys()): s.destination  = data['destination' ];
+            if ('destination'   in data.keys()):
+                if (data['destination'] == 'none'): s.destination = None;
+                else                              : s.destination = data['destination'];
+
             if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragmentmode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
