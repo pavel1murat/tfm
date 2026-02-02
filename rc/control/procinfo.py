@@ -83,7 +83,7 @@ class Procinfo(object):
 
         if self.fhicl is not None:
             self.fhicl_used = ""
-            self.recursive_include(self.fhicl)
+            self.recursive_include(self.fhicl)  # likely not neeeded - flatten it
         else:
             self.fhicl_used = None
 

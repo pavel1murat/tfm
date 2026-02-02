@@ -403,8 +403,8 @@ class FarmManager(Component):
                 subdir2 = self.client.odb_get(process_path)
                 TRACE.DEBUG(0,f'subdir2 process_path:{process_path}',TRACE_NAME)
                 for name,value in subdir2.items():
+# Rank defines the XMLRPC port number 
                     if (name == "Rank"):              rank      = int(value)
-                    # if (name == "XmlrpcPort"):        port      = str(value)
                     if (name == "Subsystem" ):        subsystem = str(value)
                     if (name == "AllowedProcessors"): allowed_processors = str(value)
                     if (name == "Target"):            target    = str(value)                        
@@ -414,7 +414,7 @@ class FarmManager(Component):
                 pname   = 'undefined';
 #------------------------------------------------------------------------------
 # PM: this naming is something to get rid of - a Procinfo thing has a type, so a
-# name is an overkill
+# name is an overkill ... later...
 #------------------------------------------------------------------------------
                 if   (key_name[0:2] == 'br') :
                     pname       = 'BoardReader'
@@ -423,8 +423,8 @@ class FarmManager(Component):
                         dtc_enabled = self.client.odb_get(process_path+'/DTC/Enabled')
                         if (dtc_enabled == 0) :
 #------------------------------------------------------------------------------
-# a boardreader may read a DTC. If the DTC present but disabled, don't start the boardreader
-# also, disable the boardreader
+# a boardreader reads a DTC. If the DTC is disabled, there is nothing to read
+# don't start the boardreader - disable it instead
 #------------------------------------------------------------------------------
                             self.client.odb_set(process_path+'/Enabled',0) ##
                             continue
@@ -481,9 +481,8 @@ class FarmManager(Component):
         path     = self.daq_conf_path + "/Subsystems"
 
         self.print_log('i',f'path:{path}');
-
 #------------------------------------------------------------------------------
-# expect only subssytem definitions in this subdirectory
+# expect only subsystem definitions in this subdirectory
 #------------------------------------------------------------------------------
         dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
@@ -494,13 +493,13 @@ class FarmManager(Component):
             self.print_log('i',f'subdir_path:{subdir_path}')
             
             s     = Subsystem(ss_id);
-            # assume sources to be a comma-separated list
-            if ('Sources' in data.keys()): 
-                for x in data['Sources'].split(','):
+            # assume sources to be a comma-separated list !!! 
+            if ('sources' in data.keys()): 
+                for x in data['sources'].split(','):
                     s.sources.append(x)
                     
-            if ('Destination'  in data.keys()): s.destination  = data['Destination' ];
-            if ('FragmentMode' in data.keys()): s.fragmentMode = data['FragmentMode'];
+            if ('destination'   in data.keys()): s.destination  = data['destination'  ];
+            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragment_mode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #------------------------------------------------------------------------------
@@ -625,8 +624,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-        self.package_hashes_to_save              = []
-        self.package_versions                    = {}
+#        self.package_hashes_to_save              = []
+#        self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
 
@@ -2626,6 +2625,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
             try:
                 p.update_fhicl(filename)
+                self.print_log('i',f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}', 3)
+                
                 
             except Exception:
                 TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
@@ -2834,6 +2835,8 @@ class FarmManager(Component):
 # P.Murat: TODO
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
+# 2026-01-30: FHICL files are already flattened by check_hw_fcls , do they need another reformatting ?
+#             - I don't think so...
 #-------v----------------------------------------------------------------------
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
