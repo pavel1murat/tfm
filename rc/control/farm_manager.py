@@ -486,11 +486,12 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
-            
             self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
 
             subdir_path=path+f'/{ss_id}'
             self.print_log('i',f'subdir_path:{subdir_path}')
+            # skip disabled subsystems
+            if (data['Enabled'] == 0): continue
             
             s     = Subsystem(ss_id);
             # assume sources to be a comma-separated list !!! 
@@ -498,7 +499,10 @@ class FarmManager(Component):
                 for x in data['sources'].split(','):
                     s.sources.append(x)
                     
-            if ('destination'   in data.keys()): s.destination  = data['destination'  ];
+            if ('destination'   in data.keys()):
+                if (data['destination'] == 'none'): s.destination = None;
+                else                              : s.destination  = data['destination'];
+
             if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragment_mode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
