@@ -146,15 +146,15 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                              % procinfo.label))
                     )
 
-            if "max_event_size_bytes" in procinfo.fhicl_used:
-                raise Exception(
-                    make_paragraph(
-                        ('max_event_size_bytes is found in the FHiCL document for %s; '
-                         'this parameter must not appear in FHiCL documents when "advanced_memory_usage" '
-                         'is set to true. This is because TFM calculates '
-                         'and then adds this parameter during bookkeeping.')
-                        % (procinfo.label))
-                )
+# PM 2026-02-03            if "max_event_size_bytes" in procinfo.fhicl_used:
+# PM 2026-02-03                raise Exception(
+# PM 2026-02-03                    make_paragraph(
+# PM 2026-02-03                        ('max_event_size_bytes is found in the FHiCL document for %s; '
+# PM 2026-02-03                         'this parameter must not appear in FHiCL documents when "advanced_memory_usage" '
+# PM 2026-02-03                         'is set to true. This is because TFM calculates '
+# PM 2026-02-03                         'and then adds this parameter during bookkeeping.')
+# PM 2026-02-03                        % (procinfo.label))
+# PM 2026-02-03                )
     # debugging
     dl = self.find_process("dl01")
     print('------------------- 00001 DL01 test FCL');
@@ -306,35 +306,39 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # max_event_size_bytes gets set to the value calculated here in
     # bookkeeping, whether this involves adding the
     # max_event_size_bytes parameter or clobbering the existing one
+    # max_even_size_words should be present only for EBs, DLs
 
-    if self.advanced_memory_usage:
-        for p in self.procinfos:
-            TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
-            self.print_log('i', f'-- advanced_memory_usage: p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}');
-            if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
-                if re.search(r"\n[^#]*.*max_event_size_bytes.*\s*:\s*[0-9\.e]+",p.fhicl_used,):
-                    p.fhicl_used = re.sub(
-                        "max_event_size_bytes\s*:\s*[0-9\.e]+",
-                        "max_event_size_bytes: %d"
-                        % (max_event_sizes[p.subsystem]),
-                        p.fhicl_used,
-                    )
-                else:
-
-                    res = re.search(r"\n(\s*buffer_count\s*:\s*[0-9]+)",p.fhicl_used)
-
-                    assert res, make_paragraph(
-                        "artdaq FHiCL requirements have changed since this code was written"+
-                        f' (TFM expects a parameter called \'buffer_count\' in {p.label}, but this doesn\'t appear'+
-                        " to exist -> TFM code needs to be changed to accommodate this)"
-                    )
-
-                    p.fhicl_used = re.sub(
-                        r"\n(\s*buffer_count\s*:\s*[0-9]+)",
-                        "\n%s\nmax_event_size_bytes: %d"
-                        % (res.group(1),max_event_sizes[p.subsystem],),
-                        p.fhicl_used,
-                    )
+# PM: max_event_size_bytes calculated by the TFM
+# PM 2026-02-03 #    if self.advanced_memory_usage:
+# PM 2026-02-03 #        for p in self.procinfos:
+# PM 2026-02-03 #            TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+# PM 2026-02-03 #            self.print_log('i', f'-- advanced_memory_usage: p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}');
+# PM 2026-02-03 #            if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
+# PM 2026-02-03 #                if re.search(r"\n[^#]*.*max_event_size_bytes.*\s*:\s*[0-9\.e]+",p.fhicl_used,):
+# PM 2026-02-03 #                    p.fhicl_used = re.sub(
+# PM 2026-02-03 #                        "max_event_size_bytes\s*:\s*[0-9\.e]+",
+# PM 2026-02-03 #                        "max_event_size_bytes: %d"
+# PM 2026-02-03 #                        % (max_event_sizes[p.subsystem]),
+# PM 2026-02-03 ## figure it out...                        % (p.max_event_size_bytes),
+# PM 2026-02-03 #                        p.fhicl_used,
+# PM 2026-02-03 #                    )
+# PM 2026-02-03 #                else:
+# PM 2026-02-03 #
+# PM 2026-02-03 #                    res = re.search(r"\n(\s*buffer_count\s*:\s*[0-9]+)",p.fhicl_used)
+# PM 2026-02-03 #
+# PM 2026-02-03 #                    assert res, make_paragraph(
+# PM 2026-02-03 #                        "artdaq FHiCL requirements have changed since this code was written"+
+# PM 2026-02-03 #                        f' (TFM expects a parameter called \'buffer_count\' in {p.label}, but this doesn\'t appear'+
+# PM 2026-02-03 #                        " to exist -> TFM code needs to be changed to accommodate this)"
+# PM 2026-02-03 #                    )
+# PM 2026-02-03 #
+# PM 2026-02-03 #                    p.fhicl_used = re.sub(
+# PM 2026-02-03 #                        r"\n(\s*buffer_count\s*:\s*[0-9]+)",
+# PM 2026-02-03 #                        "\n%s\nmax_event_size_bytes: %d"
+# PM 2026-02-03 #                        % (res.group(1),max_event_sizes[p.subsystem]),
+# PM 2026-02-03 ##                        % (res.group(1),p.max_event_size_bytes),
+# PM 2026-02-03 #                        p.fhicl_used,
+# PM 2026-02-03 #                    )
 
     # debugging
     dl = self.find_process("dl01")

@@ -387,12 +387,19 @@ class FarmManager(Component):
         return hname;
 
 #------------------------------------------------------------------------------
-    def host_map_string(self,offset):
+# list_of_processes is either a p.list_of_destinations or a p.list_of_sources
+#------------------------------------------------------------------------------
+    def host_map_string(self,list_of_processes,offset = ''):
         s = ''
-        for p in self.procinfos:
+        plist = list_of_processes;
+        if (plist == None): plist = self.procinfos;
+
+        #        for p in self.procinfos:
+
+        for p in plist:
 #            s += f'{offset} {{ rank:{p.rank:3} host: "{p.host}" }}';
             s += f' {{ rank:{p.rank:3} host: "{p.host}"}}';
-            if (p != self.procinfos[-1]):
+            if (p != plist[-1]):
                 s += ','
 
 #            s += '\n'
@@ -400,20 +407,22 @@ class FarmManager(Component):
         return s;
 
 #------------------------------------------------------------------------------
-    def destination_string(self,p,max_fragment_size_words):
+# 'p' is a Processinfo
+#------------------------------------------------------------------------------
+    def destination_string(self,p):
         s = ''
-        
         for d in p.list_of_destinations:
             s += f' d{d.rank}: {{'
             s += f' transferPluginType: {self.transfer}'
             s += f' destination_rank:  {d.rank}'
-            s += f' max_fragment_size_words: {max_fragment_size_words}'
+            # for BR, event=fragment
+            s += f' max_fragment_size_words: {p.max_event_size_words()}'
             
             # first destination includes the host_map
             if (d == p.list_of_destinations[0]):
                 offset = '        '
                 s += ' host_map: ['
-                s += self.host_map_string(offset);
+                s += self.host_map_string(p.list_of_destinations,offset);
                 s += ']'
                 
             s +=  '}\n'
@@ -421,20 +430,22 @@ class FarmManager(Component):
         return s;
 
 #------------------------------------------------------------------------------
-    def source_string(self,p,max_fragment_size_words):
+# 'p' is a Processinfo
+#------------------------------------------------------------------------------
+    def source_string(self,p):
         s  = ''
 
         for x in p.list_of_sources:
             s += f' s{x.rank}: {{'
             s += f' transferPluginType: {self.transfer}'
             s += f' source_rank:  {x.rank}'
-            s += f' max_fragment_size_words: {max_fragment_size_words}'
+            s += f' max_fragment_size_words: {x.max_event_size_words()}'
             
             # first destination includes the host_map
             if (x == p.list_of_sources[0]):
                 s += ' host_map: ['
                 offset = ''
-                s += self.host_map_string(offset);
+                s += self.host_map_string(p.list_of_sources,offset);
                 s += ']'
                 
             s +=  '}\n'
@@ -445,7 +456,7 @@ class FarmManager(Component):
 # place in expanded FHICL file, no more processing needed
 # also need to replace some lines which could be process specific
 #------------------------------------------------------------------------------
-    def update_fhicl(self, procinfo, max_fragment_size_words):
+    def update_fhicl(self, procinfo):
         # step 1 : read and replace - start from BRs
         print('------ update_fhicl')
         procinfo.print()
@@ -457,75 +468,132 @@ class FarmManager(Component):
         if (procinfo.type() == BOARD_READER):
             for line in lines:
                 # print(line);
-                new_text.append(line)
-                if (line.find('daq.fragment_receiver.destinations') >= 0):
-                    # always replace the line with the real string
-                    # max_fragment_size_words is calculated
-                    s = self.destination_string(procinfo,max_fragment_size_words)
+                pattern = r'(?:[\w-]+\.)*destinations'
+                match = re.search(pattern,line)
+                if (match):
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    s = self.destination_string(procinfo)
                     new_text.append(s)
+                    new_text.append('}\n');
+                    continue
+                    
+                pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
+                match = re.search(pattern,line)
+                if (match):
+                    key = match.group(0);
+                    # in this case, replaces
+                    s      = f'{key}: {procinfo.max_fragment_size_bytes}\n';
+                    new_text.append(s);
+                    continue;
+
+                new_text.append(line)
                     
         elif (procinfo.type() == EVENT_BUILDER):
             for line in lines:
                 # print(line);
-                new_text.append(line);
-                pattern = 'daq.event_builder.sources';
+                pattern = r'(?:[\w-]+\.)*sources'
                 match = re.search(pattern,line)
                 if (match):
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
                     # always replace the line with the real string
                     # max_fragment_size_words is calculated
-                    s = self.source_string(procinfo,max_fragment_size_words)
+                    s = self.source_string(procinfo)
                     new_text.append(s)
+                    new_text.append('}\n');
                     continue
 
-                pattern = r'art.outputs.([\w.-]+).destinations'
+                pattern = r'(?:[\w-]+\.)*destinations'
                 match = re.search(pattern,line)
                 if (match):
-                    module = match.group(1);
-                    s = self.destination_string(procinfo,max_fragment_size_words);
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    s = self.destination_string(procinfo);
                     new_text.append(s);
+                    new_text.append('}\n');
                     continue;
                     
-                pattern = r'art.outputs.([\w.-]+).host_map'
+                pattern = r'(?:[\w-]+\.)*host_map'
                 match = re.search(pattern,line)
                 if (match):
-                    module = match.group(1);
+                    key = match.group(0);
+                    new_text.append(f'{key}: [');
                     offset = '    ' # 4 spaces (TCL indent)
-                    s = self.host_map_string(offset);
+                    s      = self.host_map_string(procinfo.list_of_destinations,offset);
+                    new_text.append(s);
+                    new_text.append(' ]\n');
+                    continue;
+
+                pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+                match = re.search(pattern,line)
+                if (match):
+                    key = match.group(0);
+                    # in this case, replaces
+                    s      = f'{key}: {procinfo.max_event_size_bytes}\n';
                     new_text.append(s);
                     continue;
 
+                new_text.append(line);
+                
         elif (procinfo.type() == DATA_LOGGER):
             for line in lines:
                 # print(line);
-                new_text.append(line);
-                pattern = 'daq.aggregator.sources';
+                pattern = r'(?:[\w-]+\.)*sources'
                 match = re.search(pattern,line)
                 if (match):
-                    # always replace the line with the real string
-                    # max_fragment_size_words is calculated
-                    s = self.source_string(procinfo,max_fragment_size_words)
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    s = self.source_string(procinfo)
                     new_text.append(s)
+                    new_text.append('}\n');
                     continue
 
-                pattern = r'art.outputs.([\w.-]+).destinations'
+                pattern = r'(?:[\w-]+\.)*destinations'
                 match = re.search(pattern,line)
                 if (match):
-                    module = match.group(1);
-                    s = self.destination_string(procinfo,max_fragment_size_words);
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    s = self.destination_string(procinfo);
                     new_text.append(s);
+                    new_text.append('}\n');
                     continue;
                     
-                pattern = r'art.outputs.([\w.-]+).host_map'
+                pattern = r'(?:[\w-]+\.)*host_map'
                 match = re.search(pattern,line)
                 if (match):
-                    module = match.group(1);
+                    key = match.group(0);
+                    new_text.append(f'{key}: [');
                     offset = '    ' ## 4 spaces, TCL indent
-                    s = self.host_map_string(offset);
+                    # host_map_string - always destinations
+                    s = self.host_map_string(procinfo.list_of_destinations,offset);
                     new_text.append(s);
+                    new_text.append(' ]\n');
                     continue;
         
+                pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+                match = re.search(pattern,line)
+                if (match):
+                    key = match.group(0);
+                    # in this case, replaces
+                    s      = f'{key}: {procinfo.max_event_size_bytes}\n';
+                    new_text.append(s);
+                    continue;
 
-        #-------- write updated FCL
+                #------------------------------------------------------------------------------
+                # any other line - just rewrite
+                #------------------------------------------------------------------------------
+                new_text.append(line);
+
+        elif (procinfo.type() == DISPATCHER):
+            raise Exception('DISPATCHER: IMPLEMENT ME!')
+        
+        elif (procinfo.type() == ROUTING_MANAGER):
+            raise Exception('ROUTING_MANAGER: IMPLEMENT ME!')
+        
+#---------------^--------------------------------------------------------------
+#  write updated FCL
+#-------v----------------------------------------------------------------------
         new_fn = f'/tmp/partition_{self.partition()}/{self.config_name}/{procinfo.label}.fcl'
         with open(new_fn,'w') as f:
             f.writelines(line for line in new_text)
@@ -574,7 +642,7 @@ class FarmManager(Component):
 #---------------v--------------------------------------------------------------
                 enabled = self.client.odb_get(process_path+'/Enabled')
                 if (enabled == 0) : continue;
-                
+                # subdir2 is a dict , subdir2['max_fragment_size_bytes] 
                 subdir2 = self.client.odb_get(process_path)
                 TRACE.DEBUG(0,f'subdir2 process_path:{process_path}',TRACE_NAME)
                 for name,value in subdir2.items():
@@ -637,6 +705,11 @@ class FarmManager(Component):
                              fhicl              = fcl_fn,
                              prepend            = ""
                              )
+                if (p.type() == BOARD_READER):
+                    # for a BR, fragment and event are the same, for all other processes, event size is calculated
+                    p.max_fragment_size_bytes = subdir2['max_fragment_size_bytes']
+                    p.max_event_size_bytes    = p.max_fragment_size_bytes;
+                
                 if (p.server == None):
                     self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
                 else:
@@ -733,21 +806,30 @@ class FarmManager(Component):
         return;
 
 #------------------------------------------------------------------------------
-# define processes for p.type = EVENT_BUILDER, 
+# define processes for p.type = EVENT_BUILDER,
+# event builder should have some connections
 #------------------------------------------------------------------------------
     def init_eb_connections(self,p):
+        print(f'--------------------------- init_ib_connections:{p.label}')
         # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
         # start from checking inputs
         s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
         # BRs should already be covered, check for input from other EBs
 
-        if (s.sources != None):
+        p.max_fragment_size_bytes = 0;
+        p.max_event_size_bytes    = 0;
+
+        print(f's.sources:{s.sources}');
+        print(f'p.list_of_sources:{p.list_of_sources}');
+
+        if (len(s.sources) > 0):
             for source in s.sources:
                 ss = self.subsystems[source]
                 # there should be no DLs in the source subsystem, it should end in EB
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
                     for eb in list_of_ebs:
+                        p.max_event_size_bytes += eb.max_event_size_bytes;
                         # avoid double counting
                         if (not eb in p.list_of_sources):
                             p.list_of_sources.append(eb);
@@ -756,13 +838,27 @@ class FarmManager(Component):
                 elif (ss.max_type == BOARD_READER):
                     list_of_brs = ss.list_of_procinfos[BOARD_READER]
                     for br in list_of_brs:
+                        p.max_event_size_bytes   += br.max_fragment_size_bytes;
+                        if (br.max_fragment_size_bytes > p.max_fragment_size_bytes):
+                            p.max_fragment_size_bytes = br.max_fragment_size_bytes;
                         # avoid double counting
                         if (not br in p.list_of_sources):
                             p.list_of_sources.append(eb);
                             eb.list_of_destinations.append(p);
-                    
+
+        else:
+#-------^----------------------------------------------------------------------
+# subsystem doesn't have inputs, look at local BRs - those are already in the list
+# of inputs
+#-----------v------------------------------------------------------------------
+            for br in p.list_of_sources:
+                print(f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}')
+                p.max_event_size_bytes += br.max_fragment_size_bytes
+                if (br.max_fragment_size_bytes > p.max_fragment_size_bytes):
+                    p.max_fragment_size_bytes = br.max_fragment_size_bytes;
+
+                print(f'p.max_event_size_bytes:{p.max_event_size_bytes} p.max_fragment_size_bytes:{p.max_fragment_size_bytes}')
 #---------------------------^--------------------------------------------------
-# - done with the sources
 # - an EB should also have destinations - either DL's or other EB's
 #-------v----------------------------------------------------------------------
 
@@ -807,7 +903,9 @@ class FarmManager(Component):
         s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
         # EBs should already be covered
 
-        if (s.sources != None):
+        p.max_event_size_bytes    = 0;
+
+        if (len(s.sources) > 0):
             for source in s.sources:
                 ss = self.subsystems[source]
                 # there should be no DLs in the source subsystem, it should end in EB
@@ -815,6 +913,9 @@ class FarmManager(Component):
                     # no EBs in the subsystem the DL handles sources
                     list_of_ebs = ss.list_of_event_builders()
                     for eb in list_of_ebs:
+                        if (eb.max_event_size_bytes > p.max_event_size_bytes):
+                            p.max_event_size_bytes =  eb.max_event_size_bytes
+
                         # avoid double counting
                         if (not eb in p.list_of_sources):
                             p.list_of_sources.append(eb);
@@ -828,6 +929,9 @@ class FarmManager(Component):
             list_of_ebs = s.list_of_event_builders()
             if (len(list_of_ebs) > 0):
                 for eb in list_of_ebs:
+                    if (eb.max_event_size_bytes > p.max_event_size_bytes):
+                        p.max_event_size_bytes =  eb.max_event_size_bytes
+                        
                     if (not eb in p.list_of_sources):
                         p.list_of_sources.append(eb);
                         eb.list_of_destinations.append(p);
@@ -1105,15 +1209,13 @@ class FarmManager(Component):
                     p1.print();
 
         print(f'----------- excersize printing the host_map')
-        s = self.host_map_string('')
+        s = self.host_map_string(None,'')
         print(f'{s}')
-
 #------------------------------------------------------------------------------
 # now update fcls
 #------------------------------------------------------------------------------
-        max_fragment_size_words = 25000;
         for p in self.procinfos:
-            self.update_fhicl(p,max_fragment_size_words);
+            self.update_fhicl(p);
         
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
@@ -3346,6 +3448,7 @@ class FarmManager(Component):
 # P.Murat: TODO
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
+# doesn't seem to be needed...
 #-------v----------------------------------------------------------------------
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 

@@ -63,6 +63,8 @@ class Procinfo(object):
         self.priority           = 999
         self.list_of_sources      = [ ]
         self.list_of_destinations = [ ]
+        self.max_fragment_size_bytes = None;
+        self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
 
         if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
         elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
@@ -83,6 +85,15 @@ class Procinfo(object):
         self.state        = "nonexistent"
 
 #------------------------------------------------------------------------------
+# assume 8-byte data words, need max_fragment_size_bytes to be defined
+#------------------------------------------------------------------------------
+    def max_event_size_words(self):
+        if (self.max_event_size_bytes == None):
+            raise Exception(self.print())
+        
+        x = int(self.max_event_size_bytes/8);
+        return x;
+#------------------------------------------------------------------------------
 # returns host:port
 #------------------------------------------------------------------------------
     def type(self):
@@ -95,7 +106,10 @@ class Procinfo(object):
 #        return self.host+'-data:'+self.port;
         return self.host+':'+self.port;
 
-    def print(self):
+    def print(self,text = None):
+        if (text):
+            print(f'{text}');
+            
         print(f'procinfo: subsystem:{self.subsystem:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
 
     def __lt__(self, other):
