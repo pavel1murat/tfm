@@ -49,6 +49,4 @@ daq.aggregator.init_fragment_count     : -1
 daq.aggregator.sources                 : {}
 art.outputs.rootNetOutput.destinations : {}
 art.outputs.rootNetOutput.host_map     : []
-
-# daq.aggregator.init_fragment_count: "XX"
 #------------------------------------------------------------------------------
