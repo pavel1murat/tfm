@@ -1,0 +1,16 @@
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+#include "demo_mc2/prolog.fcl"
+
+daq: {
+    fragment_receiver : { @table::daq.fragment_receiver }
+    metrics           : { }
+}
+
+daq.fragment_receiver.artdaqLabel : "br13"
+#------------------------------------------------------------------------------
+# to be replaced
+#------------------------------------------------------------------------------
+daq.fragment_receiver.max_fragment_size_bytes : 200000
+daq.fragment_receiver.destinations            : {}

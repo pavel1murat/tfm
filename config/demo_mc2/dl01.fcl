@@ -1,0 +1,54 @@
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+#include "demo_mc2/prolog.fcl"
+
+daq: {
+    aggregator : { @table::daq.dl_aggregator }
+    metrics: { }
+}
+
+art: {
+    services: { @table::artdaq_services }
+
+    source: { module_type: "ArtdaqInput"  }
+    
+    outputs: {
+        rootOutput: {
+            module_type: "RootDAQOut"
+            fileName: "/tmp/raw.mu2e.trk.demo_mc2.%06r_%06s.art"
+            compressionLevel: 0
+            fileProperties: {
+                maxSize: 1500000
+                granularity: "SubRun"
+            }
+            checkFileName: false
+        }
+
+        rootNetOutput: {
+            module_type: "RootNetOutput"
+            host_map     : []               ## both braces on one line !
+            destinations: {}           ## both braces on one line !
+            routing_table_config: { use_routing_manager: false }
+        }
+    }
+    physics: {
+        analyzers: { }
+        e1       : [ rootOutput ]
+        end_paths: [ e1 ]
+    }
+}
+
+art.process_name : "dl01"
+art.services.ArtdaqSharedMemoryServiceInterface.waiting_time: 300
+#------------------------------------------------------------------------------
+# to be overwritten, redefined
+#------------------------------------------------------------------------------
+daq.aggregator.max_event_size_bytes    : -1
+daq.aggregator.init_fragment_count     : -1
+daq.aggregator.sources                 : {}
+art.outputs.rootNetOutput.destinations : {}
+art.outputs.rootNetOutput.host_map     : []
+
+# daq.aggregator.init_fragment_count: "XX"
+#------------------------------------------------------------------------------
