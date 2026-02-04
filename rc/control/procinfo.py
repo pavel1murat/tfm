@@ -65,6 +65,7 @@ class Procinfo(object):
         self.list_of_destinations = [ ]
         self.max_fragment_size_bytes = None;
         self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
+        self.init_fragment_count     = None;         ## for DLs, DSs 
 
         if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
         elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;

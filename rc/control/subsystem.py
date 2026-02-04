@@ -41,7 +41,7 @@ class Subsystem(object):
 
     def print(self):
         print('-- START Subsystem::print')
-        print ("-- subsystem ID:",self.id,
+        print ("-- subsystem ID:"  ,self.id,
                " index:"           ,self.index,
                " sources:"         ,self.sources,
                " destination:"     ,self.destination,

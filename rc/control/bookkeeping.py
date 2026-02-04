@@ -1183,36 +1183,36 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     self.print_log("i", f'step 14: took {time.time() - starttime} sec');
     starttime = time.time();
 
-    for subsystem_id, subsystem in self.subsystems.items():
-        init_fragment_counts = {}
-
-        for procinfo in [p for p in self.procinfos if p.subsystem == subsystem_id]:
-
-            if procinfo.name not in init_fragment_counts:
-
-                possible_event_senders = []
-                init_fragment_count    = 0
-
-                if procinfo.name == "EventBuilder":
-                    for ss_source in subsystem.sources:
-                        for sender in [p for p in self.procinfos if p.subsystem == ss_source and p.name == "EventBuilder"]:
-                            if sends_to_via_RootNetOutput(sender,procinfo):
-                                init_fragment_count += 1
-                elif procinfo.name == "DataLogger":
-                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
-                        if sends_to_via_RootNetOutput(sender,procinfo):
-                            init_fragment_count += 1
-                elif procinfo.name == "Dispatcher":
-                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "DataLogger"]:
-                        if sends_to_via_RootNetOutput(sender,procinfo):
-                            init_fragment_count += 1
-                    if (init_fragment_count == 0):
-                        # Dispatcher will _always_ receive init Fragments, this probably means we're running without DataLoggers
-                        for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
-                            if sends_to_via_RootNetOutput(sender,procinfo):
-                                init_fragment_count += 1
-
-                init_fragment_counts[procinfo.name] = init_fragment_count
+# PM 2026-02-04 #    for subsystem_id, subsystem in self.subsystems.items():
+# PM 2026-02-04 #        init_fragment_counts = {}
+# PM 2026-02-04 #
+# PM 2026-02-04 #        for procinfo in [p for p in self.procinfos if p.subsystem == subsystem_id]:
+# PM 2026-02-04 #
+# PM 2026-02-04 #            if procinfo.name not in init_fragment_counts:
+# PM 2026-02-04 #
+# PM 2026-02-04 #                possible_event_senders = []
+# PM 2026-02-04 #                init_fragment_count    = 0
+# PM 2026-02-04 #
+# PM 2026-02-04 #                if procinfo.name == "EventBuilder":
+# PM 2026-02-04 #                    for ss_source in subsystem.sources:
+# PM 2026-02-04 #                        for sender in [p for p in self.procinfos if p.subsystem == ss_source and p.name == "EventBuilder"]:
+# PM 2026-02-04 #                            if sends_to_via_RootNetOutput(sender,procinfo):
+# PM 2026-02-04 #                                init_fragment_count += 1
+# PM 2026-02-04 #                elif procinfo.name == "DataLogger":
+# PM 2026-02-04 #                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
+# PM 2026-02-04 #                        if sends_to_via_RootNetOutput(sender,procinfo):
+# PM 2026-02-04 #                            init_fragment_count += 1
+# PM 2026-02-04 #                elif procinfo.name == "Dispatcher":
+# PM 2026-02-04 #                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "DataLogger"]:
+# PM 2026-02-04 #                        if sends_to_via_RootNetOutput(sender,procinfo):
+# PM 2026-02-04 #                            init_fragment_count += 1
+# PM 2026-02-04 #                    if (init_fragment_count == 0):
+# PM 2026-02-04 #                        # Dispatcher will _always_ receive init Fragments, this probably means we're running without DataLoggers
+# PM 2026-02-04 #                        for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
+# PM 2026-02-04 #                            if sends_to_via_RootNetOutput(sender,procinfo):
+# PM 2026-02-04 #                                init_fragment_count += 1
+# PM 2026-02-04 #
+# PM 2026-02-04 #                init_fragment_counts[procinfo.name] = init_fragment_count
 #------------------------------------------------------------------------------
 # define 'init_fragment_count' if it is > 0 and is not defined explicitly
 #------------------------------------------------------------------------------

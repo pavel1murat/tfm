@@ -191,6 +191,15 @@ def update_fhicl(procinfo, transfer_plugin, tmp_dir):
                 new_text.append(s);
                 continue;
 
+            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {procinfo.init_fragment_count}\n';
+                new_text.append(s);
+                continue;
+
             #------------------------------------------------------------------------------
             # any other line - just rewrite
             #------------------------------------------------------------------------------

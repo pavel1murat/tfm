@@ -664,28 +664,32 @@ class FarmManager(Component):
 # define processes for p.type = DATA_LOGGER
 #------------------------------------------------------------------------------
     def init_dl_connections(self,p):
+
+        print(f'--- p.label:{p.label} p.subsystem:{p.subsystem}');
         # DL has to have inputs from either own EBs or from EBs other subsystems
         # start from checking inputs
         s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
+        s.print();
         # EBs should already be covered
 
-        p.max_event_size_bytes    = 0;
+        p.max_event_size_bytes = 0;
+        p.init_fragment_count  = 0;
 
         if (len(s.sources) > 0):
             for source in s.sources:
                 ss = self.subsystems[source]
                 # there should be no DLs in the source subsystem, it should end in EB
-                if (ss.min_type == DATA_LOGGER):
-                    # no EBs in the subsystem the DL handles sources
-                    list_of_ebs = ss.list_of_event_builders()
-                    for eb in list_of_ebs:
-                        if (eb.max_event_size_bytes > p.max_event_size_bytes):
-                            p.max_event_size_bytes =  eb.max_event_size_bytes
+                list_of_ebs = ss.list_of_event_builders()
+                for eb in list_of_ebs:
+                    p.init_fragment_count += 1;
+                    
+                    if (eb.max_event_size_bytes > p.max_event_size_bytes):
+                        p.max_event_size_bytes =  eb.max_event_size_bytes
 
-                        # avoid double counting
-                        if (not eb in p.list_of_sources):
-                            p.list_of_sources.append(eb);
-                            eb.list_of_destinations.append(p);
+                    # avoid double counting
+                    if (not eb in p.list_of_sources):
+                        p.list_of_sources.append(eb);
+                        eb.list_of_destinations.append(p);
 #---------------------------^--------------------------------------------------
 # done with the sources
 # an EB should also have destinations - either DL's or other EB's
@@ -695,6 +699,7 @@ class FarmManager(Component):
             list_of_ebs = s.list_of_event_builders()
             if (len(list_of_ebs) > 0):
                 for eb in list_of_ebs:
+                    p.init_fragment_count += 1;
                     if (eb.max_event_size_bytes > p.max_event_size_bytes):
                         p.max_event_size_bytes =  eb.max_event_size_bytes
                         
@@ -707,7 +712,7 @@ class FarmManager(Component):
                 raise Exception('DL: no EBs in the subsystem');
         return;
 #------------------------------------------------------------------------------
-# define processes for p.type = DISPATCHER
+# define processes for p.type = DISPATCHER - yet to be debugged - will need fixes!
 #------------------------------------------------------------------------------
     def init_ds_connections(self,p):
         # DS only has inputs ..DLs ?
