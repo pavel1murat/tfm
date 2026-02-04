@@ -48,6 +48,7 @@ else:
     from tfm.rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
 import tfm.rc.control.utilities as rcu
+import tfm.rc.control.artdaq    as artdaq
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
@@ -79,22 +80,7 @@ from tfm.rc.control.manage_processes_direct import get_pid_for_process_base
 from tfm.rc.control.manage_processes_direct import process_launch_diagnostics_base
 from tfm.rc.control.manage_processes_direct import mopup_process_base
 
-#------------------------------------------------------------------------------
-# 2026-01-29 : database_v2 doesn't seem to be used... start cleaning up by renaming the
-#              imported python file 
-#------------------------------------------------------------------------------
-# if os.getenv("TFM_FHICL_DIRECTORY") == "IGNORED":
-#     from tfm.rc.control.config_functions_database_v2 import get_config_info_base
-#     from tfm.rc.control.config_functions_database_v2 import put_config_info_base
-#     from tfm.rc.control.config_functions_database_v2 import put_config_info_on_stop_base
-#     from tfm.rc.control.config_functions_database_v2 import listconfigs_base
-# 
-# else:
-#     from tfm.rc.control.config_functions_local import get_config_info_base
-#     from tfm.rc.control.config_functions_local import put_config_info_base
-#     from tfm.rc.control.config_functions_local import put_config_info_on_stop_base
-#     from tfm.rc.control.config_functions_local import listconfigs_base
-    
+#------------------------------------------------------------------------------   
 class FarmManager(Component):
     """
     FarmManager: The intermediary between Run Control, the
@@ -385,226 +371,6 @@ class FarmManager(Component):
         self.print_log('i',f'--- END',3)
         
         return hname;
-
-#------------------------------------------------------------------------------
-# list_of_processes is either a p.list_of_destinations or a p.list_of_sources
-#------------------------------------------------------------------------------
-    def host_map_string(self,list_of_processes,offset = ''):
-        s = ''
-        plist = list_of_processes;
-        if (plist == None): plist = self.procinfos;
-
-        #        for p in self.procinfos:
-
-        for p in plist:
-#            s += f'{offset} {{ rank:{p.rank:3} host: "{p.host}" }}';
-            s += f' {{ rank:{p.rank:3} host: "{p.host}"}}';
-            if (p != plist[-1]):
-                s += ','
-
-#            s += '\n'
-            
-        return s;
-
-#------------------------------------------------------------------------------
-# 'p' is a Processinfo
-#------------------------------------------------------------------------------
-    def destination_string(self,p):
-        s = ''
-        for d in p.list_of_destinations:
-            s += f' d{d.rank}: {{'
-            s += f' transferPluginType: {self.transfer}'
-            s += f' destination_rank:  {d.rank}'
-            # for BR, event=fragment
-            s += f' max_fragment_size_words: {p.max_event_size_words()}'
-            
-            # first destination includes the host_map
-            if (d == p.list_of_destinations[0]):
-                offset = '        '
-                s += ' host_map: ['
-                s += self.host_map_string(p.list_of_destinations,offset);
-                s += ']'
-                
-            s +=  '}\n'
-
-        return s;
-
-#------------------------------------------------------------------------------
-# 'p' is a Processinfo
-#------------------------------------------------------------------------------
-    def source_string(self,p):
-        s  = ''
-
-        for x in p.list_of_sources:
-            s += f' s{x.rank}: {{'
-            s += f' transferPluginType: {self.transfer}'
-            s += f' source_rank:  {x.rank}'
-            s += f' max_fragment_size_words: {x.max_event_size_words()}'
-            
-            # first destination includes the host_map
-            if (x == p.list_of_sources[0]):
-                s += ' host_map: ['
-                offset = ''
-                s += self.host_map_string(p.list_of_sources,offset);
-                s += ']'
-                
-            s +=  '}\n'
-
-        return s;
-    
-#------------------------------------------------------------------------------
-# place in expanded FHICL file, no more processing needed
-# also need to replace some lines which could be process specific
-#------------------------------------------------------------------------------
-    def update_fhicl(self, procinfo):
-        # step 1 : read and replace - start from BRs
-        print('------ update_fhicl')
-        procinfo.print()
-        
-        with open(procinfo.fhicl,'r') as f:
-            lines = f.readlines()
-
-        new_text = []
-        if (procinfo.type() == BOARD_READER):
-            for line in lines:
-                # print(line);
-                pattern = r'(?:[\w-]+\.)*destinations'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    s = self.destination_string(procinfo)
-                    new_text.append(s)
-                    new_text.append('}\n');
-                    continue
-                    
-                pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    # in this case, replaces
-                    s      = f'{key}: {procinfo.max_fragment_size_bytes}\n';
-                    new_text.append(s);
-                    continue;
-
-                new_text.append(line)
-                    
-        elif (procinfo.type() == EVENT_BUILDER):
-            for line in lines:
-                # print(line);
-                pattern = r'(?:[\w-]+\.)*sources'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    # always replace the line with the real string
-                    # max_fragment_size_words is calculated
-                    s = self.source_string(procinfo)
-                    new_text.append(s)
-                    new_text.append('}\n');
-                    continue
-
-                pattern = r'(?:[\w-]+\.)*destinations'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    s = self.destination_string(procinfo);
-                    new_text.append(s);
-                    new_text.append('}\n');
-                    continue;
-                    
-                pattern = r'(?:[\w-]+\.)*host_map'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: [');
-                    offset = '    ' # 4 spaces (TCL indent)
-                    s      = self.host_map_string(procinfo.list_of_destinations,offset);
-                    new_text.append(s);
-                    new_text.append(' ]\n');
-                    continue;
-
-                pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    # in this case, replaces
-                    s      = f'{key}: {procinfo.max_event_size_bytes}\n';
-                    new_text.append(s);
-                    continue;
-
-                new_text.append(line);
-                
-        elif (procinfo.type() == DATA_LOGGER):
-            for line in lines:
-                # print(line);
-                pattern = r'(?:[\w-]+\.)*sources'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    s = self.source_string(procinfo)
-                    new_text.append(s)
-                    new_text.append('}\n');
-                    continue
-
-                pattern = r'(?:[\w-]+\.)*destinations'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    s = self.destination_string(procinfo);
-                    new_text.append(s);
-                    new_text.append('}\n');
-                    continue;
-                    
-                pattern = r'(?:[\w-]+\.)*host_map'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    new_text.append(f'{key}: [');
-                    offset = '    ' ## 4 spaces, TCL indent
-                    # host_map_string - always destinations
-                    s = self.host_map_string(procinfo.list_of_destinations,offset);
-                    new_text.append(s);
-                    new_text.append(' ]\n');
-                    continue;
-        
-                pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-                match = re.search(pattern,line)
-                if (match):
-                    key = match.group(0);
-                    # in this case, replaces
-                    s      = f'{key}: {procinfo.max_event_size_bytes}\n';
-                    new_text.append(s);
-                    continue;
-
-                #------------------------------------------------------------------------------
-                # any other line - just rewrite
-                #------------------------------------------------------------------------------
-                new_text.append(line);
-
-        elif (procinfo.type() == DISPATCHER):
-            raise Exception('DISPATCHER: IMPLEMENT ME!')
-        
-        elif (procinfo.type() == ROUTING_MANAGER):
-            raise Exception('ROUTING_MANAGER: IMPLEMENT ME!')
-        
-#---------------^--------------------------------------------------------------
-#  write updated FCL
-#-------v----------------------------------------------------------------------
-        new_fn = f'/tmp/partition_{self.partition()}/{self.config_name}/{procinfo.label}.fcl'
-        with open(new_fn,'w') as f:
-            f.writelines(line for line in new_text)
-            
-        # step 2 : flatten
-        res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
-        procinfo.fhicl      = new_fn;
-        procinfo.fhicl_used = res.stdout;
-
-        print('----------------------------- end of update_fhicl')
-        print(procinfo.fhicl_used);
 
 #------------------------------------------------------------------------------
 # PM: create self.procinfo's
@@ -1209,13 +975,16 @@ class FarmManager(Component):
                     p1.print();
 
         print(f'----------- excersize printing the host_map')
-        s = self.host_map_string(None,'')
+        s = artdaq.host_map_string(self.procinfos,'')
         print(f'{s}')
 #------------------------------------------------------------------------------
-# now update fcls
+# now update fcls - to decouple that code, need to pass the transfer plugin
+# and the output directory name
 #------------------------------------------------------------------------------
+        tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
         for p in self.procinfos:
-            self.update_fhicl(p);
+#            self.update_fhicl(p);
+            artdaq.update_fhicl(p,self.transfer,tmp_dir);
         
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
@@ -3118,47 +2887,6 @@ class FarmManager(Component):
         sys.stdout.flush()
 
 #-------^----------------------------------------------------------------------
-# this one simply copies the FHICL files from  one place to another - why ???
-#------------------------------------------------------------------------------
-#     def get_config_info(self):
-#     
-#         TRACE.INFO(f'-- START: self.subconfigs_for_run:{self.subconfigs_for_run}',TRACE_NAME)
-#         
-#         uuidgen = (
-#             subprocess.Popen("uuidgen", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-#             .stdout.readlines()[0]
-#             .strip()
-#             .decode("utf-8")
-#         )
-#         tmpdir = "/tmp/%s" % (uuidgen)
-#         os.mkdir(tmpdir)
-#     
-#         ffp = []
-#        
-#         for subconfig in self.subconfigs_for_run:
-#             subconfig_dir = "%s/%s" % (self.get_config_parentdir(), subconfig)
-#     
-#             if os.path.exists(subconfig_dir):
-#                 tmp_subconfig_dir = "%s/%s" % (tmpdir, subconfig)
-#                 if os.path.exists(tmp_subconfig_dir): 
-#                     shutil.rmtree(tmp_subconfig_dir)
-#                 shutil.copytree(subconfig_dir, tmp_subconfig_dir)
-#                 assert os.path.exists(tmp_subconfig_dir)
-#     
-#                 for dirname, dummy, dummy in os.walk(tmp_subconfig_dir):
-#                     ffp.append(dirname)
-#             else:
-#                 raise Exception(
-#                     rcu.make_paragraph(
-#                         'Error: unable to find expected directory of FHiCL configuration files "%s"'
-#                         % (subconfig_dir)
-#                     )
-#                 )
-#     
-#         TRACE.INFO(f'-- END: tmpdir:{tmpdir} ffp:{ffp}',TRACE_NAME);
-#         return tmpdir, ffp
-
-#-------^----------------------------------------------------------------------
 # starting from this point, perform run-dependent configuration
 # look at the FCL files - they need to be looked at before the processes are launched
 # See Issue #20803.
@@ -3168,100 +2896,26 @@ class FarmManager(Component):
     def check_hw_fcls(self):
 
         starttime = time.time()
-#------------------------------------------------------------------------------
-# get_config_info copies all FCL files from the config dir to subdirectory
-# with a single name /tmp/xxxxx. 
-# this needs to be changed to run fhicl-dump instead and only for the registered processes
-#------------------------------------------------------------------------------
-#         try:
-#             tmpdir_for_fhicl, self.fhicl_file_path = self.get_config_info()
-#             assert "/tmp" == tmpdir_for_fhicl[:4]
-#         except:
-#             self.revert_failed_transition("calling get_config_info()")
-#             return -1
             
         rootfile_cntr = 0
-#        fn_dictionary = {}  # If we find a repeated *.fcl file, that's an error
         
         TRACE.INFO(f'-- START',TRACE_NAME)
-
-#         for dummy, dummy, filenames in os.walk(tmpdir_for_fhicl):
-#             for fn in filenames:
-#                 # self.print_log("i", f'farm_manager::check_hw_fcls fn:{fn}', 2)
-#                 TRACE.TRACE(TRACE.TLVL_DEBUG,f'farm_manager::check_hw_fcls fn:{fn}',TRACE_NAME)
-#                 if fn.endswith(".fcl"):
-#                     if fn not in fn_dictionary:
-#                         fn_dictionary[fn] = True
-#         
-#                         if fn.endswith("_hw_cfg.fcl"):
-#                             fn_dictionary[fn.replace("_hw_cfg.fcl", ".fcl")] = True
-#                         else:
-#                             fn_dictionary[fn.replace(".fcl", "_hw_cfg.fcl")] = True
-#                     else:
-#                         raise Exception(
-#                             rcu.make_paragraph(
-#                                 ('ERROR in farm_manager::check_hw_fcls: fn "%s"'
-#                                  'found more than once given the set'
-#                                  ' of requested subconfigurations "%s" (see %s)')
-#                                 % (fn," ".join(self.subconfigs_for_run),tmpdir_for_fhicl)
-#                             )
-#                         )
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would re-upload the FCL files?
 # self.config_dir contains only FCL files 
 #-------v------------------------------------------------------------------------------
-#        TRACE.DEBUG(0,f'DEBUG: before loop over procinfos',TRACE_NAME)
-        
         for p in self.procinfos:
-#             filename    = f'{self.config_dir}/{p.label}.fcl';           
-#             found_fhicl = os.path.exists(filename);
-# 
-#             self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-#             TRACE.INFO(f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
-#             
-#             if not found_fhicl:
-#                 TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
-#                 self.print_log("e",rcu.make_paragraph(
-#                     f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
-#                 )
-#                 self.revert_failed_transition("looking for all needed FHiCL documents")
-#                 return
-#------------------------------------------------------------------------------
-# update the process FHICL file - start from expanding it
-# already expanded
-#------------------------------------------------------------------------------
-#             try:
-#                 self.update_fhicl(p,filename)
-#                 self.print_log('i', f'------------------ p.fhicl_used:\n{p.fhicl_used}');
-#                 
-#             except Exception:
-#                 TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
-#                 self.print_log("e", traceback.format_exc())
-#                 self.alert_and_recover("farm_manager::check_hw_fcls : An exception was thrown when creating the process "
-#                                        "FHiCL documents; see traceback above for more info")
-#                 return
-
             if not self.disable_unique_rootfile_labels and ("EventBuilder" in p.name or "DataLogger" in p.name):
                 fhicl_before_sub     = p.fhicl_used
                 rootfile_cntr_prefix = "dl"
-                p.fhicl_used         = re.sub(
-                    r"(\n\s*[^#\s].*)\.root",
-                    r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",
-                    p.fhicl_used,
-                )
+                p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
 
                 if p.fhicl_used != fhicl_before_sub:
                     rootfile_cntr += 1
 
         endtime = time.time()
         self.print_log("i", "CONFIG transition 002: step lasted (%.1f seconds)." % (endtime - starttime))
-
-#        for p in self.procinfos:
-#            assert not p.fhicl is None and not p.fhicl_used is None
-
-#        assert "/tmp" == tmpdir_for_fhicl[:4] and len(tmpdir_for_fhicl) > 4
-#        shutil.rmtree(tmpdir_for_fhicl)
 
         return 0  # end of function
 
@@ -3680,18 +3334,6 @@ class FarmManager(Component):
         self.fState.set_completed(0);
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
-#------------------------------------------------------------------------------
-# 2026-01-29 PM: put_config_info does nothing
-#------------------------------------------------------------------------------
-#         try:
-#             self.put_config_info_on_stop()
-#         except Exception:
-#             self.print_log("e", traceback.format_exc())
-#             self.alert_and_recover(
-#                 ("An exception was thrown when trying to save configuration info; "
-#                  "see traceback above for more info")
-#             )
-#             return
 
         self.stop_datataking()
 
