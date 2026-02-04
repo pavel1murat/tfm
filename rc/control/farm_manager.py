@@ -582,11 +582,12 @@ class FarmManager(Component):
         s = self.subsystems[p.subsystem]; # subsystem which a given process belongs to
         # BRs should already be covered, check for input from other EBs
 
-        p.max_fragment_size_bytes = 0;
-        p.max_event_size_bytes    = 0;
-
         print(f's.sources:{s.sources}');
         print(f'p.list_of_sources:{p.list_of_sources}');
+
+        sum_fragment_size_bytes = 0;               # sum of the BR's input
+        max_event_size_bytes    = 0;               # max event from input EB's
+        p.init_fragment_count   = 0;
 
         if (len(s.sources) > 0):
             for source in s.sources:
@@ -595,7 +596,9 @@ class FarmManager(Component):
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
                     for eb in list_of_ebs:
-                        p.max_event_size_bytes += eb.max_event_size_bytes;
+                        p.init_fragment_count += 1
+                        if (eb.max_event_size_bytes > max_event_size_bytes):
+                            max_event_size_bytes = eb.max_event_size_bytes;
                         # avoid double counting
                         if (not eb in p.list_of_sources):
                             p.list_of_sources.append(eb);
@@ -604,9 +607,7 @@ class FarmManager(Component):
                 elif (ss.max_type == BOARD_READER):
                     list_of_brs = ss.list_of_procinfos[BOARD_READER]
                     for br in list_of_brs:
-                        p.max_event_size_bytes   += br.max_fragment_size_bytes;
-                        if (br.max_fragment_size_bytes > p.max_fragment_size_bytes):
-                            p.max_fragment_size_bytes = br.max_fragment_size_bytes;
+                        sum_fragment_size_bytes += br.max_fragment_size_bytes;
                         # avoid double counting
                         if (not br in p.list_of_sources):
                             p.list_of_sources.append(eb);
@@ -619,17 +620,21 @@ class FarmManager(Component):
 #-----------v------------------------------------------------------------------
             for br in p.list_of_sources:
                 print(f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}')
-                p.max_event_size_bytes += br.max_fragment_size_bytes
-                if (br.max_fragment_size_bytes > p.max_fragment_size_bytes):
-                    p.max_fragment_size_bytes = br.max_fragment_size_bytes;
+                sum_fragment_size_bytes += br.max_fragment_size_bytes
 
                 print(f'p.max_event_size_bytes:{p.max_event_size_bytes} p.max_fragment_size_bytes:{p.max_fragment_size_bytes}')
+
+        p.max_fragment_size_bytes = sum_fragment_size_bytes;
+        p.max_event_size_bytes    = sum_fragment_size_bytes+max_event_size_bytes;
+
 #---------------------------^--------------------------------------------------
-# - an EB should also have destinations - either DL's or other EB's
+# done with the sources
+# destinations: an EB should also have destinations - either DL's or other EB's
 #-------v----------------------------------------------------------------------
 
         list_of_dls = s.list_of_procinfos[DATA_LOGGER]
         if (len(list_of_dls) > 0):
+            # subsystem has its own DL(s)
             for dl in list_of_dls:
                 dl.list_of_sources.append(p);
                 p.list_of_destinations.append(dl);
@@ -640,7 +645,7 @@ class FarmManager(Component):
                 # subsystem has a destination, that has to start with EB level
                 sd = self.subsystems[s.destination]
                 if (sd.min_type < EVENT_BUILDER):
-                    # a problem, throw an exception
+                    # a problem, subsystem has BRs at best - throw an exception
                     raise Exception('EB: trouble');
                 else:
                     # first check EBs in the destination subsystem
@@ -650,17 +655,25 @@ class FarmManager(Component):
                             p.list_of_destinations.append(eb);
                             eb.list_of_sources.append(p);
                     else:
-                        # no EBs, look for DLs
+                        # no EBs, check for DLs
                         list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
                         if (len(list_of_dls) > 0):
                             for dl in list_of_dls:
                                 p.list_of_destinations.append(dl);
                                 dl.list_of_sources.append(p);
                         else:
-                            # a problem , throw
-                            raise Exception('EB: no EBs/DLs in the DEST');
+                            # no EBs/DLss, check for DSs
+                            list_of_dss = sd.list_of_procinfos[DISPATCHER]
+                            if (len(list_of_dss) > 0):
+                                for ds in list_of_dss:
+                                    p.list_of_destinations.append(ds);
+                                    ds.list_of_sources.append(p);
+                                    
+                                else:
+                                    # a problem , throw
+                                    raise Exception('EB: no EBs/DLs in the DEST');
         return;
-#------------------------------------------------------------------------------
+#-------^----------------------------------------------------------------------
 # define processes for p.type = DATA_LOGGER
 #------------------------------------------------------------------------------
     def init_dl_connections(self,p):
@@ -675,22 +688,25 @@ class FarmManager(Component):
         p.max_event_size_bytes = 0;
         p.init_fragment_count  = 0;
 
-        if (len(s.sources) > 0):
+        if ((len(s.sources) > 0) and (s.min_type == DATA_LOGGER)):
+            # subsystem has sources, and there is no local  EBs
+            # can take input from the upstream EBs
             for source in s.sources:
-                ss = self.subsystems[source]
-                # there should be no DLs in the source subsystem, it should end in EB
-                list_of_ebs = ss.list_of_event_builders()
-                for eb in list_of_ebs:
-                    p.init_fragment_count += 1;
-                    
-                    if (eb.max_event_size_bytes > p.max_event_size_bytes):
-                        p.max_event_size_bytes =  eb.max_event_size_bytes
-
-                    # avoid double counting
-                    if (not eb in p.list_of_sources):
-                        p.list_of_sources.append(eb);
-                        eb.list_of_destinations.append(p);
-#---------------------------^--------------------------------------------------
+                ss = self.subsystems[source]   # this can be streamlined - use the list of subsystems, not IDs
+                # there should be no DLs in the source subsystem, it should end with  the EBs
+                if (ss.max_type == EVENT_BUILDER):
+                    list_of_ebs = ss.list_of_event_builders()
+                    for eb in list_of_ebs:
+                        p.init_fragment_count += 1;
+                        
+                        if (eb.max_event_size_bytes > p.max_event_size_bytes):
+                            p.max_event_size_bytes =  eb.max_event_size_bytes
+    
+                        # avoid double counting
+                        if (not eb in p.list_of_sources):
+                            p.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(p);
+#-------------------------------^----------------------------------------------
 # done with the sources
 # an EB should also have destinations - either DL's or other EB's
 #-------v----------------------------------------------------------------------
