@@ -14,7 +14,7 @@ art.process_name : "eb11"
 #------------------------------------------------------------------------------
 # to be overwritten
 #------------------------------------------------------------------------------
-daq.event_builde.max_event_size_bytes  : -1
+daq.event_builder.max_event_size_bytes : -1
 daq.event_builder.init_fragment_counts : -1 ## two event builders in addition to BR11
 daq.event_builder.sources              : {}
 art.outputs.rootNetOutput.destinations : {}
