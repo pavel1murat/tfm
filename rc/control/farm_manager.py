@@ -33,7 +33,6 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 # home brew
 #------------------------------------------------------------------------------
 import tfm.rc.control.run_control_state as     run_control_state
-from   tfm.rc.control.subsystem         import Subsystem
 from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
 
 from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
@@ -593,7 +592,7 @@ class FarmManager(Component):
             subdir_path=path+f'/{ss_id}'
             self.print_log('i',f'subdir_path:{subdir_path}')
             
-            s     = Subsystem(ss_id);
+            s     = artdaq.Subsystem(ss_id);
             # assume sources to be a comma-separated list
             if ('sources' in data.keys()): 
                 for x in data['sources'].split(','):
