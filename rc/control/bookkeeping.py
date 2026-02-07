@@ -107,13 +107,13 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         max_fragment_sizes = []
 
-        for procinfo in self.procinfos:
+        for p in self.procinfos:
             # res = the number of bytes (string)
 #            print(f' ------------------------------- FHICLE file {procinfo.label} in bookkeeping')
 #            print(procinfo.fhicl_used)
             res = re.findall(
                 r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",
-                procinfo.fhicl_used,
+                p.fhicl_used,
             )
             # breakpoint()
             if p.type() == BOARD_READER:
