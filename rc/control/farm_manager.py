@@ -358,6 +358,11 @@ class FarmManager(Component):
         else:
             return default;
 
+    def get_process_status(self,p):
+        return self.client.odb_get(p.odb_path+'/Status')
+
+    def set_process_status(self,p,status):
+        self.client.odb_set(p.odb_path+'/Status',status)
 
 #------------------------------------------------------------------------------
 # 'public names' = short names , i.e. 'mu2edaq22'
@@ -687,6 +692,9 @@ class FarmManager(Component):
         self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
         self._cmd_path               = '/Mu2e/Commands/DAQ/Tfm';
+
+        self.client.odb_set(self.tfm_conf_path+'/Status',1);
+
         self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
         self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
 
@@ -919,6 +927,8 @@ class FarmManager(Component):
 # P.M. if debug_level is defined on the command line, override the config file settings
 #------------------------------------------------------------------------------
         if (debug_level >= 0): self.debug_level = debug_level
+
+        self.client.odb_set(self.tfm_conf_path+'/Status',0);
 
 
     def __del__(self):
@@ -2050,8 +2060,7 @@ class FarmManager(Component):
     def process_command(self, p, command):
 
         if self.exception:
-            self.print_log("d","self.exception set to true at some point, won't send %s command to %s" 
-                           % (command, p.label),2)
+            self.print_log("d",f"self.exception set to true at some point, won't send command:{command} to process:{p.label}",2)
             return
 
         timeout_dict = {
@@ -2061,6 +2070,7 @@ class FarmManager(Component):
             "Dispatcher"    : self.dispatcher_timeout,
             "RoutingManager": self.routingmanager_timeout,
         }
+        
         timeout = timeout_dict[p.name]
 
         self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 1",2)
@@ -2071,7 +2081,6 @@ class FarmManager(Component):
 
         try:
             if command == "Init":
-                # breakpoint()
                 p.lastreturned = p.server.daq.init(p.fhicl_used, timeout)
             elif command == "Start":
                 p.lastreturned = p.server.daq.start(self.run_number, timeout)
@@ -2103,25 +2112,18 @@ class FarmManager(Component):
             if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
                 p.state = self.target_states[command]
                 self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",2)
-                self.client.odb_set(p.odb_path+'/Status',0);
+                self.set_process_status(p,0);
 
         except Exception:
             self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",2)
-            self.client.odb_set(p.odb_path+'/Status',-1);
+            self.set_process_status(p,-1);
             self.exception = True
 
             if "timeout: timed out" in traceback.format_exc():
                 output_message = (
                     ("\n%s: Timeout sending %s transition to artdaq process %s at %s:%s; "
                      "try checking logfile %s for details\n")
-                    % (
-                        rcu.date_and_time(),
-                        command,
-                        p.label,
-                        p.host,
-                        p.port,
-                        self.determine_logfilename(p),
-                    )
+                    % (rcu.date_and_time(),command,p.label,p.host,p.port,self.determine_logfilename(p))
                 )
             elif "[Errno 111] Connection refused" in traceback.format_exc():
                 output_message = (
@@ -2174,7 +2176,7 @@ class FarmManager(Component):
     def do_command(self, command):
         func_name = 'do_command'
 
-###        self.print_log('d',f'-- {func_name} START: command:{command}')
+        TRACE.INFO('-- START: command:{command}',TRACE_NAME);
 
         if command != "Start" and command != "Init" and command != "Stop":
             self.print_log("i", "%s transition underway" % (command.upper()))
@@ -2243,8 +2245,9 @@ class FarmManager(Component):
                 for priority in priority_rankings:
                     proc_threads = {}
                     for p in self.procinfos:
-                        TRACE.DEBUG(0,f'p:{p.name}',TRACE_NAME);
+                        TRACE.DEBUG(0,f'p:{p.name} self.process_command:{self.process_command} command:{command}',TRACE_NAME);
                         if (proctype in p.name and priority == p.priority and p.subsystem.id == subsystem):
+                            self.set_process_status(p,1)
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
                             proc_threads   [p.label] = t
                             proc_starttimes[p.label] = time.time()
@@ -2266,7 +2269,12 @@ class FarmManager(Component):
         self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." 
                        % (command.upper(),endtime - starttime))
 
-        nfailed = len([p for p in self.procinfos if p.lastreturned != "Success" ])
+        nfailed = 0;
+        for p in self.procinfos:
+            if (p.lastreturned != "Success"):
+                     nfailed += 1;
+                     # PM and mark the failure
+                     self.set_process_status(p,-1)
 
         TRACE.DEBUG(0,f'nfailed:{nfailed} self.debug_level:{self.debug_level}',TRACE_NAME)
         if ((self.debug_level >= 2) or (nfailed > 0)):
@@ -2765,19 +2773,18 @@ class FarmManager(Component):
 # P.M. it looks that it takes all fcl files from the config directory and checks them....
 #---v--------------------------------------------------------------------------
     def check_hw_fcls(self):
+        TRACE.INFO(f'-- START',TRACE_NAME)
 
-        starttime = time.time()
-            
+        starttime     = time.time()
         rootfile_cntr = 0
         
-        TRACE.INFO(f'-- START',TRACE_NAME)
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would re-upload the FCL files?
 # self.config_dir contains only FCL files 
 #-------v------------------------------------------------------------------------------
         for p in self.procinfos:
-            if not self.disable_unique_rootfile_labels and ("EventBuilder" in p.name or "DataLogger" in p.name):
+            if (not self.disable_unique_rootfile_labels and (p.is_eventbuilder() or p.is_datalogger())):
                 fhicl_before_sub     = p.fhicl_used
                 rootfile_cntr_prefix = "dl"
                 p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
@@ -2787,6 +2794,7 @@ class FarmManager(Component):
 
         endtime = time.time()
         self.print_log("i", "CONFIG transition 002: step lasted (%.1f seconds)." % (endtime - starttime))
+        TRACE.INFO(f'-- END',TRACE_NAME)
 
         return 0  # end of function
 
@@ -3008,7 +3016,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # this is where the processes are launched - 
 #-----------v------------------------------------------------------------------
-            # breakpoint()
             launch_procs_actions = self.launch_procs()
 
             assert type(launch_procs_actions) is dict, rcu.make_paragraph(
@@ -3141,19 +3148,6 @@ class FarmManager(Component):
         self.check_run_record_integrity()
         self.set_stop_requested(False);
 #------------------------------------------------------------------------------
-# step X) put_config_info - this does nothing
-#-------v------------------------------------------------------------------------------
-#         self.print_log("i", "START transition 001: before put_config_info")
-# 
-#         try:
-#             self.put_config_info()
-#         except Exception:
-#             self.print_log("e", traceback.format_exc())
-#             self.alert_and_recover(
-#                 "An exception was thrown when trying to save configuration info; see traceback above for more info"
-#             )
-#             return
-#------------------------------------------------------------------------------
 # start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
         self.print_log("i","START transition 002: [farm_manager::do_start_running]: before execute_trace_script")
@@ -3207,7 +3201,7 @@ class FarmManager(Component):
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
 
-        self.stop_datataking()
+        self.stop_datataking() # does nothing for now
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_stop)
