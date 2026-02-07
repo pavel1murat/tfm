@@ -9,15 +9,16 @@
 # d) allow artdaq clients to message back, handle client messages
 #
 #------------------------------------------------------------------------------
-import os, sys, argparse, glob, inspect
+import os, sys, argparse, glob, inspect, re
 from   datetime import datetime, timezone
-
+from   operator import attrgetter
 import pathlib, pdb, random, re, shutil, signal, socket, stat, string, subprocess
 import threading, time, traceback
 
 import  TRACE
 TRACE_NAME="farm_manager"
 
+import tfm.rc.control.artdaq
 import midas.client
 #------------------------------------------------------------------------------
 # debugging printout
@@ -33,7 +34,7 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 #------------------------------------------------------------------------------
 import tfm.rc.control.run_control_state as     run_control_state
 from   tfm.rc.control.subsystem         import Subsystem
-from   tfm.rc.control.procinfo          import Procinfo
+from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
 
 from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
 from   tfm.rc.control.component         import Component
@@ -48,6 +49,7 @@ else:
     from tfm.rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
 import tfm.rc.control.utilities as rcu
+import tfm.rc.control.artdaq    as artdaq
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
@@ -79,6 +81,7 @@ from tfm.rc.control.manage_processes_direct import get_pid_for_process_base
 from tfm.rc.control.manage_processes_direct import process_launch_diagnostics_base
 from tfm.rc.control.manage_processes_direct import mopup_process_base
 
+#------------------------------------------------------------------------------   
 class FarmManager(Component):
     """
     FarmManager: The intermediary between Run Control, the
@@ -181,7 +184,8 @@ class FarmManager(Component):
         # configurations
         # with multiple request domains and levels of filtering.
 
-        self.subsystems = {}
+        self.subsystems         = {}            # don't really need a dict
+        self.list_of_subsystems = []            # prepare for a transition
         return
 #------^-----------------------------------------------------------------------
 # want run number to be always printed with 6 digits
@@ -203,6 +207,21 @@ class FarmManager(Component):
     def xmlrpc_port_number(self,rank):
         port = self.base_port_number+self.partition()*self.ports_per_partition+rank
         return port
+#------------------------------------------------------------------------------
+# 'name' - what was called subsystem ID (a string)
+#------------------------------------------------------------------------------
+    def find_subsystem(self,name):
+        return next((s for s in self.list_of_subsystems if s.id == name),None);
+            
+    def find_process(self,label):
+        return next((p for p in self.procinfos if p.label == label),None);
+
+#        for p in self.procinfos:
+#            if (p.label == label):
+#                return p;
+
+#        return None
+
 #------------------------------------------------------------------------------
 # format (and location) of the PMT logfile - 
 # includes directory, run_number, host, user, partition (in integer), and a timestamp
@@ -272,10 +291,11 @@ class FarmManager(Component):
                        False,
                 )
 
-        cmd = "%s ; . %s for_running" % (
-            ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-            self.daq_setup_script,
-        )
+        spack_env = os.getenv('SPACK_ENV').split('/')[-1];
+        cmd = "%s ; . %s %s" % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
+                                self.daq_setup_script,spack_env)
+
+        self.print_log("i",f'cmd:"{cmd}"\n',1,False);
 
         if not rcu.host_is_local(node):
             cmd = "timeout %d ssh %s '%s'" % (self.ssh_timeout_in_seconds,node,cmd)
@@ -363,7 +383,8 @@ class FarmManager(Component):
         return hname;
 
 #------------------------------------------------------------------------------
-# PM: create self.procinfo's
+# PM: 1. subsystems are already created and cross-linked
+#     2. create processes 
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
@@ -374,14 +395,16 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
-#        for short_node_name,node_value in nodes_dir:
         for short_node_name in nodes_dir.keys():
             node_path    = nodes_path+'/'+short_node_name;
             node_enabled = self.client.odb_get(node_path+'/Enabled')
-            TRACE.DEBUG(1,f'node_path:{node_path} node_enabled:{node_enabled}',TRACE_NAME)
+            TRACE.DEBUG(0,f'node_path:{node_path} node_enabled:{node_enabled}',TRACE_NAME)
             if (node_enabled == 0) : continue;
             
             node_artdaq_path = nodes_path+'/'+short_node_name+'/Artdaq';
+            
+            node = artdaq.Node(short_node_name,node_artdaq_path);
+            self.artdaq.add_node(node);
             
             TRACE.DEBUG(0,f'node_artdaq_path:{node_artdaq_path}',TRACE_NAME)
             enabled = self.client.odb_get(node_artdaq_path+'/Enabled')
@@ -391,90 +414,162 @@ class FarmManager(Component):
             node_artdaq_dir = self.client.odb_get(node_artdaq_path)
             for key_name,key_value in node_artdaq_dir.items():        # loop over processes on this node
                 TRACE.DEBUG(0,f'key_name:{key_name} key_value:{key_value}',TRACE_NAME)
-                if (key_name == 'Enabled') or (key_name == 'Status') : continue;
-                process_path = f'{node_artdaq_path}/{key_name}'
-                TRACE.DEBUG(0,f'process_path:{process_path}',TRACE_NAME)
+                if (key_name == 'Enabled') or (key_name == 'Status'):
+                    continue;
+                
+                process_odb_path = f'{node_artdaq_path}/{key_name}'
+                TRACE.DEBUG(0,f'process_odb_path:{process_odb_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # at this point, expect 'key_name; to be a process label and skip disabled processes
 #---------------v--------------------------------------------------------------
-                enabled = self.client.odb_get(process_path+'/Enabled')
-                if (enabled == 0) : continue;
+                enabled = self.client.odb_get(process_odb_path+'/Enabled')
+                if (enabled == 0):
+                    # the process is disabled, skip it
+                    continue;
                 
-                subdir2 = self.client.odb_get(process_path)
-                TRACE.DEBUG(0,f'subdir2 process_path:{process_path}',TRACE_NAME)
+                # subdir2 is a dict , subdir2['max_fragment_size_bytes] 
+                subdir2 = self.client.odb_get(process_odb_path)
+                
+                TRACE.DEBUG(0,f'process:{key_name} process_odb_path:{process_odb_path}',TRACE_NAME)
                 for name,value in subdir2.items():
-# Rank defines the XMLRPC port number 
-                    if (name == "Rank"):              rank      = int(value)
-                    if (name == "Subsystem" ):        subsystem = str(value)
+                    if (name == "Rank"):              rank               = int(value)
+                    if (name == "Subsystem" ):        subsystem_id       = str(value)
                     if (name == "AllowedProcessors"): allowed_processors = str(value)
-                    if (name == "Target"):            target    = str(value)                        
-                    if (name == "Prepend"):           prepend   = str(value)
+                    if (name == "Target"):            target             = str(value)                        
+                    if (name == "Prepend"):           prepend            = str(value)
 
-                timeout = 30;                 # seconds
-                pname   = 'undefined';
+                TRACE.DEBUG(0,f'process:{key_name} rank:{rank} subsystem_id:{subsystem_id} target:{target} prepend:{prepend} allowed_processors:{allowed_processors}',TRACE_NAME)
+                # check the process subsystem - that could be disabled independently
+                s = self.find_subsystem(subsystem_id);
+                if (s == None):
+                    TRACE.ERROR(f'requested process:{key_name} belongs to disabled subsystem:{subsystem_id}. Process not initialized',TRACE_NAME);
+                    continue;
+
+                timeout     = 30;                 # seconds ... better be 60
+                pname       = 'undefined';
+                host        = self.hostname_on_private_subnet(short_node_name)
+
+                # to not hide 100000+1000*partition_id_rank in procinfo
+                xmlrpc_port = self.xmlrpc_port_number(rank);
+                fcl_fn      = f'{self.config_dir}/{key_name}.fcl';
 #------------------------------------------------------------------------------
 # PM: this naming is something to get rid of - a Procinfo thing has a type, so a
 # name is an overkill ... later...
 #------------------------------------------------------------------------------
+                TRACE.DEBUG(0,f'label:{key_name} rank:{rank} port:{xmlrpc_port} fcl_fn:{fcl_fn}')
+
                 if   (key_name[0:2] == 'br') :
-                    pname       = 'BoardReader'
-                    timeout     = self.boardreader_timeout;
                     if ('DTC' in subdir2.keys()):
-                        dtc_enabled = self.client.odb_get(process_path+'/DTC/Enabled')
+                        dtc_enabled = self.client.odb_get(process_odb_path+'/DTC/Enabled')
                         if (dtc_enabled == 0) :
 #------------------------------------------------------------------------------
-# a boardreader reads a DTC. If the DTC is disabled, there is nothing to read
-# don't start the boardreader - disable it instead
+# a boardreader may read a DTC. if the DTC is disabled, don't start the boardreader, disable it instead
 #------------------------------------------------------------------------------
-                            self.client.odb_set(process_path+'/Enabled',0) ##
+                            msg = f'boardreader:{key_name} DTC is disabled, disable the boardreader';
+                            self.print_log('w',msg);
+                            TRACE.WARN(msg,TRACE_NAME)
+                            self.client.odb_set(process_odb_path+'/Enabled',0)
                             continue
+                        
+                    p = artdaq.BoardReader('BoardReader',
+                                           rank, ##                = rank ,
+                                           host,  ##             = host ,          # at this point, store long (with '-ctrl' names)
+                                           str(xmlrpc_port),
+                                           timeout, ##           = self.boardreader_timeout,
+                                           key_name  ,
+                                           subsystem_id, ##      = subsystem_id,
+                                           allowed_processors = None,
+                                           target             = "none",
+                                           fhicl              = fcl_fn,
+                                           prepend            = "")
+                    
+                    # for a BR, a 'fragment' and an 'event' is the same, for all other processes, event size is calculated
+                    
+                    p.max_fragment_size_bytes = subdir2['max_fragment_size_bytes']
+                    p.max_event_size_bytes    = p.max_fragment_size_bytes;
+                        
                 elif (key_name[0:2] == 'dl') :
-                    pname   = 'DataLogger'
-                    timeout = self.datalogger_timeout;
+                    p = artdaq.DataLogger('DataLogger',
+                                          rank,   ##            = rank ,
+                                          host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                          str(xmlrpc_port),
+                                          timeout, ##            = self.datalogger_timeout,
+                                          key_name  ,
+                                          subsystem_id, ##          = subsystem_id,
+                                          allowed_processors = None,
+                                          target             = "none",
+                                          fhicl              = fcl_fn,
+                                          prepend            = "")
+                    
                 elif (key_name[0:2] == 'ds') :
-                    pname   = 'Dispatcher'
-                    timeout = self.dispatcher_timeout;
+                    p = artdaq.Dispatcher('Dispatcher',
+                                          rank, ##               = rank ,
+                                          host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                          str(xmlrpc_port),
+                                          timeout, ##            = self.dispatcher_timeout,
+                                          key_name  ,
+                                          subsystem_id, #          = subsystem_id,
+                                          allowed_processors = None,
+                                          target             = "none",
+                                          fhicl              = fcl_fn,
+                                          prepend            = "")
+                    
                 elif (key_name[0:2] == 'eb') :
-                    pname   = 'EventBuilder'
-                    timeout = self.eventbuilder_timeout;
+                    p = artdaq.EventBuilder('EventBuilder',
+                                            rank, ##               = rank ,
+                                            host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                            str(xmlrpc_port),
+                                            timeout, ##            = self.eventbuilder_timeout,
+                                            key_name  ,
+                                            subsystem_id, ##          = subsystem_id,
+                                            allowed_processors = None,
+                                            target             = "none",
+                                            fhicl              = fcl_fn,
+                                            prepend            = "")
+
+                    
                 elif (key_name[0:2] == 'rm') :
-                    pname   = 'RoutingManager'
-                    timeout = self.routingmanager_timeout;
+                    p = artdaq.RoutingManager('RoutingManager',
+                                              rank, ##               = rank ,
+                                              host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                              str(xmlrpc_port),
+                                              timeout, ##            = self.routingmanager_timeout,
+                                              key_name  ,
+                                              subsystem_id, ##       = subsystem_id,
+                                              allowed_processors = None,
+                                              target             = "none",
+                                              fhicl              = fcl_fn,
+                                              prepend            = "")
+
                 else:
                     raise Exception(f'ERROR: undefined process type:{label} for {host}')
-
-                host = self.hostname_on_private_subnet(short_node_name)
-
-                # to not hide 100000+1000*partition_id_rank in procinfo
-                xmlrpc_port = self.xmlrpc_port_number(rank);
                 
-                TRACE.DEBUG(0,f'name:{pname} label:{key_name} rank:{rank} port:{xmlrpc_port}')
-                p = Procinfo(name               = pname,
-                             rank               = rank ,
-                             host               = host ,          # at this point, store long (with '-ctrl' names)
-                             port               = str(xmlrpc_port),
-                             timeout            = timeout,
-                             label              = key_name  ,
-                             subsystem          = subsystem,
-                             allowed_processors = None,
-                             target             = "none",
-                             prepend            = ""
-                             )
+                p.odb_path = process_odb_path;
+                
                 if (p.server == None):
                     self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
                 else:
                     p.print();
                     self.procinfos.append(p)
 
+                node.add_process(p);
+
+        self.procinfos.sort(key=lambda x: x.rank)
+#-------^-----------^----------------------------------------------------------
+# an exersize: print host map, sort procinfos by rank anyway
+#-------v----------------------------------------------------------------------
+               
         TRACE.INFO('-- END',TRACE_NAME)
         return;
+
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
 # in a configuration, subsystems are described under "DAQ/Subsystems" 
 #---v--------------------------------------------------------------------------
     def init_artdaq_subsystems(self):
 
-        self.subsystems = {}
+        self.subsystems         = {}
+        self.list_of_subsystems = [];              # a list, not a dict... prepare for a transition
         
         self.print_log('i','---START')
 
@@ -488,38 +583,58 @@ class FarmManager(Component):
         for (ss_id,data) in dir.items():
             
             self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
-
+            if (data['Enabled'] == 0): continue ;
+            
             subdir_path=path+f'/{ss_id}'
             self.print_log('i',f'subdir_path:{subdir_path}')
             
             s     = Subsystem(ss_id);
-            # assume sources to be a comma-separated list !!! 
+            # assume sources to be a comma-separated list
             if ('sources' in data.keys()): 
                 for x in data['sources'].split(','):
                     s.sources.append(x)
                     
-            if ('destination'   in data.keys()): s.destination  = data['destination'  ];
-            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragment_mode'];
+            if ('destination' in data.keys()):
+                dest = data['destination'];
+                if (dest == '') or (dest == 'none'): s.destination = None;
+                else                               : s.destination = dest;
+
+            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragmentmode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #------------------------------------------------------------------------------
             s.print()
             self.subsystems[s.id] = s
+            self.list_of_subsystems.append(s);    # duplicate, prepare for a transition
 #-----------^------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #-------v----------------------------------------------------------------------
-        self.print_log('i',f'N subsystems:{len(self.subsystems.keys())}')
-        
-        for k,v in self.subsystems.items():
-            print('k,type  = ',k,type(k))
-            print('v,type  = ',v,type(v))
-            v.print();
-            
+        self.print_log('i',f'N subsystems:{len(self.list_of_subsystems)}')
+#------------------------------------------------------------------------------
+# all subsystems created, cross-link them to avoid multiple searches later
+#------------------------------------------------------------------------------
+        for s in self.list_of_subsystems:
+            for sid in s.sources:
+                ss = self.find_subsystem(sid);
+                if (ss):
+                    s.list_of_sS.append(ss)
+                else:
+                    raise Exception(f'cant find source subsystem sid:{sid}')
+                
+            if s.destination != None:
+                s.dS = self.find_subsystem(s.destination)
+
+            s.print();
+#------------------------------------------------------------------------------
+# done with subsystems. However, at this point a subsystem
+# doesn't know about its processes - that should come later
+#------------------------------------------------------------------------------
         self.print_log('i','--- END')
         
         return
 
-#------------------------------------------------------------------------------
+
+#-------^----------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
 #---v--------------------------------------------------------------------------
@@ -550,6 +665,7 @@ class FarmManager(Component):
         self.mu2e_daq_dir            = os.path.expandvars(self.client.odb_get('/Mu2e/MU2E_DAQ_DIR'));
         self.spackdir                = self.mu2e_daq_dir + '/spack'
         self.daq_setup_script        = os.path.expandvars(self.client.odb_get('/Mu2e/DaqSetupScript'))
+        self.artdaq                  = artdaq.Artdaq();
 
         self.midas_server_host       = os.path.expandvars(self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
         self.top_output_dir          = os.path.expandvars(self.client.odb_get("/Mu2e/OutputDir"));
@@ -650,13 +766,95 @@ class FarmManager(Component):
         self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
         self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
 #------------------------------------------------------------------------------
-# definition of subsystems
+# initialize artfaq subsystems and processes
 #-------v----------------------------------------------------------------------
         self.init_artdaq_subsystems()
-#------------------------------------------------------------------------------
-# definition of artdaq processes.. processes know about their subsystems
-#------------------------------------------------------------------------------
         self.init_artdaq_processes()
+#------------------------------------------------------------------------------
+# associate processes and subsystems
+#-------v----------------------------------------------------------------------
+        print('-------------------------- append processes to subsystems')
+        for p in self.procinfos:
+            print (f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}')
+            s           = self.subsystems[p.subsystem_id]
+            p.subsystem = s;                        # finally, defined
+            s.print()
+#------------------------------------------------------------------------------
+# a subsystem has 5 lists of processes, separate for each type - is that still needed ?
+#------------------------------------------------------------------------------
+            s.list_of_procinfos[p.type()].append(p);
+            
+            if (s.max_type < p.type()): s.max_type = p.type();
+            if (s.min_type > p.type()): s.min_type = p.type();
+
+        print('-------------------------- subsystems supposedly initialized')
+        for s in self.subsystems.values():
+            s.print()
+
+#------------------------------------------------------------------------------
+# processes and subsystems are cross-linked, 
+# for each process create its own lists of source and destination processes
+# within the subsystem, those are the same for all processes of the same type
+#
+# BR --> EB
+#               lowest in the subsystem
+# EB --> EB
+# EB --> DL
+#
+# DL --> DS
+#------------------------------------------------------------------------------
+        print('-------------------------- init_process_connections')
+        for p in self.procinfos:
+            p.init_connections();
+
+#-------^----------------------------------------------------------------------
+# at this point, each process knows about its sources and destinations
+# so we can update the FCL file
+# replaced should be lines with
+# -- BR:
+#         daq.fragment_receiver.destinations
+# -- EB:
+#         daq.event_builder.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DL:
+#         daq.aggregator.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DS:
+#         daq.aggregator.sources
+#
+# don't forget about smth max_fragment_size_bytes....
+# want to print what we got
+#-------v----------------------------------------------------------------------
+        print(f'----------- AAA processed self.procinfos: print sources and destinations')
+        for p in self.procinfos:
+            print(f'p.subsystem:{p.subsystem.id} p.rank:{p.rank} p.label:{p.label}')
+            if (p.list_of_sources == None):
+                print('  -- sources: None');
+            else:
+                print('  -- sources:')
+                for p1 in p.list_of_sources:
+                    p1.print();
+
+            if (p.list_of_destinations == None):
+                print('  -- destinations: None');
+            else:
+                print('  -- destinations:')
+                for p1 in p.list_of_destinations:
+                    p1.print();
+
+        print(f'----------- excersize printing the host_map')
+        s = artdaq.host_map_string(self.procinfos,'')
+        print(f'{s}')
+#------------------------------------------------------------------------------
+# now update fcls - to decouple that code, need to pass the transfer plugin
+# and the output directory name
+#------------------------------------------------------------------------------
+        tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
+        for p in self.procinfos:
+            artdaq.update_fhicl(p,self.transfer,tmp_dir);
+        
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 
@@ -730,10 +928,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # global actor functions
 #---v--------------------------------------------------------------------------
-#    get_config_info                       = get_config_info_base
-#    put_config_info                       = put_config_info_base
-#    put_config_info_on_stop               = put_config_info_on_stop_base
-#    listconfigs                           = listconfigs_base
     save_run_record                       = save_run_record_base
     save_metadata_value                   = save_metadata_value_base
     start_datataking                      = start_datataking_base
@@ -1479,11 +1673,8 @@ class FarmManager(Component):
 
         undefined_var = None
 
-        if   self.daq_setup_script is None: undefined_var = "daq_setup_script"
-        elif self.debug_level      is None: undefined_var = "debug_level"
-
-        if undefined_var :
-            raise Exception(rcu.make_paragraph('Error: "%s" undefined' % (undefined_var)))
+        if self.daq_setup_script is None: 
+            raise Exception(rcu.make_paragraph('Error: self.daq_setup_script undefined'))
 
         if self.debug_level == 0:
             self.print_log("w",rcu.make_paragraph(
@@ -1521,7 +1712,7 @@ class FarmManager(Component):
         if (self.debug_level >= 2):
             for key in self.subsystems.keys(): self.subsystems[key].print()
 
-        for ss in self.subsystems:
+        for ss in self.subsystems:                       # ss is a string (key)
             dest = self.subsystems[ss].destination
             if dest is not None:
                 if (self.subsystems[dest] == None or ss not in self.subsystems[dest].sources):
@@ -1851,7 +2042,7 @@ class FarmManager(Component):
             )
 
 #------------------------------------------------------------------------------
-# "process_command" is the function which will send a transition to a single artdaq process, 
+# "process_command" is a function which sends a transition to a single artdaq process, 
 # and be run on its own thread so that transitions to different processes can be sent simultaneously
 # WHY ??? - pass it the index of the procinfo struct we want, rather than the actual procinfo struct
 # 'p' here is a Procinfo         
@@ -1872,6 +2063,8 @@ class FarmManager(Component):
         }
         timeout = timeout_dict[p.name]
 
+        self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 1",2)
+        self.client.odb_set(p.odb_path+'/Status',1);
         p.state = self.verbing_to_states[command]
 
         self.print_log("d","Sending transition %s to %s" % (command, p.label),3)
@@ -1909,8 +2102,12 @@ class FarmManager(Component):
 
             if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
                 p.state = self.target_states[command]
+                self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",2)
+                self.client.odb_set(p.odb_path+'/Status',0);
 
         except Exception:
+            self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",2)
+            self.client.odb_set(p.odb_path+'/Status',-1);
             self.exception = True
 
             if "timeout: timed out" in traceback.format_exc():
@@ -2036,8 +2233,8 @@ class FarmManager(Component):
                 priorities_used = {}
 
                 for p in self.procinfos:
-                    TRACE.DEBUG(0,f'  p.name:{p.name} p.label:{p.label} p.priority:{p.priority} p.subsystem:{p.subsystem}',TRACE_NAME);
-                    if proctype in p.name and p.subsystem == subsystem:
+                    TRACE.DEBUG(0,f'  p.name:{p.name} p.label:{p.label} p.priority:{p.priority} p.subsystem_id:{p.subsystem.id}',TRACE_NAME);
+                    if proctype in p.name and p.subsystem.id == subsystem:
                         priorities_used[p.priority] = p
 
                 priority_rankings = sorted(priorities_used.keys())
@@ -2047,7 +2244,7 @@ class FarmManager(Component):
                     proc_threads = {}
                     for p in self.procinfos:
                         TRACE.DEBUG(0,f'p:{p.name}',TRACE_NAME);
-                        if (proctype in p.name and priority == p.priority and p.subsystem == subsystem):
+                        if (proctype in p.name and priority == p.priority and p.subsystem.id == subsystem):
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
                             proc_threads   [p.label] = t
                             proc_starttimes[p.label] = time.time()
@@ -2454,34 +2651,6 @@ class FarmManager(Component):
                     )
                     return -1
         return 0
-#------------------------------------------------------------------------------
-# this is the place where each ARTDAQ component get its XMLRPC server created
-# 1) not sure why this can't be done whem initializing the Procinfo thing
-# 2) can have timeout a parameter of the Procinfo thing
-# P.Murat: create_time_server_proxy - make it a separate function
-#---v--------------------------------------------------------------------------
-#     def create_time_server_proxy(self):
-#         starttime = time.time()
-#         for p in self.procinfos:
-# 
-#             if   "BoardReader"    in p.name: timeout = self.boardreader_timeout
-#             elif "EventBuilder"   in p.name: timeout = self.eventbuilder_timeout
-#             elif "RoutingManager" in p.name: timeout = self.routingmanager_timeout
-#             elif "DataLogger"     in p.name: timeout = self.datalogger_timeout
-#             elif "Dispatcher"     in p.name: timeout = self.dispatcher_timeout
-# 
-#             try:
-#                 p.server = TimeoutServerProxy(p.socketstring, timeout)
-#             except Exception:
-#                 self.print_log("e", traceback.format_exc())
-#                 self.alert_and_recover('Problem creating server with socket "%s"' % p.socketstring)
-#                 return -1
-# #------------------------------------------------------------------------------
-# #       everything is fine
-# #-------v----------------------------------------------------------------------
-#         endtime = time.time()
-#         self.print_log("i", "create_time_server_proxy done (%.1f seconds)." % (endtime - starttime))
-#         return 0
 
 #------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
@@ -2597,52 +2766,21 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def check_hw_fcls(self):
 
-        TRACE.INFO(f'-- START',TRACE_NAME)
-
-        starttime     = time.time()
+        starttime = time.time()
+            
         rootfile_cntr = 0
+        
+        TRACE.INFO(f'-- START',TRACE_NAME)
 #------------------------------------------------------------------------------
 # it looks that here we're checking availability of the FCL files for the processes 
 # which are already running ? is the idea that one would re-upload the FCL files?
 # self.config_dir contains only FCL files 
 #-------v------------------------------------------------------------------------------
         for p in self.procinfos:
-            filename    = f'{self.config_dir}/{p.label}.fcl';           
-            found_fhicl = os.path.exists(filename);
-
-            self.print_log("i", f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label}', 2)
-            TRACE.INFO(f'p.name={p.name} p.label={p.label} FCL filename:{filename} found_fhicl:{found_fhicl}',TRACE_NAME)
-            
-            if not found_fhicl:
-                TRACE.ERROR(f'no FCL for p.name={p.name} p.label={p.label}',TRACE_NAME)
-                self.print_log("e",rcu.make_paragraph(
-                    f'farm_manager::check_hw_fcls : no FCL for p.name={p.name} p.label={p.label}')
-                )
-                self.revert_failed_transition("looking for all needed FHiCL documents")
-                return
-#------------------------------------------------------------------------------
-# update the process FHICL file - start from expanding it
-#------------------------------------------------------------------------------
-            try:
-                p.update_fhicl(filename)
-                self.print_log('i',f'farm_manager::check_hw_fcls p.name:{p.name} p.label:{p.label} p.fhicl_used:\n{p.fhicl_used}', 3)
-                
-                
-            except Exception:
-                TRACE.ERROR(f'failed to fhicl-dump filename:{filename}',TRACE_NAME)
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover("farm_manager::check_hw_fcls : An exception was thrown when creating the process "
-                                       "FHiCL documents; see traceback above for more info")
-                return
-
             if not self.disable_unique_rootfile_labels and ("EventBuilder" in p.name or "DataLogger" in p.name):
                 fhicl_before_sub     = p.fhicl_used
                 rootfile_cntr_prefix = "dl"
-                p.fhicl_used         = re.sub(
-                    r"(\n\s*[^#\s].*)\.root",
-                    r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",
-                    p.fhicl_used,
-                )
+                p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
 
                 if p.fhicl_used != fhicl_before_sub:
                     rootfile_cntr += 1
@@ -2697,9 +2835,9 @@ class FarmManager(Component):
 
         for ss in sorted(self.subsystems):
             for p in self.procinfos:
-                if p.subsystem == ss:
+                if p.subsystem.id == ss:
                     self.print_log("d","%-20s at %s:%s, part of subsystem %s, has rank %d" 
-                                   % (p.label,p.host,p.port,p.subsystem,p.rank),2)
+                                   % (p.label,p.host,p.port,p.subsystem.id,p.rank),2)
 #------------------------------------------------------------------------------
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 #-------v----------------------------------------------------------------------
@@ -2831,12 +2969,12 @@ class FarmManager(Component):
             self.create_setup_fhiclcpp_if_needed()
         except:
             raise
+
 #------------------------------------------------------------------------------
 # P.Murat: TODO
 # is this an assumption that reformatted FCL's and processes make two parallel lists,
 # so one could use the same common index to iterate ?
-# 2026-01-30: FHICL files are already flattened by check_hw_fcls , do they need another reformatting ?
-#             - I don't think so...
+# doesn't seem to be needed...
 #-------v----------------------------------------------------------------------
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
@@ -3068,18 +3206,6 @@ class FarmManager(Component):
         self.fState.set_completed(0);
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
-#------------------------------------------------------------------------------
-# 2026-01-29 PM: put_config_info does nothing
-#------------------------------------------------------------------------------
-#         try:
-#             self.put_config_info_on_stop()
-#         except Exception:
-#             self.print_log("e", traceback.format_exc())
-#             self.alert_and_recover(
-#                 ("An exception was thrown when trying to save configuration info; "
-#                  "see traceback above for more info")
-#             )
-#             return
 
         self.stop_datataking()
 

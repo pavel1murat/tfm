@@ -40,13 +40,13 @@ class Procinfo(object):
                  rank,
                  host,
                  port,                            # assumed to be a string
-                 timeout            = 30,         # PM: pick some reasonable default
-                 label              = None,
-                 subsystem          = "1",
+                 timeout,         # PM: pick some reasonable default
+                 label,
+                 subsystem_id,
                  allowed_processors = None,
                  target             = None,
-                 prepend            = "",
                  fhicl              = None,
+                 prepend            = "",
                  fhicl_file_path    = [],
                  ):
         self.name               = name
@@ -54,13 +54,20 @@ class Procinfo(object):
         self.port               = port
         self.host               = host
         self.label              = label
-        self.subsystem          = subsystem
+        self.subsystem_id       = subsystem_id
+        self.subsystem          = None;               # not defined at this point
         self.allowed_processors = allowed_processors
         self.target             = target
         self.prepend            = prepend
         self.fhicl              = fhicl  # Name of the input FHiCL document
         self.ffp                = fhicl_file_path
         self.priority           = 999
+        self.list_of_sources      = [ ]
+        self.list_of_destinations = [ ]
+        self.max_fragment_size_bytes = None;
+        self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
+        self.init_fragment_count     = None;         ## for DLs, DSs
+        self.odb_path                = None;
 
         if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
         elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
@@ -74,21 +81,6 @@ class Procinfo(object):
             self.server = TimeoutServerProxy(xmlrpc_url, timeout)
         except Exception:
             TRACE.TRACE(3,f'failed to create an XMLRPC server for process:{label} and socket:{xmlrpc_url}',TRACE_NAME);
-
-        # FHiCL code actually sent to the process
-
-        # JCF, 11/11/14 -- note that "fhicl_used" will be modified
-        # during the initalization function, as bookkeeping, etc.,
-        # is performed on FHiCL parameters
-
-        if self.fhicl is not None:
-            self.fhicl_used = ""
-            self.recursive_include(self.fhicl)  # likely not neeeded - flatten it
-        else:
-            self.fhicl_used = None
-
-        # JCF, Jan-14-2016
-
         # Do NOT change the "lastreturned" string below without
         # changing the commensurate string in check_proc_transition!
 
@@ -96,10 +88,40 @@ class Procinfo(object):
         self.state        = "nonexistent"
 
 #------------------------------------------------------------------------------
+# assume 8-byte data words, need max_fragment_size_bytes to be defined
+#------------------------------------------------------------------------------
+    def max_event_size_words(self):
+        if (self.max_event_size_bytes == None):
+            raise Exception(self.print())
+        
+        x = int(self.max_event_size_bytes/8);
+        return x;
+#------------------------------------------------------------------------------
+# to be overloaded
+#------------------------------------------------------------------------------
+    def init_connections(self):
+        pass
+#------------------------------------------------------------------------------
 # returns host:port
 #------------------------------------------------------------------------------
     def type(self):
         return self._type;
+
+    def is_boardreader(self):
+        return self._type == BOARD_READER;
+
+    def is_datalogger(self):
+        return self._type == DATA_LOGGER;
+
+    def is_dispatcher(self):
+        return self._type == DISPATCHER;
+
+    def is_eventbuilder(self):
+        return self._type == EVENT_BUILDER;
+
+    def is_routingmanager(self):
+        return self._type == ROUTING_MANAGER;
+
 #------------------------------------------------------------------------------
 # P.Murat: in the Edwards Center, the daq servers communicate using the private
 #          data network, where mu2edaq09 has the name of mu2edaq09-ctrl
@@ -108,20 +130,11 @@ class Procinfo(object):
 #        return self.host+'-data:'+self.port;
         return self.host+':'+self.port;
 
-    def print(self):
-        print("procinfo: name:%-20s"%self.name+" type:%i"%self._type+
-              " label:%-20s"%self.label+' rpc_server:'+self.rpc_server());
-
-#------------------------------------------------------------------------------
-# place in expanded FHICL file, no more processing needed
-#------------------------------------------------------------------------------
-    def update_fhicl(self, fhicl):
-#        self.fhicl      = fhicl
-#        self.fhicl_used = ""
-#        self.recursive_include(self.fhicl)
-        res = subprocess.run(['fhicl-dump', fhicl],capture_output=True,text=True);
-        self.fhicl      = fhicl;
-        self.fhicl_used = res.stdout;
+    def print(self,text = None):
+        if (text):
+            print(f'{text}');
+            
+        print(f'procinfo: subsystem_id:{self.subsystem_id:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
 
     def __lt__(self, other):
         if self.name != other.name:
