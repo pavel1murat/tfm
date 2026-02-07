@@ -394,6 +394,8 @@ def construct_checked_command(cmds):
 #------------------------------------------------------------------------------
 # P.Murat: this one was a disaster, as in the only place it is called for, one 
 #          associates the reformatted fcl's to  procinfos
+# 2026-01-30: fcl's are already processed through fhicl-dump - do we need to do it the
+#             second time ?
 #------------------------------------------------------------------------------
 def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     TRACE.DEBUG(0,f'-- START',TRACE_NAME)

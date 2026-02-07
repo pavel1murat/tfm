@@ -454,7 +454,7 @@ class FarmManager(Component):
                 fcl_fn      = f'{self.config_dir}/{key_name}.fcl';
 #------------------------------------------------------------------------------
 # PM: this naming is something to get rid of - a Procinfo thing has a type, so a
-# name is an overkill
+# name is an overkill ... later...
 #------------------------------------------------------------------------------
                 TRACE.DEBUG(0,f'label:{key_name} rank:{rank} port:{xmlrpc_port} fcl_fn:{fcl_fn}')
 
@@ -740,8 +740,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-        self.package_hashes_to_save              = []
-        self.package_versions                    = {}
+#        self.package_hashes_to_save              = []
+#        self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
 

@@ -23,11 +23,10 @@ import  TRACE; TRACE_NAME="bookkeeping"
 
 def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
-    # Determine that the artdaq package used is new enough to be
-    # compatible with the assumptions about its interface
+    # Determine that the artdaq package used is new enough
+    # to be compatible with the assumptions about its interface
 
-    # JCF, Nov-20-2018: update this when ready to require subsystem-compatible
-    # artdaq
+    # JCF, Nov-20-2018: update this when ready to require subsystem-compatible artdaq
     TRACE.INFO(f'-- START',TRACE_NAME)
 
     starttime = time.time()
@@ -55,9 +54,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
 
     if not res:
-        raise Exception(
-            "Problem parsing the calculated version of artdaq, %s" % (version)
-        )
+        raise Exception(f'Problem parsing the calculated version of artdaq, {version}')
 
     majorver   = res.group(1)
     minorver   = res.group(2)
@@ -119,7 +116,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 procinfo.fhicl_used,
             )
             # breakpoint()
-            if procinfo.type() == BOARD_READER:
+            if p.type() == BOARD_READER:
                 if len(res) > 0:
                     max_fragment_size_token = res[-1]
 
@@ -128,22 +125,20 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     else:
                         max_fragment_size = int(max_fragment_size_token[2:], 16)
 
-                    max_fragment_sizes.append((procinfo.label, max_fragment_size))
+                    max_fragment_sizes.append((p.label, max_fragment_size))
                 else:
                     raise Exception(
                         make_paragraph(
-                            ('Unable to find the max_fragment_size_bytes variable in the FHiCL document for %s; '
-                             'this is needed since "advanced_memory_usage" is set to true')
-                            % (procinfo.label)
+                            (f'Unable to find the max_fragment_size_bytes variable in the FHiCL document for {p.label}; '
+                             'this is needed since "advanced_memory_usage" is set to true'))
                         )
                     )
             else:
                 if len(res) > 0:
                     raise Exception(
                         make_paragraph(
-                            ("max_fragment_size_bytes is found in the FHiCL document for %s ;" 
-                             "this parameter must not appear in FHiCL documents for non-BoardReader artdaq processes"
-                             % procinfo.label))
+                            (f'max_fragment_size_bytes is found in the FHiCL document for {p.label} ;' 
+                             "this parameter is not allowed for non-BoardReader artdaq processes"))
                     )
 
 # PM 2026-02-03            if "max_event_size_bytes" in procinfo.fhicl_used:
@@ -351,9 +346,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         if procinfo.host == "localhost":
             host_to_display = os.environ["HOSTNAME"]
         else:
-            host_to_display = procinfo.host
+            host_to_display = p.host
 
-        proc_hosts.append('{rank: %d host: "%s"}' % (procinfo.rank, host_to_display))
+        proc_hosts.append('{rank: %d host: "%s"}' % (p.rank, host_to_display))
 
     host_map_string = "host_map: [%s]" % (", ".join(proc_hosts))
 
@@ -402,8 +397,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
                 )
 #---------------^--------------------------------------------------------------
-# There shouldn't be a RoutingManager in a subsystem with a parent
-# subsystem which contains a DFO
+# There shouldn't be a RoutingManager in a subsystem with a parent subsystem
+# which contains a DFO
 #-------v----------------------------------------------------------------------
         if get_router_process_identifier(procinfo) == "DFO":
             rogue_routingmanagers = [
@@ -563,7 +558,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         ) != len(set([p.target for p in router_process_for_subsystem_as_list])):
             raise Exception(
                 make_paragraph(
-                    "TFM has found more than one router process (RoutingManager, DFO, etc.) associated with subsystem %s requested in the boot file %s with the same target; this isn't currently supported"
+                    "found more than one router process (RoutingManager, DFO, etc.) associated with subsystem %s requested in the boot file %s with the same target; this isn't currently supported"
                     % (subsystem_id, self.boot_filename)
                 )
             )
@@ -666,10 +661,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )[0]
                     for process_involved_in_request in processes_involved_in_requests:
                         for i_proc in range(len(self.procinfos)):
-                            if (
-                                self.procinfos[i_proc].label
-                                == process_involved_in_request
-                            ):
+                            if (self.procinfos[i_proc].label == process_involved_in_request):
                                 self.procinfos[i_proc].fhicl_used = re.sub(
                                     "multicast_interface_ip\s*:\s*\S+",
                                     'multicast_interface_ip: "%s"'
@@ -758,6 +750,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             + "\n"
             + self.procinfos[i_proc].fhicl_used[table_end:]
         )
+        return
+#-------^----------------------------------------------------------------------
+# end of bookkeep_table_for_router_process , add return to help navigation
+#------------------------------------------------------------------------------
 
     self.print_log("i", f'step 12: took {time.time() - starttime} sec');
     starttime = time.time();
@@ -947,8 +943,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 % (proc1.label)
             )
 
-            # Check to make sure there's been no change in the way destinations
-            # are defined
+            # Check to make sure there's been no change in the way destinations are defined
             assert re.search(r"destinations:", proc1.fhicl_used[begin:end]), (
                 "Bookkeeping error: unable to find a destinations table within %s's RootNetOutput's enclosing table"
                 % (proc1.label)
