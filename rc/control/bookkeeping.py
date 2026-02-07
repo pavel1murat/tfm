@@ -132,7 +132,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                             (f'Unable to find the max_fragment_size_bytes variable in the FHiCL document for {p.label}; '
                              'this is needed since "advanced_memory_usage" is set to true'))
                         )
-                    )
+
             else:
                 if len(res) > 0:
                     raise Exception(
