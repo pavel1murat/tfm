@@ -16,7 +16,8 @@ import TRACE; TRACE_NAME="utilities";
 
 # from rc.control.procinfo import Procinfo
 
-bash_unsetup_command = 'upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi'
+# PM: no more UPS
+# bash_unsetup_command = 'upsname=$( which ups 2>/dev/null ); if [[ -n $upsname ]]; then unsetup() { . `$upsname unsetup "$@"` ; }; for pp in `printenv | sed -ne "/^SETUP_/{s/SETUP_//;s/=.*//;p}"`; do test $pp = UPS && continue; prod=`echo $pp | tr "A-Z" "a-z"`; unsetup -j $prod; done; echo "After bash unsetup, products active (should be nothing but ups listed):"; ups active; else echo "ups does not appear to be set up; will not unsetup any products"; fi'
 
 # Raise exceptions from threads https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread
 class RaisingThread(Thread):
@@ -369,14 +370,14 @@ def date_and_time_filename():
 
 def construct_checked_command(cmds):
 
-    # breakpoint()
     checked_cmds = []
 
     for cmd in cmds:
-
+        TRACE.DEBUG(1,f'cmd:{cmd}',TRACE_NAME)
         checked_cmds.append(cmd)
 
-        if not re.search(r"\s*&\s*$", cmd) and not bash_unsetup_command in cmd:
+#        if not re.search(r"\s*&\s*$", cmd) and not bash_unsetup_command in cmd:
+        if not re.search(r"\s*&\s*$", cmd): #  and not bash_unsetup_command in cmd:
             check_cmd = (
                 ('if [[ "$?" != "0" ]]; then '
                  'echo %s: Nonzero return value from the following command: "%s" '
@@ -428,8 +429,7 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
         .stdout.readlines()[0]
         .strip()
     )
-    TRACE.DEBUG(0,f'reformat_indir :{reformat_indir}' ,TRACE_NAME);
-    TRACE.DEBUG(0,f'reformat_outdir:{reformat_outdir}',TRACE_NAME);
+    TRACE.DEBUG(0,f'reformat_indir :{reformat_indir} reformat_outdir:{reformat_outdir}' ,TRACE_NAME);
 
     for p in procinfos:
         fn = "%s/%s.fcl" % (reformat_indir, p.label)

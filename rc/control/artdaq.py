@@ -4,7 +4,7 @@ import os, sys, argparse, glob, inspect, re, subprocess
 
 from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
 
-
+import TRACE ; TRACE_NAME='artdaq'
 #------------------------------------------------------------------------------
 # list_of_processes is either a p.list_of_destinations or a p.list_of_sources
 #------------------------------------------------------------------------------
@@ -71,6 +71,7 @@ def update_fhicl(procinfo, transfer_plugin, tmp_dir):
     # step 1 : read and replace - start from BRs
     print('------ update_fhicl')
     procinfo.print()
+    TRACE.INFO(f'procinfo.label:{procinfo.label} procinfo.fhicl:{procinfo.fhicl}',TRACE_NAME)
     
     with open(procinfo.fhicl,'r') as f:
         lines = f.readlines()
@@ -238,4 +239,377 @@ def update_fhicl(procinfo, transfer_plugin, tmp_dir):
 
 #---^--------------------------------------------------------------------------
 # marking the end
+#------------------------------------------------------------------------------
+class Node:
+
+    def __init__(self, name, node_artdaq_odb_path):
+        self.name                 = name;
+        self.node_artdaq_odb_path = node_artdaq_odb_path;
+        self.list_of_processes    = []
+
+    def add_process(self,p):
+        self.list_of_processes.append(p);
+
+
+#------------------------------------------------------------------------------
+class Artdaq:
+
+    def __init__(self):
+        self.list_of_nodes = []
+
+    def add_node(self, node):
+        self.list_of_nodes.append(node);
+        
+#------------------------------------------------------------------------------
+# define processes this p.type = BOARD_READER, BR is talking to destinations only
+#------------------------------------------------------------------------------
+class BoardReader(Procinfo):
+
+    def __init__(self,
+                 name, ##                = None, ## pname,
+                 rank, ##               = rank ,
+                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                 port, ##               = str(xmlrpc_port),
+                 timeout, ##            = timeout,
+                 label,   ##              = key_name  ,
+                 subsystem , ##         = subsystem,
+                 allowed_processors = None,
+                 target             = "none",
+                 fhicl              = "no_fcl_fn",
+                 prepend            = ""
+                 ):
+        
+        super().__init__(name,rank,host,port,timeout,label,subsystem,
+                         allowed_processors,target,fhicl,prepend)
+
+#------------------------------------------------------------------------------
+# boardreades only have destinations
+#------------------------------------------------------------------------------
+    def init_connections(self):
+        
+        # s = self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+        s = self.subsystem;                       # this is an object, not a string (subsystem_id)
+        if (s.max_type >= EVENT_BUILDER):
+            # local EBs: send fragments to them
+
+            list_of_ebs = s.list_of_procinfos[EVENT_BUILDER]
+            for eb in list_of_ebs:
+                self.list_of_destinations.append(eb);
+                eb.list_of_sources.append(self);
+        else:
+            # subsystem has only BRs, check subsystem destination
+            print(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}')
+            if (s.destination != None):
+                # subsystem has a destination, that has to have event builders
+                print(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"')
+                sd = s.dS;                  # destination subsystem, ## self.subsystems[s.destination];
+                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+                print(f'-- [BoardReader::init_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}')
+                
+                for eb in list_of_ebs:
+                    print(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}')
+                    self.list_of_destinations.append(eb);
+                    eb.list_of_sources.append(self);
+            else:
+                # the subsystem has only BRs', that is a problem
+                raise Exception(f'ERROR: subsystem:{s.id} has only BRs and no destination. FIX IT.')
+        return;
+
+
+#------------------------------------------------------------------------------
+class EventBuilder(Procinfo):
+
+    def __init__(self,
+                 name  , ##             = pname,
+                 rank  , ##             = rank ,
+                 host  , ##             = host ,          # at this point, store long (with '-ctrl' names)
+                 port  , ##             = str(xmlrpc_port),
+                 timeout, ##            = timeout,
+                 label  , ##            = key_name  ,
+                 subsystem , ##         = subsystem,
+                 allowed_processors = None,
+                 target             = "none",
+                 fhicl              = "no_fcl_fn",
+                 prepend            = ""
+                 ):
+        
+        super().__init__(name,rank,host,port,timeout,label,subsystem,
+                         allowed_processors,target,fhicl,prepend)
+        
+    def init_connections(self):      # p = self
+        print(f'--------------------------- EventBuilder::init_connections:{self.label}')
+        # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
+        # start from checking inputs
+        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+        # BRs should already be covered, check for input from other EBs
+
+        print(f's.sources:{s.sources}');
+        print(f'process.list_of_sources:{self.list_of_sources}');
+
+        sum_fragment_size_bytes  = 0;               # sum of the BR's input
+        max_event_size_bytes     = 0;               # max event from input EB's
+        self.init_fragment_count = 0;
+
+        if (len(s.sources) > 0):
+            for ss in s.list_of_sS:
+                # there should be no DLs in the source subsystem, it should end in EB
+                if (ss.max_type == EVENT_BUILDER):
+                    list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
+                    for eb in list_of_ebs:
+                        self.init_fragment_count += 1
+                        if (eb.max_event_size_bytes > max_event_size_bytes):
+                            max_event_size_bytes = eb.max_event_size_bytes;
+                        # avoid double counting
+                        if (not eb in self.list_of_sources):
+                            self.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(self);
+
+                elif (ss.max_type == BOARD_READER):
+                    list_of_brs = ss.list_of_procinfos[BOARD_READER]
+                    for br in list_of_brs:
+                        sum_fragment_size_bytes += br.max_fragment_size_bytes;
+                        # avoid double counting
+                        if (not br in self.list_of_sources):
+                            self.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(self);
+
+        else:
+#-------^----------------------------------------------------------------------
+# subsystem doesn't have inputs, look at local BRs - those are already in the list
+# of inputs
+#-----------v------------------------------------------------------------------
+            for br in self.list_of_sources:
+                print(f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}')
+                sum_fragment_size_bytes += br.max_fragment_size_bytes
+
+                print(f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}')
+
+
+        self.max_fragment_size_bytes = sum_fragment_size_bytes;
+        self.max_event_size_bytes    = sum_fragment_size_bytes+max_event_size_bytes;
+
+#---------------------------^--------------------------------------------------
+# done with the sources
+# destinations: each EB should also have 'destination' processes tow hich it sends events - either DL's or other EB's (or DSs ?)
+# first check if the subsystem ahs data loggers
+#-------v----------------------------------------------------------------------
+
+        list_of_dls = s.list_of_procinfos[DATA_LOGGER]
+        if (len(list_of_dls) > 0):
+            # subsystem has its own DL(s)
+            for dl in list_of_dls:
+                dl.list_of_sources.append(self);
+                self.list_of_destinations.append(dl);
+                    
+        else:
+            # subsystem has no its own data loggers, so it should have a destination subsystem
+            sd = s.dS;
+            if (sd != None):
+                # subsystem has a destination, that has to start with EB level
+                if (sd.min_type < EVENT_BUILDER):
+                    # a problem, subsystem has BRs at best - throw an exception
+                    raise Exception('EB: trouble');
+                else:
+                    # first check EBs in the destination subsystem
+                    list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+                    if (len(list_of_ebs) > 0):
+                        for eb in list_of_ebs:
+                            self.list_of_destinations.append(eb);
+                            eb.list_of_sources.append(self);
+                    else:
+                        # no EBs, check for DLs
+                        list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
+                        if (len(list_of_dls) > 0):
+                            for dl in list_of_dls:
+                                self.list_of_destinations.append(dl);
+                                dl.list_of_sources.append(self);
+                        else:
+                            # no EBs/DLss, check for DSs
+                            list_of_dss = sd.list_of_procinfos[DISPATCHER]
+                            if (len(list_of_dss) > 0):
+                                for ds in list_of_dss:
+                                    self.list_of_destinations.append(ds);
+                                    ds.list_of_sources.append(self);
+                                    
+                                else:
+                                    # a problem , throw
+                                    raise Exception('EB: no EBs/DLs in the DEST');
+        return;
+
+#------------------------------------------------------------------------------
+class DataLogger(Procinfo):
+
+    def __init__(self,
+                 name, ##                = pname,
+                 rank , ##              = rank ,
+                 host , ##              = host ,          # at this point, store long (with '-ctrl' names)
+                 port , ##              = str(xmlrpc_port),
+                 timeout, ##            = timeout,
+                 label, ##              = key_name  ,
+                 subsystem, ##          = subsystem,
+                 allowed_processors = None,
+                 target             = "none",
+                 fhicl              = "no_fcl_fn",
+                 prepend            = ""
+                 ):
+        
+        super().__init__(name,rank,host,port,timeout,label,subsystem,
+                         allowed_processors,target,fhicl,prepend)
+
+#-------^----------------------------------------------------------------------
+# define processes for p.type = DATA_LOGGER
+#------------------------------------------------------------------------------
+    def init_connections(self):
+
+        print(f'--- p.label:{self.label} p.subsystem_id:{self.subsystem_id}');
+        # DL has to have inputs from either own EBs or from EBs other subsystems
+        # start from checking inputs
+        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+        s.print();
+        # EBs should already be covered
+
+        self.max_event_size_bytes = 0;
+        self.init_fragment_count  = 0;
+
+        if ((len(s.list_of_sS) > 0) and (s.min_type == DATA_LOGGER)):
+            # subsystem has sources, and there is no local  EBs
+            # can take input from the upstream EBs
+            for ss in s.list_of_sS:
+                # there should be no DLs in the source subsystem, it should end with  the EBs
+                if (ss.max_type == EVENT_BUILDER):
+                    list_of_ebs = ss.list_of_event_builders()
+                    for eb in list_of_ebs:
+                        self.init_fragment_count += 1;
+                        
+                        if (eb.max_event_size_bytes > self.max_event_size_bytes):
+                            self.max_event_size_bytes =  eb.max_event_size_bytes
+    
+                        # avoid double counting
+                        if (not eb in self.list_of_sources):
+                            self.list_of_sources.append(eb);
+                            eb.list_of_destinations.append(self);
+#-------------------------------^----------------------------------------------
+# no source subsystems or those start from DLs - look for local inputs
+#-------v----------------------------------------------------------------------
+        else:
+            # subsystem has no official sources, there should be local EB's
+            list_of_ebs = s.list_of_event_builders()
+            if (len(list_of_ebs) > 0):
+                for eb in list_of_ebs:
+                    self.init_fragment_count += 1;
+                    if (eb.max_event_size_bytes > self.max_event_size_bytes):
+                        self.max_event_size_bytes =  eb.max_event_size_bytes
+                        
+                    if (not eb in self.list_of_sources):
+                        self.list_of_sources.append(eb);
+                        eb.list_of_destinations.append(self);
+                    
+            else:
+                # subsystem has no own EB's : trouble
+                raise Exception('DL: no EBs in the subsystem');
+
+#------------------------------------------------------------------------------
+# now - destinations ... not done yet
+#------------------------------------------------------------------------------
+
+        TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
+        return;
+
+#------------------------------------------------------------------------------
+class Dispatcher(Procinfo):
+
+    def __init__(self,
+                 name, ##              = pname,
+                 rank, ##               = rank ,
+                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                 port, ##               = str(xmlrpc_port),
+                 timeout, ##            = timeout,
+                 label, ##              = key_name  ,
+                 subsystem, ##          = subsystem,
+                 allowed_processors = None,
+                 target             = "none",
+                 fhicl              = "no_fcl_fn",
+                 prepend            = ""
+                 ):
+        
+        super().__init__(name,rank,host,port,timeout,label,subsystem,
+                         allowed_processors,target,fhicl,prepend)
+
+
+    def init_connections(self):
+        # DS only has inputs ..DLs ? start from checking inputs
+        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+
+        if (len(s.list_of_sS) > 0):
+            # THERE ARE INPUT SUBSYSTEMS, thus there should be no local inputs
+            # for now, assume correct inputs, handle errors later
+            for ss in s.list_of_sS:               ## source in s.sources:
+                # there should be DLs in the source subsystem
+                if (ss.max_type >= DATA_LOGGER):
+                    # it might make sense to allow a DL to send events to DSs anywhere,
+                    # although need to check the logic
+                    plist = ss.list_of_data_loggers()
+                    for x in plist:
+                        # avoid double counting - just in case
+                        if (not x in self.list_of_sources):
+                            self.list_of_sources.append(x);
+                            x.list_of_destinations.append(self);
+                else:
+                    # ss has no DLs, check EBs 
+                    plist = ss.list_of_event_builders();
+                    for x in plist:
+                        # avoid double counting - just in case
+                        if (not x in self.list_of_sources):
+                            self.list_of_sources.append(x);
+                            x.list_of_destinations.append(self);
+#---------------------------^--------------------------------------------------
+# no input sources , check local inputs
+#-------v----------------------------------------------------------------------
+        else:
+            plist = s.list_of_data_loggers()
+            if (len(plist) > 0):
+                # DLs available, local EBs should be talking to them
+                for x in plist:
+                    self.list_of_sources.append(x);
+                    x.list_of_destinations.append(self);
+                    
+            else:
+                # subsystem has no own data loggers, look for event builders
+                plist = s.list_of_event_builders()
+                if (len(plist) > 0):
+                    # DLs available, local EBs should be talking to them
+                    for x in plist:
+                        if (not x in dl.list_of_sources):
+                            self.list_of_sources.append(x);
+                            x.list_of_destinations.append(self);
+                else:
+                    # a problem , throw
+                    raise Exception('Dispatcher::init_connections: DS: no local DLs or EBs');
+        return;
+
+#------------------------------------------------------------------------------
+class RoutingManager(Procinfo):
+
+    def __init__(self,
+                 name, ##               = pname,
+                 rank, ##               = rank ,
+                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                 port, ##               = str(xmlrpc_port),
+                 timeout, ##            = timeout,
+                 label, ##              = key_name  ,
+                 subsystem, ##          = subsystem,
+                 allowed_processors = None,
+                 target             = "none",
+                 fhicl              = "no_fcl_fn",
+                 prepend            = ""
+                 ):
+        
+        super().__init__(name,rank,host,port,timeout,label,subsystem,
+                         allowed_processors,target,fhicl,prepend)
+
+#------------------------------------------------------------------------------
+# define processes for p.type = ROUTINE_MANAGER
+#------------------------------------------------------------------------------
+    def rm_connections(self):
+        raise Exception('RoutingManager::init_connection: not implemented yet');
 #------------------------------------------------------------------------------

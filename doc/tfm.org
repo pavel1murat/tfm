@@ -16,6 +16,33 @@
 
 * ------------------------------------------------------------------------------
 * [[file:./communication_with_artdaq.org][communication with artdaq]]
+* artdaq subsystems and logic of their communication                         
+- a subsystem is a group of processes. There are 5 types of processes:
+- boardreaders
+- eventbuilders
+- dataloggers
+- dispatchers
+- routingmanagers
+
+the ordering above is hierarchical :
+
+- normally, the boardrearers send data to event builders
+- event builders send data to data loggers
+- data logggers - to dispatchers.
+- dispatchers send data to slow monitoring clients. It is not clear why
+  dispatchers are needed at all - the data loggers can communicate with
+  the slow control clients w/o any need in additional layers
+- routing managers - dunno, guess they route the network traffic across
+  multiple subnets, if a DAQ system spans over
+
+a subsystem may have inputs (sources) and outputs (destinations) defined.
+In this case, input to the first layer of the subsystem comes from the last
+layer of the source subsystem(s), and the output of the last layer
+of this subsystem is directed to the lowest layer of the destination subsystem
+- multiple sources
+- single destination
+
+
 * configuration                                                              
 ** the TFM configuration is defined in ODB subtree /Mu2e/ActiveRunConfiguration/DAQ/Tfm
 1) .FCL files of the ARTDAQ jobs: 

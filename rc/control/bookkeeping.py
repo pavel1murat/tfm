@@ -112,8 +112,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         for procinfo in self.procinfos:
             # res = the number of bytes (string)
-            print(f' ------------------------------- FHICLE file {procinfo.label} in bookkeeping')
-            print(procinfo.fhicl_used)
+#            print(f' ------------------------------- FHICLE file {procinfo.label} in bookkeeping')
+#            print(procinfo.fhicl_used)
             res = re.findall(
                 r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",
                 procinfo.fhicl_used,
@@ -226,13 +226,13 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
             if not self.strict_fragment_id_mode:
                 total_fragment_space = generated_fragments_per_event * fragment_space
-                subsystem_fragment_space[procinfo.subsystem] += total_fragment_space
-                subsystem_fragment_ids[procinfo.subsystem] += reader_ids
+                subsystem_fragment_space[procinfo.subsystem_id] += total_fragment_space
+                subsystem_fragment_ids[procinfo.subsystem_id] += reader_ids
             else:
                 for tid in reader_ids:
-                    if tid not in subsystem_fragment_ids[procinfo.subsystem]:
-                        subsystem_fragment_space[procinfo.subsystem] += fragment_space
-                        subsystem_fragment_ids[procinfo.subsystem].append(tid)
+                    if tid not in subsystem_fragment_ids[procinfo.subsystem_id]:
+                        subsystem_fragment_space[procinfo.subsystem_id] += fragment_space
+                        subsystem_fragment_ids[procinfo.subsystem_id].append(tid)
 
     self.print_log("i", f'step 3: took {time.time() - starttime} sec');
     starttime = time.time();
@@ -325,7 +325,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 p.fhicl_used = re.sub(
                     "fragment_ids\s*:\s*\[[0-9, ]*\]",
                     "fragment_ids: [ %s ]"
-                    % (", ".join([str(i) for i in fragment_ids[p.subsystem]])),
+                    % (", ".join([str(i) for i in fragment_ids[p.subsystem_id]])),
                     p.fhicl_used,
                 )
 
@@ -357,187 +357,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     host_map_string = "host_map: [%s]" % (", ".join(proc_hosts))
 
-    # This function will construct the sources or destinations table
-    # for a given process.  If we're performing advanced memory usage,
-    # the max event size will need to be provided; this value is used
-    # to calculate the size of the buffers in the transfer plugins
-
-# PM 2026-02-03 #    def create_sources_or_destinations_string(procinfo, nodetype, max_event_size, inter_subsystem_transfer=False):
-# PM 2026-02-03 #
-# PM 2026-02-03 #        if   (nodetype == "sources"):
-# PM 2026-02-03 #            prefix = "s"
-# PM 2026-02-03 #        elif (nodetype == "destinations"):
-# PM 2026-02-03 #            prefix = "d"
-# PM 2026-02-03 #        else:
-# PM 2026-02-03 #            assert (
-# PM 2026-02-03 #                False
-# PM 2026-02-03 #            ), "nodetype passed to %s has to be either sources or destinations" % (
-# PM 2026-02-03 #                create_sources_or_destinations_string.__name__
-# PM 2026-02-03 #            )
-# PM 2026-02-03 #
-# PM 2026-02-03 #        buffer_size_words = -1
-# PM 2026-02-03 #
-# PM 2026-02-03 #        if self.advanced_memory_usage:
-# PM 2026-02-03 #
-# PM 2026-02-03 #            if "BoardReader" in procinfo.name:
-# PM 2026-02-03 #
-# PM 2026-02-03 #                list_of_one_fragment_size = [
-# PM 2026-02-03 #                    proctuple[1]
-# PM 2026-02-03 #                    for proctuple in max_fragment_sizes
-# PM 2026-02-03 #                    if proctuple[0] == procinfo.label
-# PM 2026-02-03 #                ]
-# PM 2026-02-03 #                assert len(list_of_one_fragment_size) == 1
-# PM 2026-02-03 #
-# PM 2026-02-03 #                buffer_size_words = list_of_one_fragment_size[0] / 8
-# PM 2026-02-03 #
-# PM 2026-02-03 #            elif "EventBuilder" not in procinfo.name or nodetype != "sources":
-# PM 2026-02-03 #                buffer_size_words = max_event_size / 8
-# PM 2026-02-03 #            else:
-# PM 2026-02-03 #                pass
-# PM 2026-02-03 ##---------------^--------------------------------------------------------------
-# PM 2026-02-03 ## For the EventBuilder, there's a different buffer size from each source, namely either
-# PM 2026-02-03 ## the max fragment size coming from its corresponding BoardReader or, if the source is an EventBuilder
-# PM 2026-02-03 ## from a parent subsystem, the relevant set of BoardReaders for the parent subsystem. We can't use just a single variable.
-# PM 2026-02-03 ##-------v----------------------------------------------------------------------
-# PM 2026-02-03 #        else:  # Not self.advanced_memory_usage
-# PM 2026-02-03 #            if "BoardReader" in procinfo.name:
-# PM 2026-02-03 #                buffer_size_words = self.max_fragment_size_bytes / 8
-# PM 2026-02-03 #            elif "EventBuilder" not in procinfo.name or nodetype != "sources":
-# PM 2026-02-03 #                res = re.search(
-# PM 2026-02-03 #                    r"\n\s*.*max_event_size_bytes*.\s*:\s*([0-9\.e]+)", procinfo.fhicl_used
-# PM 2026-02-03 #                )
-# PM 2026-02-03 #                if res:
-# PM 2026-02-03 #                    max_event_size = int(float(res.group(1)))
-# PM 2026-02-03 #
-# PM 2026-02-03 #                buffer_size_words = max_event_size / 8
-# PM 2026-02-03 #            else:
-# PM 2026-02-03 #                pass  # Same comment for the advanced memory usage case above applies here
-# PM 2026-02-03 #
-# PM 2026-02-03 #        procinfo_subsystem_has_dataloggers = True
-# PM 2026-02-03 #        if (len([pi for pi in self.procinfos if pi.subsystem == procinfo.subsystem and pi.name == "DataLogger" ]) == 0):
-# PM 2026-02-03 #            procinfo_subsystem_has_dataloggers = False
-# PM 2026-02-03 #
-# PM 2026-02-03 #        procinfos_for_string = []
-# PM 2026-02-03 #
-# PM 2026-02-03 #        for procinfo_to_check in procinfos_sorted_by_rank:
-# PM 2026-02-03 #            add = False  # As in, "add this process we're checking to the sources or destinations
-# PM 2026-02-03 #            # table"
-# PM 2026-02-03 #
-# PM 2026-02-03 #            if (
-# PM 2026-02-03 #                procinfo_to_check.subsystem == procinfo.subsystem
-# PM 2026-02-03 #                and not inter_subsystem_transfer
-# PM 2026-02-03 #            ):
-# PM 2026-02-03 #                if "BoardReader" in procinfo.name:
-# PM 2026-02-03 #                    if (
-# PM 2026-02-03 #                        "EventBuilder" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "destinations"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                elif "EventBuilder" in procinfo.name:
-# PM 2026-02-03 #                    if (
-# PM 2026-02-03 #                        "BoardReader" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "sources"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                    elif (
-# PM 2026-02-03 #                        "DataLogger" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "destinations"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                    elif (
-# PM 2026-02-03 #                        not procinfo_subsystem_has_dataloggers
-# PM 2026-02-03 #                        and "Dispatcher" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "destinations"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                elif "DataLogger" in procinfo.name:
-# PM 2026-02-03 #                    if (
-# PM 2026-02-03 #                        "EventBuilder" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "sources"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                    elif (
-# PM 2026-02-03 #                        "Dispatcher" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "destinations"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                elif "Dispatcher" in procinfo.name:
-# PM 2026-02-03 #                    if "DataLogger" in procinfo_to_check.name and nodetype == "sources":
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #                    elif (
-# PM 2026-02-03 #                        not procinfo_subsystem_has_dataloggers
-# PM 2026-02-03 #                        and "EventBuilder" in procinfo_to_check.name
-# PM 2026-02-03 #                        and nodetype == "sources"
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #
-# PM 2026-02-03 #            if procinfo_to_check.subsystem != procinfo.subsystem and (
-# PM 2026-02-03 #                inter_subsystem_transfer or nodetype == "sources"
-# PM 2026-02-03 #            ):  # the two processes are in separate subsystems
-# PM 2026-02-03 #                if (
-# PM 2026-02-03 #                    "EventBuilder" in procinfo.name
-# PM 2026-02-03 #                    and "EventBuilder" in procinfo_to_check.name
-# PM 2026-02-03 #                ):
-# PM 2026-02-03 #                    if (
-# PM 2026-02-03 #                        nodetype == "destinations"
-# PM 2026-02-03 #                        and self.subsystems[procinfo.subsystem].destination
-# PM 2026-02-03 #                        == procinfo_to_check.subsystem
-# PM 2026-02-03 #                    ) or (
-# PM 2026-02-03 #                        nodetype == "sources"
-# PM 2026-02-03 #                        and self.subsystems[procinfo_to_check.subsystem].destination
-# PM 2026-02-03 #                        == procinfo.subsystem
-# PM 2026-02-03 #                    ):
-# PM 2026-02-03 #                        add = True
-# PM 2026-02-03 #
-# PM 2026-02-03 #            if add:
-# PM 2026-02-03 #                procinfos_for_string.append(procinfo_to_check)
-# PM 2026-02-03 #
-# PM 2026-02-03 #        nodes = []
-# PM 2026-02-03 #
-# PM 2026-02-03 #        for i_procinfo_for_string, procinfo_for_string in enumerate(procinfos_for_string):
-# PM 2026-02-03 #            hms = host_map_string
-# PM 2026-02-03 #            if i_procinfo_for_string != 0 and (nodetype == "sources" or nodetype == "destinations"):
-# PM 2026-02-03 #                hms = ""
-# PM 2026-02-03 #
-# PM 2026-02-03 #            if nodetype == "sources" and "EventBuilder" in procinfo.name:
-# PM 2026-02-03 #                if procinfo_for_string.name == "BoardReader":
-# PM 2026-02-03 #                    if self.advanced_memory_usage:
-# PM 2026-02-03 #                        list_of_one_fragment_size = [
-# PM 2026-02-03 #                            proctuple[1]
-# PM 2026-02-03 #                            for proctuple in max_fragment_sizes
-# PM 2026-02-03 #                            if proctuple[0] == procinfo_for_string.label
-# PM 2026-02-03 #                        ]
-# PM 2026-02-03 #                        assert len(list_of_one_fragment_size) == 1
-# PM 2026-02-03 #                        buffer_size_words = list_of_one_fragment_size[0] / 8
-# PM 2026-02-03 #                    else:
-# PM 2026-02-03 #                        buffer_size_words = self.max_fragment_size_bytes / 8
-# PM 2026-02-03 #                elif procinfo_for_string.name == "EventBuilder":
-# PM 2026-02-03 #                    buffer_size_words = (
-# PM 2026-02-03 #                        max_event_sizes[procinfo_for_string.subsystem] / 8
-# PM 2026-02-03 #                    )
-# PM 2026-02-03 #                else:
-# PM 2026-02-03 #                    assert False, (
-# PM 2026-02-03 #                        "A process type of %s shouldn't be considered for an EventBuilder's sources table"
-# PM 2026-02-03 #                        % (procinfo_for_string.name)
-# PM 2026-02-03 #                    )
-# PM 2026-02-03 #
-# PM 2026-02-03 #            assert buffer_size_words != -1
-# PM 2026-02-03 #
-# PM 2026-02-03 #            nodes.append(
-# PM 2026-02-03 #                "%s%d: { transferPluginType: %s %s_rank: %d max_fragment_size_words: %d %s }"
-# PM 2026-02-03 #                % (
-# PM 2026-02-03 #                    prefix,
-# PM 2026-02-03 #                    procinfo_for_string.rank,
-# PM 2026-02-03 #                    self.transfer,
-# PM 2026-02-03 #                    nodetype[:-1],
-# PM 2026-02-03 #                    procinfo_for_string.rank,
-# PM 2026-02-03 #                    buffer_size_words,
-# PM 2026-02-03 #                    hms,
-# PM 2026-02-03 #                )
-# PM 2026-02-03 #            )
-# PM 2026-02-03 #
-# PM 2026-02-03 #        return "\n".join(nodes)  # End function create_sources_or_destinations_string()
-
     def get_router_process_identifier(procinfo):
         if "RoutingManager" in procinfo.name:
             return "RoutingManager"
@@ -549,20 +368,15 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     router_process_info                   = {}
     router_process_info["RoutingManager"] = {"location": "child_subsystem"}
     router_process_info["DFO"           ] = {"location": "parent_subsystem"}
-    subsystems_without_dataloggers = (
-        []
-    )  # Used when routing to Dispatchers, if no DataLoggers, then route from
-    # EventBuilders
+#------------------------------------------------------------------------------
+# subsystems w/o DLs used when routing to DSs, if no DLs, then route from EB's
+#------------------------------------------------------------------------------
+    subsystems_without_dataloggers        = (    []   )  
 
     self.print_log("i", f'step 7: took {time.time() - starttime} sec');
     starttime = time.time();
 
     # Couple of sanity checks
-
-    # debugging
-    dl = self.find_process("dl01")
-    print('------------------- 00004 DL01 test FCL');
-    print(dl.fhicl_used);
 
     for procinfo in self.procinfos:
 
@@ -573,7 +387,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 pi.label
                 for pi in self.procinfos
                 if "EventBuilder" in pi.name
-                and pi.subsystem == procinfo.subsystem
+                and pi.subsystem_id == procinfo.subsystem_id
                 and pi.label != procinfo.label
             ]
             if len(rogue_eventbuilders) > 0:
@@ -581,7 +395,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     make_paragraph(
                         "The following EventBuilder(s) were found in subsystem %s, location of DFO process %s; a DFO can't share a subsystems with other EventBuilders: %s"
                         % (
-                            procinfo.subsystem,
+                            procinfo.subsystem.id,
                             procinfo.label,
                             " ".join(rogue_eventbuilders),
                         )
@@ -596,7 +410,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 pi.label
                 for pi in self.procinfos
                 if "RoutingManager" in pi.name
-                and self.subsystems[procinfo.subsystem].destination == pi.subsystem
+                and self.subsystems[procinfo.subsystem_id].destination == pi.subsystem_id
             ]
             if len(rogue_routingmanagers) > 0:
                 raise Exception(
@@ -612,20 +426,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
                 )
 
-    # debugging
-    dl = self.find_process("dl01")
-    print('------------------- 00005 DL01 test FCL');
-    print(dl.fhicl_used);
-
     self.print_log("i", f'step 8: took {time.time() - starttime} sec');
-    starttime = time.time();
-
-    # debugging
-# PM 2026-02-03 #    dl = self.find_process("dl01")
-# PM 2026-02-03 #    print('------------------- 00007 DL01 test FCL');
-# PM 2026-02-03 #    print(dl.fhicl_used);
-
-    self.print_log("i", f'step 9: took {time.time() - starttime} sec');
     starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
@@ -637,32 +438,25 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             nonsending_boardreaders = []
 
             if router_process_target == "EventBuilder":
-                for procinfo in self.procinfos:
-                    if "BoardReader" in procinfo.name:
-                        if re.search(
-                            r"\n\s*sends_no_fragments\s*:\s*[Tt]rue",
-                            procinfo.fhicl_used,
-                        ) or re.search(
-                            r"\n\s*generated_fragments_per_event\s*:\s*0",
-                           procinfo.fhicl_used,
-                        ):
-                            nonsending_boardreaders.append(procinfo.label)
-    # debugging
-# PM 2026-02-03 #    dl = self.find_process("dl01")
-# PM 2026-02-03 #    print('------------------- 00008 DL01 test FCL');
-# PM 2026-02-03 #    print(dl.fhicl_used);
+                for p in self.procinfos:
+                    if "BoardReader" in p.name:
+                        if (re.search(r"\n\s*sends_no_fragments\s*:\s*[Tt]rue",p.fhicl_used) or
+                            re.search(r"\n\s*generated_fragments_per_event\s*:\s*0",p.fhicl_used)):
+                            nonsending_boardreaders.append(p.label)
 
     for p in self.procinfos:
-        if ("DataLogger" in p.name) or ("Dispatcher" in p.name) :
-            # P.M. comment out one more smartness!
+        if (p.is_datalogger() or p.is_dispatcher()) :
+            # P.M. comment out one more smartness! - DS and DS expect 1 event,
+            # put that into default FCL and check, instead of correcting
             # p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
             #                      "expected_fragments_per_event: 1",p.fhicl_used)
             x = 0
         else:
+            # EB or BR ?
             p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
                                   "expected_fragments_per_event: %d"
-                                  % (expected_fragments_per_event[p.subsystem]),p.fhicl_used)
-        # breakpoint()
+                                  % (expected_fragments_per_event[p.subsystem_id]),p.fhicl_used)
+
 #------------------------------------------------------------------------------
 # P.M. this was very dangerous: store process subsystem ID as a string, but assume,
 # that, in fact that is an integer, and rely on that assumption
@@ -670,7 +464,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
         if self.request_address is None:
             TRACE.TRACE(7,f'procinfo:{p}',TRACE_NAME);
-            ss = self.subsystems[p.subsystem]    # PM: 'p.subsystem' is a string
+            ss = p.subsystem; ## self.subsystems[p.subsystem_id]    # PM: 'p.subsystem_id' is a string
             TRACE.TRACE(7,f'ss:{ss}',TRACE_NAME);
             request_address = "227.128.%d.%d" % (self.partition(),128 + ss.index)
         else:
@@ -682,16 +476,14 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                               'request_address: "%s"' % (request_address.strip('"')),
                               p.fhicl_used)
 
+#------------------------------------------------------------------------------
+# PM if partition is defined, redefine it... don't really need partition in FCL at all
+#------------------------------------------------------------------------------
         p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+",
                               "partition_number: %d" % self.partition(),p.fhicl_used)
 #-------^----------------------------------------------------------------------
 # end of the loop
 #---v--------------------------------------------------------------------------
-
-    # debugging
-# PM 2026-02-03 #    dl = self.find_process("dl01")
-# PM 2026-02-03 #    print('------------------- 00009 DL01 test FCL');
-# PM 2026-02-03 #    print(dl.fhicl_used);
 
     # JCF, Apr-17-2019
 
@@ -736,10 +528,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     self.print_log("i", f'step 10: took {time.time() - starttime} sec');
     starttime = time.time();
 
-    table_update_addresses = {}
-    routing_base_ports = {}
+    table_update_addresses   = {}
+    routing_base_ports       = {}
     router_process_hostnames = {}
-    router_id = 0
+    router_id                = 0
 
     for subsystem_id, subsystem in self.subsystems.items():
 
@@ -1065,9 +857,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     i_proc, dl_subsystem, "routing_table_config", "Dispatcher"
                 )
 
-            print('------------------- 00010 DL01 test FCL');
-            print(self.procinfos[i_proc].fhicl_used);
-
         elif "Dispatcher" in self.procinfos[i_proc].name:
             di_subsystem = self.procinfos[i_proc].subsystem
             if (di_subsystem, "Dispatcher") in router_process_hostnames:
@@ -1078,12 +867,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     self.print_log("i", f'step 13: took {time.time() - starttime} sec');
     TRACE.INFO(f'step 13: took {time.time() - starttime} sec',TRACE_NAME);
     
-    starttime = time.time();
-
-    firstLoggerRank = 9999999
 #------------------------------------------------------------------------------
 # if a BoardReader writes an output file, update firstLoggerRank as well
 #------------------------------------------------------------------------------
+    starttime       = time.time();
+    firstLoggerRank = 9999999
     for p in self.procinfos:
         TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME);
         if fhicl_writes_root_file(p.fhicl_used):
@@ -1097,16 +885,15 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                 p.fhicl_used = re.sub("firstLoggerRank\s*:\s*\S+",
                                       "firstLoggerRank: %d" % (firstLoggerRank),
                                       p.fhicl_used)
-    # breakpoint()
+#---v--------------------------------------------------------------------------
     if self.data_directory_override:
         for p in self.procinfos:
 #------------------------------------------------------------------------------
 # P.Murat: one could have process types, not names - no need to do 
 #          the string comparison every time... that also is much more error-prone
 #------------------------------------------------------------------------------
-            # breakpoint()
             self.print_log("i", f'p.label:{p.label} p.type():{p.type()}');
-            if ((p.type() == EVENT_BUILDER) or (p.type() == DATA_LOGGER)):
+            if (p.is_eventbuilder() or p.is_datalogger()):
                 TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME)
                 if fhicl_writes_root_file(p.fhicl_used):
 #------------------------------------------------------------------------------
@@ -1136,14 +923,10 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
                     p.fhicl_used = (p.fhicl_used[:start]+rootoutput_table+p.fhicl_used[end:])
 
-    for fhicl_key, fhicl_value in self.bootfile_fhicl_overwrites.items():
-        print(fhicl_key, fhicl_value)
-        for i_proc in range(len(self.procinfos)):
-            self.procinfos[i_proc].fhicl_used = re.sub(
-                r"%s\s*:\s*\S+" % (fhicl_key),
-                "%s: %s" % (fhicl_key, fhicl_value),
-                self.procinfos[i_proc].fhicl_used,
-            )
+# 2026-02-07 PM #    for fhicl_key, fhicl_value in self.bootfile_fhicl_overwrites.items():
+# 2026-02-07 PM #        print(fhicl_key, fhicl_value)
+# 2026-02-07 PM #        for i_proc in range(len(self.procinfos)):
+# 2026-02-07 PM #            self.procinfos[i_proc].fhicl_used = re.sub(r"%s\s*:\s*\S+" % (fhicl_key),"%s: %s" % (fhicl_key, fhicl_value), self.procinfos[i_proc].fhicl_used )
 
     # JCF, Mar-27-2020
     # Issue #24231: bookkeep the init_fragment_count to reflect the number of
@@ -1156,10 +939,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         last_start = 0
         for i_res in res:
-            (begin, end) = enclosing_table_range(
-                proc1.fhicl_used, i_res.group(), last_start
-            )
-            last_start = i_res.start() + len(i_res.group())
+            (begin, end) = enclosing_table_range(proc1.fhicl_used, i_res.group(), last_start)
+            last_start   = i_res.start() + len(i_res.group())
 
             assert begin != -1 and end != -1, (
                 "Bookkeeping error: RootNetOutput module was found in %s but unable to locate the enclosing table"
@@ -1183,36 +964,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     self.print_log("i", f'step 14: took {time.time() - starttime} sec');
     starttime = time.time();
 
-# PM 2026-02-04 #    for subsystem_id, subsystem in self.subsystems.items():
-# PM 2026-02-04 #        init_fragment_counts = {}
-# PM 2026-02-04 #
-# PM 2026-02-04 #        for procinfo in [p for p in self.procinfos if p.subsystem == subsystem_id]:
-# PM 2026-02-04 #
-# PM 2026-02-04 #            if procinfo.name not in init_fragment_counts:
-# PM 2026-02-04 #
-# PM 2026-02-04 #                possible_event_senders = []
-# PM 2026-02-04 #                init_fragment_count    = 0
-# PM 2026-02-04 #
-# PM 2026-02-04 #                if procinfo.name == "EventBuilder":
-# PM 2026-02-04 #                    for ss_source in subsystem.sources:
-# PM 2026-02-04 #                        for sender in [p for p in self.procinfos if p.subsystem == ss_source and p.name == "EventBuilder"]:
-# PM 2026-02-04 #                            if sends_to_via_RootNetOutput(sender,procinfo):
-# PM 2026-02-04 #                                init_fragment_count += 1
-# PM 2026-02-04 #                elif procinfo.name == "DataLogger":
-# PM 2026-02-04 #                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
-# PM 2026-02-04 #                        if sends_to_via_RootNetOutput(sender,procinfo):
-# PM 2026-02-04 #                            init_fragment_count += 1
-# PM 2026-02-04 #                elif procinfo.name == "Dispatcher":
-# PM 2026-02-04 #                    for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "DataLogger"]:
-# PM 2026-02-04 #                        if sends_to_via_RootNetOutput(sender,procinfo):
-# PM 2026-02-04 #                            init_fragment_count += 1
-# PM 2026-02-04 #                    if (init_fragment_count == 0):
-# PM 2026-02-04 #                        # Dispatcher will _always_ receive init Fragments, this probably means we're running without DataLoggers
-# PM 2026-02-04 #                        for sender in [p for p in self.procinfos if p.subsystem == procinfo.subsystem and p.name == "EventBuilder"]:
-# PM 2026-02-04 #                            if sends_to_via_RootNetOutput(sender,procinfo):
-# PM 2026-02-04 #                                init_fragment_count += 1
-# PM 2026-02-04 #
-# PM 2026-02-04 #                init_fragment_counts[procinfo.name] = init_fragment_count
 #------------------------------------------------------------------------------
 # define 'init_fragment_count' if it is > 0 and is not defined explicitly
 #------------------------------------------------------------------------------
@@ -1225,9 +976,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #                 )
 
     self.print_log("i", f'step 5: took {time.time() - starttime} sec');
-    starttime = time.time();
-    TRACE.INFO(f'-- END',TRACE_NAME)
+    TRACE.INFO('-- END',TRACE_NAME)
     return
 
-def bookkeeping_for_fhicl_documents_artdaq_v4_base(self):
-    pass
+# def bookkeeping_for_fhicl_documents_artdaq_v4_base(self):
+#     pass

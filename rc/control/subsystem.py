@@ -11,12 +11,19 @@ from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUI
 class Subsystem(object):
     __index = 0;                            # subsystem number counter
 
-    def __init__(self,ss_id):
-        self.id           = ss_id           # ss_id is a string
+    def __init__(self,ssid):
+        self.id           = ssid            # ssid is a string
         self.index        = Subsystem.__index;        # 
-        self.sources      = []              # list of strings ? integers ?
-        self.destination  = None            # string 
         self.fragmentMode = None            #
+
+        self.sources      = []              # list of strings (ss_id's) - get rid of that...
+        self.destination  = None            # string
+        
+                                            # temporarily duplicate the above, prepare for a transition
+                                            
+        self.list_of_sS   = [];             # list of objects of Subsystem type
+        self.dS           = None;           # if not None, object of Subsystem tyep
+        
         self.list_of_procinfos = { }
         self.list_of_procinfos[BOARD_READER   ] = []
         self.list_of_procinfos[EVENT_BUILDER  ] = []
@@ -26,7 +33,7 @@ class Subsystem(object):
         self.max_type     = -1;             # max type of the processes in this subsystem
         self.min_type     = 99;             # min type of the processes in this subsystem
 
-        Subsystem.__index += 1;             # increment the subsystem counter
+        Subsystem.__index += 1;             # increment the subsystem counter, why is it needed ?
         
     def __lt__(self, other):
         if self.index != other.index:
@@ -39,6 +46,7 @@ class Subsystem(object):
         else:
             return False  # equal
 
+#------------------------------------------------------------------------------
     def print(self):
         print('-- START Subsystem::print')
         print ("-- subsystem ID:"  ,self.id,
@@ -46,6 +54,7 @@ class Subsystem(object):
                " sources:"         ,self.sources,
                " destination:"     ,self.destination,
                "fragmentMode:"     ,self.fragmentMode);
+        
         for k in self.list_of_procinfos:
             # print(f'------- k:{k}') 
             list_of_p = self.list_of_procinfos[k]   ## expect to be a list
@@ -53,6 +62,7 @@ class Subsystem(object):
                 print(f'-- k:{k} p.rank:{p.rank} p.label:{p.label} ')
         print('-- END Subsystem::print')
 
+#------------------------------------------------------------------------------
     def list_of_board_readers(self):
         return self.list_of_procinfos[BOARD_READER];
     

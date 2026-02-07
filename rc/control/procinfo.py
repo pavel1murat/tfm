@@ -40,13 +40,13 @@ class Procinfo(object):
                  rank,
                  host,
                  port,                            # assumed to be a string
-                 timeout            = 30,         # PM: pick some reasonable default
-                 label              = None,
-                 subsystem          = "1",
+                 timeout,         # PM: pick some reasonable default
+                 label,
+                 subsystem_id,
                  allowed_processors = None,
                  target             = None,
-                 prepend            = "",
                  fhicl              = None,
+                 prepend            = "",
                  fhicl_file_path    = [],
                  ):
         self.name               = name
@@ -54,7 +54,8 @@ class Procinfo(object):
         self.port               = port
         self.host               = host
         self.label              = label
-        self.subsystem          = subsystem
+        self.subsystem_id       = subsystem_id
+        self.subsystem          = None;               # not defined at this point
         self.allowed_processors = allowed_processors
         self.target             = target
         self.prepend            = prepend
@@ -65,7 +66,8 @@ class Procinfo(object):
         self.list_of_destinations = [ ]
         self.max_fragment_size_bytes = None;
         self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
-        self.init_fragment_count     = None;         ## for DLs, DSs 
+        self.init_fragment_count     = None;         ## for DLs, DSs
+        self.odb_path                = None;
 
         if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
         elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
@@ -95,10 +97,31 @@ class Procinfo(object):
         x = int(self.max_event_size_bytes/8);
         return x;
 #------------------------------------------------------------------------------
+# to be overloaded
+#------------------------------------------------------------------------------
+    def init_connections(self):
+        pass
+#------------------------------------------------------------------------------
 # returns host:port
 #------------------------------------------------------------------------------
     def type(self):
         return self._type;
+
+    def is_boardreader(self):
+        return self._type == BOARD_READER;
+
+    def is_datalogger(self):
+        return self._type == DATA_LOGGER;
+
+    def is_dispatcher(self):
+        return self._type == DISPATCHER;
+
+    def is_eventbuilder(self):
+        return self._type == EVENT_BUILDER;
+
+    def is_routingmanager(self):
+        return self._type == ROUTING_MANAGER;
+
 #------------------------------------------------------------------------------
 # P.Murat: in the Edwards Center, the daq servers communicate using the private
 #          data network, where mu2edaq09 has the name of mu2edaq09-ctrl
@@ -111,7 +134,7 @@ class Procinfo(object):
         if (text):
             print(f'{text}');
             
-        print(f'procinfo: subsystem:{self.subsystem:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
+        print(f'procinfo: subsystem_id:{self.subsystem_id:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
 
     def __lt__(self, other):
         if self.name != other.name:
