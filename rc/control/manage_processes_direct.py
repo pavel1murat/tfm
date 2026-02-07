@@ -1,8 +1,8 @@
 #
 import random, string, os, sys, subprocess, socket, time, re, copy;
-import TRACE
 import tfm.rc.control.utilities as rcu;
 
+import TRACE ; TRACE_NAME="manage_proc"
 
 def bootfile_name_to_execname(bootfile_name):
 
@@ -59,7 +59,7 @@ def launch_procs_on_host(self,host,
         )
 
     if len(preexisting_pids) > 0:
-        TRACE.TRACE(4,f":003: preexisting_pids on {host}:{preexisting_pids}")
+        TRACE.DEBUG(1,f":003: preexisting_pids on {host}:{preexisting_pids}")
         self.print_log("e",rcu.make_paragraph(
             ("On host %s, found artdaq process(es) already existing which use the ports"
              " TFM was going to use; this may be the result of an improper cleanup from"
@@ -123,7 +123,8 @@ def launch_procs_on_host(self,host,
 # at this point assume that we know the run number
 #------------------------------------------------------------------------------
 def launch_procs_base(self):
-
+    TRACE.INFO('--START:',TRACE_NAME)
+    
     mf_fcl = rcu.obtain_messagefacility_fhicl(self)
     self.create_setup_fhiclcpp_if_needed()
 
@@ -167,7 +168,7 @@ def launch_procs_base(self):
 #------------------------------------------------------------------------------
     for host in set([procinfo.host for procinfo in self.procinfos]):
         if not rcu.host_is_local(host):
-            cmd    = "scp -p %s %s:%s" % (mf_fcl,host,mf_fcl)
+            cmd    = f"scp -p {mf_fcl}  {host}:{mf_fcl}"
             status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
 
@@ -181,12 +182,17 @@ def launch_procs_base(self):
     launch_commands_to_run_on_host_background = {}
     launch_commands_on_host_to_show_user      = {}
 
-    # breakpoint()
     self.launch_attempt_files                 = {}
 
     for p in self.procinfos:
-        if p.host == "localhost": p.host = socket.gethostname(); ## rcu.get_short_hostname()
-        # breakpoint()
+#------------------------------------------------------------------------------
+# mark all processes as busy
+#------------------------------------------------------------------------------
+        self.set_process_status(p,1)
+        
+        if p.host == "localhost":
+            p.host = socket.gethostname(); ## rcu.get_short_hostname()
+            
         if not p.host in launch_commands_to_run_on_host:
 #------------------------------------------------------------------------------
 # form the name of the PMT log file, assume know the run number
@@ -247,25 +253,21 @@ def launch_procs_base(self):
                 p.label,
                 self.partition())
         )
+        
         if p.allowed_processors is not None:
-            base_launch_cmd = "taskset --cpu-list %s %s" % (
-                p.allowed_processors,
-                base_launch_cmd,
-            )
+            base_launch_cmd = f'taskset --cpu-list {p.allowed_processors} {base_launch_cmd}'
         elif self.allowed_processors is not None:
-            base_launch_cmd = "taskset --cpu-list %s %s" % (
-                self.allowed_processors,
-                base_launch_cmd,
-            )
+            base_launch_cmd = f"taskset --cpu-list {self.allowed_processors} {base_launch_cmd}"
 
         # base_launch_cmd = "valgrind --tool=callgrind %s" % (base_launch_cmd)
-        launch_cmd = "%s >> %s 2>&1 & " % (base_launch_cmd,self.launch_attempt_files[p.host],)
+        launch_cmd = f'{base_launch_cmd} >> {self.launch_attempt_files[p.host]} 2>&1 & '
 
         launch_commands_to_run_on_host_background[p.host].append(launch_cmd)
         launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
-    # breakpoint()
-    # print
-    # breakpoint()
+
+#------------------------------------------------------------------------------
+# execute commands - submit jobs, one [long] ssh command  string per host
+#------------------------------------------------------------------------------
     threads = []
     for host in launch_commands_to_run_on_host:
         t = rcu.RaisingThread(
@@ -284,6 +286,8 @@ def launch_procs_base(self):
     for t in threads:
         t.join()
 
+    TRACE.INFO('--END: submission threads finished',TRACE_NAME)
+    
     return launch_commands_on_host_to_show_user
 
 
@@ -594,33 +598,33 @@ def get_pids_and_labels_on_host(self,host):
 
     return cleaned_pids, labels_of_found_processes
 
-
-# check_proc_heartbeats_base() will check that the expected artdaq
-# processes are up and running
-
+#------------------------------------------------------------------------------
+# check_proc_heartbeats_base() checks that the expected artdaq processes are up and running
+#------------------------------------------------------------------------------
 def check_proc_heartbeats_base(self, requireSuccess=True):
 
     is_all_ok           = True
     procinfos_to_remove = []
     found_processes     = []
 
-    for host in set([p.host for p in self.procinfos]):
+    for node in self.artdaq.list_of_nodes: ## set([p.host for p in self.procinfos]):
 
+        host = node.name;
         (pids,labels_of_found_processes) = get_pids_and_labels_on_host(self,host)
 
-        for procinfo in [procinfo for procinfo in self.procinfos if procinfo.host == host]:
-            if procinfo.label in labels_of_found_processes:
-                found_processes.append(procinfo)
+        for p in node.list_of_processes: ## [procinfo for procinfo in self.procinfos if procinfo.host == host]:
+            if p.label in labels_of_found_processes:
+                found_processes.append(p)
+                if (self.get_process_status(p) != 0):
+                    self.set_process_status(p,0);
             else:
                 is_all_ok = False
 
                 if requireSuccess:
-                    self.print_log("e","Appear to have lost process with label %s on host %s"
-                        % (procinfo.label, procinfo.host),
-                    )
-                    procinfos_to_remove.append(procinfo)
+                    self.print_log("e",f"Appear to have lost process with label {p.label} on host:{host}")
+                    procinfos_to_remove.append(p)
 
-                    mopup_process_base(self, procinfo)
+                    mopup_process_base(self,p)
 
     if not is_all_ok and requireSuccess:
         if self.state() == "running":
