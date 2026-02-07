@@ -42,9 +42,9 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # For good measure, let's also save the DAQ setup script
 # JCF, Oct-25-2018: but save it with environment variables expanded (see Issue #21225)
-# - why on earth using Popen when there is copy2 ?
+# PM - why on earth using Popen when there is copy2 ?
 #---v--------------------------------------------------------------------------
-    new_fn = outdir + "/setup.txt";
+    new_fn = outdir + '/' + os.path.basename(self.daq_setup_script);
     try:
         shutil.copy2(self.daq_setup_script,new_fn);
     except Exception:
@@ -115,8 +115,7 @@ def save_run_record_base(self):
 
     # assert "TFM_DIR" in os.environ and os.path.exists(os.environ["TFM_DIR"])
 
-    buildinfo_packages = [pkg for pkg in self.package_hashes_to_save]  
-#     buildinfo_packages.append("tfm")
+    # buildinfo_packages = [pkg for pkg in self.package_hashes_to_save]  
 
     self.print_log("d", "%s:save_record_base 0061" % (__file__),2)
 #------------------------------------------------------------------------------
@@ -128,28 +127,11 @@ def save_run_record_base(self):
 #   'tfm'        : '"time from BuildInfo undetermined" "version from BuildInfo undetermined"'
 # }
 # P.M. it takes 12 sec even for an empty list of buildinfo_packages, which is nuts
+# 2026-02-01: cleanup in progress
 #------------------------------------------------------------------------------
-    package_buildinfo_dict = {} # get_build_info(buildinfo_packages, self.daq_setup_script)
+#    package_buildinfo_dict = {} # get_build_info(buildinfo_packages, self.daq_setup_script)
     
     self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
-
-#    print("package_buildinfo_dict:\n",package_buildinfo_dict)
-
-#     try:
-#         commit_info_fullpathname = "%s/%s" % (
-#             os.path.dirname(self.daq_setup_script),get_commit_info_filename("tfm_start")
-#         )
-#         if os.path.exists(commit_info_fullpathname):
-#             with open(commit_info_fullpathname) as commitfile:
-#                 outf.write("%s" % (commitfile.read()))
-#         else:
-#             outf.write("%s" % (get_commit_info("tfm_start",os.environ["TFM_DIR"])))
-#     except Exception:
-#         # Not an exception in a bad sense as the throw just means we're using DAQInterface as a ups product
-#         self.fill_package_versions(["tfm"])
-#         outf.write("tfm commit/version: %s" % (self.package_versions["tfm"]))
-# 
-#    outf.write(" %s\n\n" % (package_buildinfo_dict["tfm"]))
 
     package_commit_dict             = {}
     packages_whose_versions_we_need = []
@@ -195,12 +177,7 @@ def save_run_record_base(self):
 
     for pkg in sorted(package_commit_dict.keys()):
         outf.write("%s"      % (package_commit_dict[pkg]))
-        outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
-
-#    outf.write(
-#        "\nprocess management method: %s\n"
-#        % (os.environ["TFM_PROCESS_MANAGEMENT_METHOD"])
-#    )
+#        outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
 
     self.print_log("d", "%s:save_record_base 0064" % (__file__),2)
 
@@ -227,27 +204,6 @@ def save_run_record_base(self):
     outf.close()
 
     self.print_log("d", "%s:save_record_base 007" % (__file__),2)
-
-#     for (recorddir, dummy, recordfiles) in os.walk(self.tmp_run_record):
-#         for recordfile in recordfiles:
-#             os.chmod("%s/%s" % (recorddir, recordfile), 0o444)
-#
-#     try:
-#         shutil.copytree(self.tmp_run_record, self.semipermanent_run_record)
-#     except:
-#         self.print_log("w", traceback.format_exc())
-#         self.print_log(
-#             "w",
-#             make_paragraph(
-#                 ('Attempt to copy temporary run record "%s" into "%s" didn\'t work; '
-#                  'keep in mind that %s will be clobbered next time you run on this partition')
-#                 % (
-#                     self.tmp_run_record,
-#                     self.semipermanent_run_record,
-#                     self.tmp_run_record,
-#                 )
-#             ),
-#         )
 #------------------------------------------------------------------------------
 # make the directory read-only
 #------------------------------------------------------------------------------

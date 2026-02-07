@@ -1,0 +1,21 @@
+#
+#include "demo_mc2/prolog.fcl"
+
+daq: {
+    event_builder: { @table::daq.event_builder }
+    metrics      : { @table::daq.eb_metrics    }
+}
+
+art: {
+    @table::art
+}
+
+art.process_name : "eb07"
+#------------------------------------------------------------------------------
+# to be overwritten
+#------------------------------------------------------------------------------
+daq.event_builder.max_event_size_bytes : 0
+daq.event_builder.sources              : {}
+art.outputs.rootNetOutput.destinations : {}
+art.outputs.rootNetOutput.host_map     : []
+#------------------------------------------------------------------------------
