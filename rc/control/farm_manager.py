@@ -210,7 +210,7 @@ class FarmManager(Component):
 # 'name' - what was called subsystem ID (a string)
 #------------------------------------------------------------------------------
     def find_subsystem(self,name):
-        return next((s for s in self.list_of_subsystems if s.id == name),None);
+        return next((s for s in self.list_of_subsystems if (s.id == name) and (s.enabled == 1)),None);
             
     def find_process(self,label):
         return next((p for p in self.procinfos if p.label == label),None);
@@ -585,15 +585,18 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
-            self.print_log('i',f'subsystem_id:{ss_id} data:{data}',3)
-            if (data['Enabled'] == 0): continue ;
+            TRACE.INFO(f'subsystem_id:{ss_id} data:{data}',TRACE_NAME)
+            # skip disabled subsystems
+            if (data['Enabled'] == 0):
+                    continue ;
             
             subdir_path=path+f'/{ss_id}'
             self.print_log('i',f'subdir_path:{subdir_path}')
-            # skip disabled subsystems
-            if (data['Enabled'] == 0): continue
+            # disabled subsystems will be ignored, keep them around to minimize reconfiguring the ODB
+            # that comes at a cost of skipping the disabled subsystems everywhere
+            enabled = data['Enabled']
             
-            s     = artdaq.Subsystem(ss_id);
+            s     = artdaq.Subsystem(ss_id,enabled);
             # assume sources to be a comma-separated list
             if ('sources' in data.keys()): 
                 for x in data['sources'].split(','):
@@ -619,6 +622,7 @@ class FarmManager(Component):
 # all subsystems created, cross-link them to avoid multiple searches later
 #------------------------------------------------------------------------------
         for s in self.list_of_subsystems:
+            if (s.enabled == 0) : continue;
             for sid in s.sources:
                 ss = self.find_subsystem(sid);
                 if (ss):
@@ -705,6 +709,10 @@ class FarmManager(Component):
         self.base_port_number        = 10000
         if (odb_client.odb_exists(self.tfm_conf_path+"/base_port_number")):
             self.base_port_number = odb_client.odb_get(self.tfm_conf_path+"/base_port_number");
+
+        self.request_address         = None
+        if (odb_client.odb_exists(self.tfm_conf_path+"/request_address")):
+            self.request_address = odb_client.odb_get(self.tfm_conf_path+"/request_address");
               
 
         self.boardreader_priorities           = None
@@ -861,8 +869,21 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
         for p in self.procinfos:
-            artdaq.update_fhicl(p,self.transfer,tmp_dir);
-        
+            updated_fcl = p.update_fhicl(self.transfer);
+#-----------^-----------------------------------------------------------------
+#  write updated FCL but not yet flattened to /tmp, to create input for fhicl-dump
+#  for checking 
+#-----------v------------------------------------------------------------------
+            new_fn = f'{tmp_dir}/{p.label}.fcl'
+            with open(new_fn,'w') as f:
+                f.writelines(line for line in updated_fcl)
+                
+            # step 2 : flatten the FCL ... in principle there could be errors to handle,
+            # but first wait for them to thow up
+            res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
+            p.fhicl      = new_fn;
+            p.fhicl_used = res.stdout;
+            
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 

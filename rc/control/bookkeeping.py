@@ -108,9 +108,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         max_fragment_sizes = []
 
         for p in self.procinfos:
-            # res = the number of bytes (string)
-#            print(f' ------------------------------- FHICLE file {procinfo.label} in bookkeeping')
-#            print(procinfo.fhicl_used)
+            TRACE.INFO(f'p.label:{p.label} looking for max_fragment_size_bytes',TRACE_NAME);
+            print(p.fhicl_used);
+                
             res = re.findall(
                 r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",
                 p.fhicl_used,

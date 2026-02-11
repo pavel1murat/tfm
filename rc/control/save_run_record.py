@@ -133,53 +133,53 @@ def save_run_record_base(self):
     
     self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
 
-    package_commit_dict             = {}
-    packages_whose_versions_we_need = []
-
-    for pkgname in self.package_hashes_to_save:
-
-        self.print_log("d", "%s:save_record_base 0062 pkgname:%s" % (__file__,pkgname),2)
-
-        pkg_full_path = "%s/srcs/%s" % (self.daq_dir, pkgname.replace("-", "_"))
-        commit_info_fullpathname = "%s/%s" % (
-            os.path.dirname(self.daq_setup_script),
-            get_commit_info_filename(pkgname),
-        )
-
-        if os.path.exists(commit_info_fullpathname):
-            with open(commit_info_fullpathname) as commitfile:
-                package_commit_dict[pkgname] = commitfile.read()
-
-        elif os.path.exists(pkg_full_path):
-            try:
-                package_commit_dict[pkgname] = get_commit_info(pkgname, pkg_full_path)
-            except Exception:
-                self.print_log("e", traceback.format_exc())
-                self.alert_and_recover(
-                    "An exception was thrown in get_commit_info; see traceback above for more info"
-                )
-                return
-        else:
-            # We'll throw this on the list of packages whose actual versions we need to figure out in real-time
-            packages_whose_versions_we_need.append(pkgname)
-
-    self.fill_package_versions(
-        [pkg.replace("-", "_") for pkg in packages_whose_versions_we_need]
-    )
-
-    self.print_log("d", "%s:save_record_base 0063" % (__file__),2)
-
-    for pkgname in packages_whose_versions_we_need:
-        package_commit_dict[pkgname] = "%s commit/version: %s" % (
-            pkgname,
-            self.package_versions[pkgname.replace("-", "_")],
-        )
-
-    for pkg in sorted(package_commit_dict.keys()):
-        outf.write("%s"      % (package_commit_dict[pkg]))
-#        outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
-
-    self.print_log("d", "%s:save_record_base 0064" % (__file__),2)
+# 2026-02-11 PM #    package_commit_dict             = {}
+# 2026-02-11 PM #    packages_whose_versions_we_need = []
+# 2026-02-11 PM #
+# 2026-02-11 PM #    for pkgname in self.package_hashes_to_save:
+# 2026-02-11 PM #
+# 2026-02-11 PM #        self.print_log("d", "%s:save_record_base 0062 pkgname:%s" % (__file__,pkgname),2)
+# 2026-02-11 PM #
+# 2026-02-11 PM #        pkg_full_path = "%s/srcs/%s" % (self.daq_dir, pkgname.replace("-", "_"))
+# 2026-02-11 PM #        commit_info_fullpathname = "%s/%s" % (
+# 2026-02-11 PM #            os.path.dirname(self.daq_setup_script),
+# 2026-02-11 PM #            get_commit_info_filename(pkgname),
+# 2026-02-11 PM #        )
+# 2026-02-11 PM #
+# 2026-02-11 PM #        if os.path.exists(commit_info_fullpathname):
+# 2026-02-11 PM #            with open(commit_info_fullpathname) as commitfile:
+# 2026-02-11 PM #                package_commit_dict[pkgname] = commitfile.read()
+# 2026-02-11 PM #
+# 2026-02-11 PM #        elif os.path.exists(pkg_full_path):
+# 2026-02-11 PM #            try:
+# 2026-02-11 PM #                package_commit_dict[pkgname] = get_commit_info(pkgname, pkg_full_path)
+# 2026-02-11 PM #            except Exception:
+# 2026-02-11 PM #                self.print_log("e", traceback.format_exc())
+# 2026-02-11 PM #                self.alert_and_recover(
+# 2026-02-11 PM #                    "An exception was thrown in get_commit_info; see traceback above for more info"
+# 2026-02-11 PM #                )
+# 2026-02-11 PM #                return
+# 2026-02-11 PM #        else:
+# 2026-02-11 PM #            # We'll throw this on the list of packages whose actual versions we need to figure out in real-time
+# 2026-02-11 PM #            packages_whose_versions_we_need.append(pkgname)
+# 2026-02-11 PM #
+# 2026-02-11 PM #    self.fill_package_versions(
+# 2026-02-11 PM #        [pkg.replace("-", "_") for pkg in packages_whose_versions_we_need]
+# 2026-02-11 PM #    )
+# 2026-02-11 PM #
+# 2026-02-11 PM #    self.print_log("d", "%s:save_record_base 0063" % (__file__),2)
+# 2026-02-11 PM #
+# 2026-02-11 PM #    for pkgname in packages_whose_versions_we_need:
+# 2026-02-11 PM #        package_commit_dict[pkgname] = "%s commit/version: %s" % (
+# 2026-02-11 PM #            pkgname,
+# 2026-02-11 PM #            self.package_versions[pkgname.replace("-", "_")],
+# 2026-02-11 PM #        )
+# 2026-02-11 PM #
+# 2026-02-11 PM #    for pkg in sorted(package_commit_dict.keys()):
+# 2026-02-11 PM #        outf.write("%s"      % (package_commit_dict[pkg]))
+# 2026-02-11 PM ##        outf.write(" %s\n\n" % (package_buildinfo_dict[pkg]))
+# 2026-02-11 PM #
+# 2026-02-11 PM #    self.print_log("d", "%s:save_record_base 0064" % (__file__),2)
 
     if self.manage_processes:
 

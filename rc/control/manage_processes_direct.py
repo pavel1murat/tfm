@@ -215,7 +215,14 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append("export MIDAS_SERVER_HOST=%s"  % self.midas_server_host);
             launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % self.mu2e_daq_dir)
             launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
-            launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
+#------------------------------------------------------------------------------
+# make sure the jobs are setting up the same spack environment as the one they are started from
+#------------------------------------------------------------------------------
+            s = subprocess.run(['spack','env', 'status'],stdout=subprocess.PIPE,encoding='utf-8');
+            spack_env = s.stdout.strip().split()[-1];
+            TRACE.INFO(f'spack_env:{spack_env}',TRACE_NAME)
+            launch_commands_to_run_on_host[p.host].append(f'source {self.daq_setup_script} {spack_env} >> {self.launch_attempt_files[p.host]} 2>&1 ')
+#            launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
 #------------------------------------------------------------------------------
 # ##TODO: this line is dangerous, don't need external env vars to be passed... get rid of it
 #------------------------------------------------------------------------------

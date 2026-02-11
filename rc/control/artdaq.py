@@ -62,184 +62,11 @@ def source_string(p,transfer_plugin):
         s +=  '}\n'
 
     return s;
-    
-#------------------------------------------------------------------------------
-# place in expanded FHICL file, no more processing needed
-# also need to replace some lines which could be process specific
-#------------------------------------------------------------------------------
-def update_fhicl(procinfo, transfer_plugin, tmp_dir):
-    # step 1 : read and replace - start from BRs
-    print('------ update_fhicl')
-    procinfo.print()
-    TRACE.INFO(f'procinfo.label:{procinfo.label} procinfo.fhicl:{procinfo.fhicl}',TRACE_NAME)
-    
-    with open(procinfo.fhicl,'r') as f:
-        lines = f.readlines()
-
-    new_text = []
-    if (procinfo.type() == BOARD_READER):
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(procinfo,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-                
-            pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {procinfo.max_fragment_size_bytes}\n';
-                new_text.append(s);
-                continue;
-
-            new_text.append(line)
-                
-    elif (procinfo.type() == EVENT_BUILDER):
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                # always replace the line with the real string
-                # max_fragment_size_words is calculated
-                s = source_string(procinfo,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(procinfo,transfer_plugin);
-                new_text.append(s);
-                new_text.append('}\n');
-                continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' # 4 spaces (TCL indent)
-                s      = host_map_string(procinfo.list_of_destinations,offset);
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {procinfo.max_event_size_bytes}\n';
-                new_text.append(s);
-                continue;
-
-            pattern = r'(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {procinfo.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-
-            new_text.append(line);
-            
-    elif (procinfo.type() == DATA_LOGGER):
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = source_string(procinfo,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(procinfo,transfer_plugin);
-                new_text.append(s);
-                new_text.append('}\n');
-                continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' ## 4 spaces, TCL indent
-                # host_map_string - always destinations
-                s = host_map_string(procinfo.list_of_destinations,offset);
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {procinfo.max_event_size_bytes}\n';
-                new_text.append(s);
-                continue;
-
-            pattern = r'(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {procinfo.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-
-            #------------------------------------------------------------------------------
-            # any other line - just rewrite
-            #------------------------------------------------------------------------------
-            new_text.append(line);
-
-    elif (procinfo.type() == DISPATCHER):
-        raise Exception('DISPATCHER: IMPLEMENT ME!')
-    
-    elif (procinfo.type() == ROUTING_MANAGER):
-        raise Exception('ROUTING_MANAGER: IMPLEMENT ME!')
-    
-#---------------^--------------------------------------------------------------
-#  write updated FCL
-#-------v----------------------------------------------------------------------
-    new_fn = f'{tmp_dir}/{procinfo.label}.fcl'
-    with open(new_fn,'w') as f:
-        f.writelines(line for line in new_text)
-        
-    # step 2 : flatten
-    res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
-    procinfo.fhicl      = new_fn;
-    procinfo.fhicl_used = res.stdout;
-
-    print('----------------------------- end of update_fhicl')
-    print(procinfo.fhicl_used);
-    return
 
 #---^--------------------------------------------------------------------------
 # marking the end
 #------------------------------------------------------------------------------
+
 class Node:
 
     def __init__(self, name, node_artdaq_odb_path):
@@ -315,6 +142,44 @@ class BoardReader(Procinfo):
                 raise Exception(f'ERROR: subsystem:{s.id} has only BRs and no destination. FIX IT.')
         return;
 
+#------------------------------------------------------------------------------
+# BoardReader: return updated , nut not yet expanded FCL
+#------------------------------------------------------------------------------
+    def update_fhicl(self,transfer_plugin):
+        # step 1 : read and replace - start from BRs
+        TRACE.INFO(f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+    
+        with open(self.fhicl,'r') as f:
+            lines = f.readlines()
+
+        new_text = []
+        for line in lines:
+            # print(line);
+            pattern = r'(?:[\w-]+\.)*destinations'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = destination_string(self,transfer_plugin)
+                new_text.append(s)
+                new_text.append('}\n');
+                continue
+                
+            pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.max_fragment_size_bytes}\n';
+                new_text.append(s);
+                continue;
+
+            new_text.append(line)
+        
+        TRACE.INFO(f'--END: self.label:{self.label}',TRACE_NAME)
+        return new_text;
+
+
 
 #------------------------------------------------------------------------------
 class EventBuilder(Procinfo):
@@ -337,7 +202,7 @@ class EventBuilder(Procinfo):
                          allowed_processors,target,fhicl,prepend)
         
     def init_connections(self):      # p = self
-        print(f'--------------------------- EventBuilder::init_connections:{self.label}')
+        TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
         # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
         # start from checking inputs
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
@@ -352,6 +217,7 @@ class EventBuilder(Procinfo):
 
         if (len(s.sources) > 0):
             for ss in s.list_of_sS:
+                TRACE.INFO(f'ss id:{ss.id}',TRACE_NAME)
                 # there should be no DLs in the source subsystem, it should end in EB
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
@@ -367,12 +233,14 @@ class EventBuilder(Procinfo):
                 elif (ss.max_type == BOARD_READER):
                     list_of_brs = ss.list_of_procinfos[BOARD_READER]
                     for br in list_of_brs:
-                        sum_fragment_size_bytes += br.max_fragment_size_bytes;
+                        # it looks that the BRs send fragments, not 'serialized art events'....
+                        # self.init_fragment_count += 1
+                        sum_fragment_size_bytes  += br.max_fragment_size_bytes;
                         # avoid double counting
                         if (not br in self.list_of_sources):
                             self.list_of_sources.append(eb);
                             eb.list_of_destinations.append(self);
-
+            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
         else:
 #-------^----------------------------------------------------------------------
 # subsystem doesn't have inputs, look at local BRs - those are already in the list
@@ -436,6 +304,76 @@ class EventBuilder(Procinfo):
                                     raise Exception('EB: no EBs/DLs in the DEST');
         return;
 
+#------------------------------------------------------------------------------
+# EventBuilder: update FCL
+#------------------------------------------------------------------------------
+    def update_fhicl(self, transfer_plugin):
+        # step 1 : read and replace - start from BRs
+        print('------ EB: update_fhicl')
+        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        
+        with open(self.fhicl,'r') as f:
+            lines = f.readlines()
+    
+        new_text = []
+    
+        for line in lines:
+            # print(line);
+            pattern = r'(?:[\w-]+\.)*sources'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                # always replace the line with the real string
+                # max_fragment_size_words is calculated
+                s = source_string(self,transfer_plugin)
+                new_text.append(s)
+                new_text.append('}\n');
+                continue
+    
+            pattern = r'(?:[\w-]+\.)*destinations'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = destination_string(self,transfer_plugin);
+                new_text.append(s);
+                new_text.append('}\n');
+                continue;
+                
+            pattern = r'(?:[\w-]+\.)*host_map'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: [');
+                offset = '    ' # 4 spaces (TCL indent)
+                s      = host_map_string(self.list_of_destinations,offset);
+                new_text.append(s);
+                new_text.append(' ]\n');
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.max_event_size_bytes}\n';
+                new_text.append(s);
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.init_fragment_count}\n';
+                new_text.append(s);
+                continue;
+    
+            new_text.append(line);
+
+        return new_text;
+            
 #------------------------------------------------------------------------------
 class DataLogger(Procinfo):
 
@@ -510,12 +448,93 @@ class DataLogger(Procinfo):
 
 #------------------------------------------------------------------------------
 # now - destinations ... not done yet
-#------------------------------------------------------------------------------
+#-------v----------------------------------------------------------------------
+        list_of_dss = s.list_of_dispatchers()
+        if (len(list_of_dss) > 0):
+            for ds in list_of_dss:
+                self.init_fragment_count += 1;
+                        
+                if (not ds in self.list_of_destinations):
+                    self.list_of_destinations.append(ds);
+                    ds.list_of_sources.append(self);
 
         TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
         return;
 
 #------------------------------------------------------------------------------
+#  DataLogger
+#------------------------------------------------------------------------------
+    def update_fhicl(self, transfer_plugin):
+        TRACE.INFO(f'-- START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        
+        with open(self.fhicl,'r') as f:
+            lines = f.readlines()
+    
+        new_text = []
+
+        for line in lines:
+            # print(line);
+            pattern = r'(?:[\w-]+\.)*sources'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = source_string(self,transfer_plugin)
+                new_text.append(s)
+                new_text.append('}\n');
+                continue
+
+            pattern = r'(?:[\w-]+\.)*destinations'
+            match = re.search(pattern,line)
+            if (match):
+                s = destination_string(self,transfer_plugin);
+                if (s):
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    new_text.append(s);
+                    new_text.append('}\n');
+                    continue;
+                
+            pattern = r'(?:[\w-]+\.)*host_map'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: [');
+                offset = '    ' ## 4 spaces, TCL indent
+                # host_map_string - always destinations
+                s = host_map_string(self.list_of_destinations,offset);
+                TRACE.INFO(f'self.label:{self.label} host_map_string:{s}',TRACE_NAME)
+                new_text.append(s);
+                new_text.append(' ]\n');
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.max_event_size_bytes}\n';
+                new_text.append(s);
+                continue;
+
+            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.init_fragment_count}\n';
+                new_text.append(s);
+                continue;
+
+            #------------------------------------------------------------------------------
+            # any other line - just rewrite
+            #------------------------------------------------------------------------------
+            new_text.append(line);
+
+        TRACE.INFO(f'-- END: self.label:{self.label}',TRACE_NAME)
+        return new_text;
+
+#-------^----------------------------------------------------------------------
 class Dispatcher(Procinfo):
 
     def __init__(self,
@@ -588,6 +607,80 @@ class Dispatcher(Procinfo):
         return;
 
 #------------------------------------------------------------------------------
+# DS - to be impemented
+#------------------------------------------------------------------------------
+    def update_fhicl(self, transfer_plugin):
+        print('------ DS::update_fhicl')
+        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        
+        raise Exception('DISPATCHER: IMPLEMENT ME!')
+
+        with open(self.fhicl,'r') as f:
+            lines = f.readlines()
+    
+        new_text = []
+    
+        for line in lines:
+            # print(line);
+            pattern = r'(?:[\w-]+\.)*sources'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = source_string(self,transfer_plugin)
+                new_text.append(s)
+                new_text.append('}\n');
+                continue
+    
+            pattern = r'(?:[\w-]+\.)*destinations'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = destination_string(self,transfer_plugin);
+                new_text.append(s);
+                new_text.append('}\n');
+                continue;
+                
+            pattern = r'(?:[\w-]+\.)*host_map'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: [');
+                offset = '    ' ## 4 spaces, TCL indent
+                # host_map_string - always destinations
+                s = host_map_string(self.list_of_destinations,offset);
+                new_text.append(s);
+                new_text.append(' ]\n');
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.max_event_size_bytes}\n';
+                new_text.append(s);
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.init_fragment_count}\n';
+                new_text.append(s);
+                continue;
+            
+#------------------------------------------------------------------------------
+# any other line - just rewrite
+#------------------------------------------------------------------------------
+            new_text.append(line);
+    
+        return new_text;
+   
+
+#-------^----------------------------------------------------------------------
 class RoutingManager(Procinfo):
 
     def __init__(self,
@@ -613,7 +706,79 @@ class RoutingManager(Procinfo):
     def rm_connections(self):
         raise Exception('RoutingManager::init_connection: not implemented yet');
 
+#------------------------------------------------------------------------------
+# RM - to be impemented
+#------------------------------------------------------------------------------
+    def update_fhicl(self, transfer_plugin):
+        print('------ RM::update_fhicl')
+        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        
+        raise Exception('DISPATCHER: IMPLEMENT ME!')
 
+        with open(self.fhicl,'r') as f:
+            lines = f.readlines()
+    
+        new_text = []
+    
+        for line in lines:
+            # print(line);
+            pattern = r'(?:[\w-]+\.)*sources'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: {{\n');
+                s = source_string(self,transfer_plugin)
+                new_text.append(s)
+                new_text.append('}\n');
+                continue
+    
+            pattern = r'(?:[\w-]+\.)*destinations'
+            match = re.search(pattern,line)
+            if (match):
+                s = destination_string(self,transfer_plugin);
+                if (s):
+                    key = match.group(0);
+                    new_text.append(f'{key}: {{\n');
+                    new_text.append(s);
+                    new_text.append('}\n');
+                    continue;
+                
+            pattern = r'(?:[\w-]+\.)*host_map'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                new_text.append(f'{key}: [');
+                offset = '    ' ## 4 spaces, TCL indent
+                # host_map_string - always destinations
+                s = host_map_string(self.list_of_destinations,offset);
+                new_text.append(s);
+                new_text.append(' ]\n');
+                continue;
+    
+            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.max_event_size_bytes}\n';
+                new_text.append(s);
+                continue;
+    
+            pattern = r'^(?!#)(?:[\w-]+\.)*init_fragment_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.init_fragment_count}\n';
+                new_text.append(s);
+                continue;
+            
+#------------------------------------------------------------------------------
+# any other line - just rewrite
+#------------------------------------------------------------------------------
+            new_text.append(line);
+    
+        return new_text;
 
 #------------------------------------------------------------------------------
 # "Subsystem" is a structure containing all info about a given artdaq subsystem
@@ -626,13 +791,14 @@ class RoutingManager(Procinfo):
 class Subsystem(object):
     __index = 0;                            # subsystem number counter
 
-    def __init__(self,ssid):
+    def __init__(self,ssid,enabled):
         self.id           = ssid            # ssid is a string
         self.index        = Subsystem.__index;        # 
         self.fragmentMode = None            #
 
         self.sources      = []              # list of strings (ss_id's) - get rid of that...
         self.destination  = None            # string
+        self.enabled      = enabled         # has to be defined
         
                                             # temporarily duplicate the above, prepare for a transition
                                             
@@ -686,6 +852,12 @@ class Subsystem(object):
     
     def list_of_event_builders(self):
         return self.list_of_procinfos[EVENT_BUILDER];
+    
+    def list_of_dispatchers(self):
+        return self.list_of_procinfos[DISPATCHER];
+    
+    def list_of_routing_managers(self):
+        return self.list_of_procinfos[ROUTING_MANAGER];
     
     def list_of_event_processes(self, type):
         return self.list_of_procinfos[type];
