@@ -367,9 +367,11 @@ class FarmManager(Component):
 # 'public names' = short names , i.e. 'mu2edaq22'
 # TODO : this is a kludge, reimplement via :
 # ifconfig -a | grep 10.226.9 | awk '{print $2}' | nslookup | head -n 1 | awk '{print $4}' | awk -F . '{print $1}'
+# that is to be executed on the right node... for now, live with a kludge 
 #------------------------------------------------------------------------------
     def hostname_on_private_subnet(self,public_hostname):
-        self.print_log('i',f'--- {sys._getframe(0).f_code.co_name} START ',3)
+        TRACE.INFO(f'-- START: private subnet:{self.private_subnet} public_hostname:{public_hostname}',TRACE_NAME)
+        
         hname = 'undefined'
         if (self.private_subnet == '192.168.157'):
             hname = public_hostname+'-ctrl'
@@ -380,9 +382,7 @@ class FarmManager(Component):
         elif (self.private_subnet == '10.226.9'):
             hname = public_hostname+'-data'
 
-        self.print_log('i',f'public_hostname:{public_hostname} self.private_subnet:{self.private_subnet} hname:{hname}',3)
-
-        self.print_log('i',f'--- END',3)
+        TRACE.INFO(f'-- END: hname:{hname}',TRACE_NAME)
         
         return hname;
 
@@ -392,10 +392,10 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
-        self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
+        # self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.client.odb_get(nodes_path);
-        TRACE.INFO(f'-- START nodes_path:{nodes_path}',TRACE_NAME)
+        TRACE.INFO(f'-- START: nodes_path:{nodes_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
 #-------v----------------------------------------------------------------------
@@ -486,6 +486,7 @@ class FarmManager(Component):
                                            target             = "none",
                                            fhicl              = fcl_fn,
                                            prepend            = "")
+                    TRACE.INFO(f'created new boardreader label:{key_name}',TRACE_NAME)
                     
                     # for a BR, a 'fragment' and an 'event' is the same, for all other processes, event size is calculated
                     
@@ -504,6 +505,8 @@ class FarmManager(Component):
                                           target             = "none",
                                           fhicl              = fcl_fn,
                                           prepend            = "")
+
+                    TRACE.INFO(f'created new datalogger label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'ds') :
                     p = artdaq.Dispatcher('Dispatcher',
@@ -517,6 +520,8 @@ class FarmManager(Component):
                                           target             = "none",
                                           fhicl              = fcl_fn,
                                           prepend            = "")
+
+                    TRACE.INFO(f'created new dispatcher label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'eb') :
                     p = artdaq.EventBuilder('EventBuilder',
@@ -531,6 +536,8 @@ class FarmManager(Component):
                                             fhicl              = fcl_fn,
                                             prepend            = "")
 
+                    TRACE.INFO(f'created new eventbuilder label:{key_name}',TRACE_NAME)
+
                     
                 elif (key_name[0:2] == 'rm') :
                     p = artdaq.RoutingManager('RoutingManager',
@@ -544,6 +551,8 @@ class FarmManager(Component):
                                               target             = "none",
                                               fhicl              = fcl_fn,
                                               prepend            = "")
+
+                    TRACE.INFO(f'created new routing  manager label:{key_name}',TRACE_NAME)
 
                 else:
                     raise Exception(f'ERROR: undefined process type:{label} for {host}')
@@ -575,11 +584,8 @@ class FarmManager(Component):
         self.subsystems         = {}
         self.list_of_subsystems = [];              # a list, not a dict... prepare for a transition
         
-        self.print_log('i','---START')
-
-        path     = self.daq_conf_path + "/Subsystems"
-
-        self.print_log('i',f'path:{path}');
+        path                    = self.daq_conf_path + "/Subsystems"
+        TRACE.INFO(f'-- START: path:{path}')
 #------------------------------------------------------------------------------
 # expect only subsystem definitions in this subdirectory
 #------------------------------------------------------------------------------
@@ -597,17 +603,18 @@ class FarmManager(Component):
             enabled = data['Enabled']
             
             s     = artdaq.Subsystem(ss_id,enabled);
-            # assume sources to be a comma-separated list
+            # assume sources to be a comma-separated list of subsystem IDs
             if ('sources' in data.keys()): 
                 for x in data['sources'].split(','):
-                    s.sources.append(x)
+                    if (x != 'none'):
+                        s.sources.append(x)
                     
             if ('destination' in data.keys()):
                 dest = data['destination'];
                 if (dest == '') or (dest == 'none'): s.destination = None;
                 else                               : s.destination = dest;
 
-            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragmentmode'];
+            if ('fragment_mode' in data.keys()): s.fragmentMode = data['fragment_mode'];
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #------------------------------------------------------------------------------
@@ -623,12 +630,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         for s in self.list_of_subsystems:
             if (s.enabled == 0) : continue;
-            for sid in s.sources:
-                ss = self.find_subsystem(sid);
-                if (ss):
-                    s.list_of_sS.append(ss)
-                else:
-                    raise Exception(f'cant find source subsystem sid:{sid}')
+            # s.sources is a list of subsystem labels
+            for ss in s.sources:
+                x = self.find_subsystem(ss)
+                if x:
+                    s.list_of_sS.append(x)
                 
             if s.destination != None:
                 s.dS = self.find_subsystem(s.destination)
@@ -638,7 +644,7 @@ class FarmManager(Component):
 # done with subsystems. However, at this point a subsystem
 # doesn't know about its processes - that should come later
 #------------------------------------------------------------------------------
-        self.print_log('i','--- END')
+        TRACE.INFO('-- END',TRACE_NAME)
         
         return
 
@@ -872,7 +878,8 @@ class FarmManager(Component):
             updated_fcl = p.update_fhicl(self.transfer);
 #-----------^-----------------------------------------------------------------
 #  write updated FCL but not yet flattened to /tmp, to create input for fhicl-dump
-#  for checking 
+#  for checking
+#  TODO: make sure that the directory exists
 #-----------v------------------------------------------------------------------
             new_fn = f'{tmp_dir}/{p.label}.fcl'
             with open(new_fn,'w') as f:
@@ -941,9 +948,7 @@ class FarmManager(Component):
                     % (self.record_directory)))
             sys.exit(1)
 
-        self.print_log("i",'FarmManager lanched in partition %d and now in "%s" state, listening on port %d'
-                       % (self.partition(),self.state(),self.rpc_port())
-        )
+        TRACE.INFO(f'FarmManager lanched in partition {self.partition()} is "{self.state()}" state, listening on port {self.rpc_port()}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # P.M. if debug_level is defined on the command line, override the config file settings
 #------------------------------------------------------------------------------
@@ -2266,7 +2271,7 @@ class FarmManager(Component):
                 for priority in priority_rankings:
                     proc_threads = {}
                     for p in self.procinfos:
-                        TRACE.DEBUG(0,f'p:{p.name} self.process_command:{self.process_command} command:{command}',TRACE_NAME);
+                        TRACE.DEBUG(0,f'p.label:{p.label} command:{command}',TRACE_NAME);
                         if (proctype in p.name and priority == p.priority and p.subsystem.id == subsystem):
                             self.set_process_status(p,1)
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
@@ -2284,12 +2289,9 @@ class FarmManager(Component):
         if self.exception:
             raise Exception(rcu.make_paragraph("An exception was thrown during the %s transition." % (command)))
 
-        # time.sleep(1)  # PM : is sleep really needed ? - try to turn it off
-
         endtime = time.time()
         self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." 
                        % (command.upper(),endtime - starttime))
-
         nfailed = 0;
         for p in self.procinfos:
             if (p.lastreturned != "Success"):
@@ -2814,8 +2816,7 @@ class FarmManager(Component):
                     rootfile_cntr += 1
 
         endtime = time.time()
-        self.print_log("i", "CONFIG transition 002: step lasted (%.1f seconds)." % (endtime - starttime))
-        TRACE.INFO(f'-- END',TRACE_NAME)
+        TRACE.INFO(f'-- END: CONFIG transition 002: step lasted {endtime - starttime:.1f} seconds',TRACE_NAME)
 
         return 0  # end of function
 
@@ -2870,13 +2871,13 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 #-------v----------------------------------------------------------------------
-        self.print_log("i", "BOOT transition 001 : start msg viewer")
+        TRACE.INFO("BOOT transition 001 : start msg viewer",TRACE_NAME)
 
         self.msgviewer_proc = None  # initialize
         if self.use_messageviewer:
             self.start_message_viewer()
 
-        self.print_log("i", "BOOT transition 002 : done with msg viewer")
+        TRACE.INFO("BOOT transition 002 : done with msg viewer",TRACE_NAME)
 
         self.fState.set_completed(30);
 #------------------------------------------------------------------------------
@@ -2942,7 +2943,7 @@ class FarmManager(Component):
 #  former end of DO_BOOT
 #-------v-----------------------------------------------------------------------
         self.complete_state_change("booting")
-        self.print_log("i", "BOOT transition complete")
+        TRACE.INFO("BOOT transition complete",TRACE_NAME)
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------

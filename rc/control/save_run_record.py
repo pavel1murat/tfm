@@ -10,9 +10,9 @@ import string
 from   inspect import currentframe, getframeinfo
 
 from   tfm.rc.control.utilities import make_paragraph
-from   tfm.rc.control.utilities import get_commit_info
-from   tfm.rc.control.utilities import get_commit_info_filename
-from   tfm.rc.control.utilities import get_build_info
+# from   tfm.rc.control.utilities import get_commit_info
+# from   tfm.rc.control.utilities import get_commit_info_filename
+# from   tfm.rc.control.utilities import get_build_info
 #------------------------------------------------------------------------------
 # Save the FHiCL documents which were used to initialize the artdaq processes
 #------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ def save_run_record_base(self):
     self.print_log("d", "%s:save_record_base 003" % (__file__),2)
 #------------------------------------------------------------------------------
 # save information about ARTDAQ processes, ordered by rank 
-# P.M. better to ahve it first ordered by the host
+# P.M. better to have it first ordered by the host
 #------------------------------------------------------------------------------
     self.print_log("d", "%s:save_record_base 004" % (__file__),2)
     ranksfilename = "%s/ranks.txt" % (outdir)

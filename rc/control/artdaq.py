@@ -205,7 +205,9 @@ class EventBuilder(Procinfo):
         TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
         # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
         # start from checking inputs
+
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+
         # BRs should already be covered, check for input from other EBs
 
         print(f's.sources:{s.sources}');
@@ -216,8 +218,9 @@ class EventBuilder(Procinfo):
         self.init_fragment_count = 0;
 
         if (len(s.sources) > 0):
+            TRACE.INFO(f's.id:{s.id} s.sources:{s.sources}',TRACE_NAME);
             for ss in s.list_of_sS:
-                TRACE.INFO(f'ss id:{ss.id}',TRACE_NAME)
+                TRACE.INFO(f'ss {ss}',TRACE_NAME)
                 # there should be no DLs in the source subsystem, it should end in EB
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
@@ -273,35 +276,31 @@ class EventBuilder(Procinfo):
             # subsystem has no its own data loggers, so it should have a destination subsystem
             sd = s.dS;
             if (sd != None):
-                # subsystem has a destination, that has to start with EB level
-                if (sd.min_type < EVENT_BUILDER):
-                    # a problem, subsystem has BRs at best - throw an exception
-                    raise Exception('EB: trouble');
+                # subsystem has a destination, that may start with BR, but they will be skipped
+                # first check EBs in the destination subsystem
+                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+                if (len(list_of_ebs) > 0):
+                    for eb in list_of_ebs:
+                        self.list_of_destinations.append(eb);
+                        eb.list_of_sources.append(self);
                 else:
-                    # first check EBs in the destination subsystem
-                    list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
-                    if (len(list_of_ebs) > 0):
-                        for eb in list_of_ebs:
-                            self.list_of_destinations.append(eb);
-                            eb.list_of_sources.append(self);
+                    # no EBs, check for DLs
+                    list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
+                    if (len(list_of_dls) > 0):
+                        for dl in list_of_dls:
+                            self.list_of_destinations.append(dl);
+                            dl.list_of_sources.append(self);
                     else:
-                        # no EBs, check for DLs
-                        list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
-                        if (len(list_of_dls) > 0):
-                            for dl in list_of_dls:
-                                self.list_of_destinations.append(dl);
-                                dl.list_of_sources.append(self);
-                        else:
-                            # no EBs/DLss, check for DSs
-                            list_of_dss = sd.list_of_procinfos[DISPATCHER]
-                            if (len(list_of_dss) > 0):
-                                for ds in list_of_dss:
-                                    self.list_of_destinations.append(ds);
-                                    ds.list_of_sources.append(self);
-                                    
-                                else:
-                                    # a problem , throw
-                                    raise Exception('EB: no EBs/DLs in the DEST');
+                        # no EBs/DLss, check for DSs
+                        list_of_dss = sd.list_of_procinfos[DISPATCHER]
+                        if (len(list_of_dss) > 0):
+                            for ds in list_of_dss:
+                                self.list_of_destinations.append(ds);
+                                ds.list_of_sources.append(self);
+                                
+                            else:
+                                # a problem , throw
+                                raise Exception('EB: no EBs/DLs in the DEST');
         return;
 
 #------------------------------------------------------------------------------

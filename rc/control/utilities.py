@@ -265,36 +265,36 @@ def enclosing_table_name(fhiclstring, searchstring, startingloc=0):
     return name
 
 
-def commit_check_throws_if_failure(packagedir, commit_hash, date, request_after):
-
-    assert os.path.exists(packagedir), (
-        "Directory %s doesn't appear to exist; a check should occur earlier in the program for this"
-        % (packagedir)
-    )
-
-    cmds = []
-    cmds.append("cd " + packagedir)
-    cmds.append("git log | grep %s" % (commit_hash))
-
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-    proclines = proc.stdout.readlines()
-
-    if request_after and len(proclines) != 1:
-        raise Exception(
-            make_paragraph(
-                'Unable to find expected git commit hash %s (%s) in directory "%s"; this means the version of code in that directory isn\'t the one expected'
-                % (commit_hash, date, packagedir)
-            )
-        )
-    elif not request_after and len(proclines) != 0:
-        raise Exception(
-            make_paragraph(
-                'Unexpectedly found git commit hash %s (%s) in directory "%s"; this means the version of code in that directory isn\'t the one expected'
-                % (commit_hash, date, packagedir)
-            )
-        )
+# def commit_check_throws_if_failure(packagedir, commit_hash, date, request_after):
+# 
+#     assert os.path.exists(packagedir), (
+#         "Directory %s doesn't appear to exist; a check should occur earlier in the program for this"
+#         % (packagedir)
+#     )
+# 
+#     cmds = []
+#     cmds.append("cd " + packagedir)
+#     cmds.append("git log | grep %s" % (commit_hash))
+# 
+#     proc = Popen(
+#         ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
+#     )
+#     proclines = proc.stdout.readlines()
+# 
+#     if request_after and len(proclines) != 1:
+#         raise Exception(
+#             make_paragraph(
+#                 'Unable to find expected git commit hash %s (%s) in directory "%s"; this means the version of code in that directory isn\'t the one expected'
+#                 % (commit_hash, date, packagedir)
+#             )
+#         )
+#     elif not request_after and len(proclines) != 0:
+#         raise Exception(
+#             make_paragraph(
+#                 'Unexpectedly found git commit hash %s (%s) in directory "%s"; this means the version of code in that directory isn\'t the one expected'
+#                 % (commit_hash, date, packagedir)
+#             )
+#         )
 
 
 def is_msgviewer_running():
@@ -486,269 +486,6 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
 
     TRACE.DEBUG(0,f'-- END',TRACE_NAME)
     return # end of reformat_fhicl_documents, P.Murat: don't need to return anything
-
-#------------------------------------------------------------------------------
-# JCF, 12/2/14
-
-# Given the directory name of a git repository, this will return the most recent hash commit in the repo
-#------------------------------------------------------------------------------
-def get_commit_hash(gitrepo):
-
-    if not os.path.exists(gitrepo):
-        return "Unknown"
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append("git log | head -1 | awk '{print $2}'")
-
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-    proclines = proc.stdout.readlines()
-
-    if len(proclines) != 1 or len(proclines[0].strip()) != 40:
-        raise Exception(
-            make_paragraph(
-                'Commit hash for "%s" not found; this was requested in the "packages_hashes_to_save" list'
-                % gitrepo )
-        )
-
-    commit_hash = proclines[0].strip()
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append('git diff --unified=0 | grep "^-[^-][^-]" | wc -l')
-    num_subtracted_lines = (
-        Popen(
-            ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
-    )
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append('git diff --unified=0 | grep "^+[^+][^+]" | wc -l')
-    num_added_lines = (
-        Popen(
-            ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-        )
-        .stdout.readlines()[0]
-        .strip()
-    )
-
-    return "%s %s %s" % (commit_hash, num_subtracted_lines, num_added_lines)
-
-
-def get_commit_comment(gitrepo):
-
-    max_length = 50
-
-    if not os.path.exists(gitrepo):
-        return ""
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append("git log --format=%B -n 1 HEAD")
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-
-    proclines = proc.stdout.readlines()
-    single_line_comment = proclines[0]
-    for line in proclines[1:]:
-        single_line_comment += " " + line
-
-    for badchar in ["\n", '"', "'"]:
-        single_line_comment = single_line_comment.replace(badchar, "")
-
-    if len(single_line_comment) > max_length:
-        single_line_comment = single_line_comment[0:max_length] + "..."
-
-    return single_line_comment
-
-
-def get_commit_time(gitrepo):
-
-    if not os.path.exists(gitrepo):
-        return "Unknown"
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append("git log -1 | sed -r -n 's/Date:\\s+(.*)/\\1/p'")
-
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-    proclines = proc.stdout.readlines()
-
-    return proclines[0].strip()
-
-
-def get_commit_branch(gitrepo):
-    if not os.path.exists(gitrepo):
-        return "Unknown"
-
-    cmds = []
-    cmds.append("cd %s" % (gitrepo))
-    cmds.append("git branch | sed -r -n 's/^\\* (\\S+)/\\1/p'")
-
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-    proclines = proc.stdout.readlines()
-
-    return proclines[0].strip()
-
-
-# JCF, Jul-6-2019
-
-# Note to self: if you modify the label before the colon below, make sure you make commensurate
-# modifications in save_run_record...
-
-
-def get_commit_info(pkgname, gitrepo):
-    return '%s commit/version: %s "%s" "%s" "%s"' % (
-        pkgname,
-        get_commit_hash(gitrepo),
-        get_commit_comment(gitrepo),
-        get_commit_time(gitrepo),
-        get_commit_branch(gitrepo),
-    )
-
-
-def get_commit_info_filename(pkgname):
-    return "%s_commit_info.txt" % (pkgname)
-
-
-def get_build_info(pkgnames, setup_script):
-    def parse_buildinfo_file(buildinfo_filename):
-
-        buildinfo_version       = '"version from BuildInfo undetermined"'
-        buildinfo_time          = '"time from BuildInfo undetermined"'
-        found_buildinfo_version = False
-        found_buildinfo_time    = False
-
-        with open(buildinfo_filename) as inf:
-            for line in inf.readlines():
-
-                res = re.search(r"setPackageVersion\s*\(\s*(\".*\")\s*\)", line)
-                if res:
-                    buildinfo_version       = res.group(1)
-                    found_buildinfo_version = True
-                    continue
-
-                res = re.search(r"setBuildTimestamp\s*\(\s*(\".*\")\s*\)", line)
-                if res:
-                    buildinfo_time       = res.group(1)
-                    found_buildinfo_time = True
-                    continue
-
-        if not found_buildinfo_version or not found_buildinfo_time:
-            print(
-                "Failed to find one (or both of) buildinfo time and version in %s!"
-                % (buildinfo_filename)
-            )
-
-        return "%s %s" % (buildinfo_time, buildinfo_version)
-
-    pkg_build_infos = {}
-    cmds            = []
-    cmds.append(bash_unsetup_command)
-    cmds.append(". %s" % (setup_script))
-
-    for pkgname in pkgnames:
-        ups_pkgname = pkgname.replace("-", "_")
-        cmds.append('ups active | grep -E "^%s\s+"' % (ups_pkgname))
-
-    proc = Popen(
-        ";".join(cmds), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-    stdoutlines = proc.stdout.readlines()
-
-    for pkgname in pkgnames:
-
-        buildinfo_time           = '"time from BuildInfo undetermined"'
-        buildinfo_version        = '"version from BuildInfo undetermined"'
-        pkg_build_infos[pkgname] = "%s %s" % (buildinfo_time, buildinfo_version)
-
-        ups_pkgname = pkgname.replace("-", "_")
-
-        found_ups_package   = False
-        package_line_number = -1
-        for i_l, line in enumerate(stdoutlines):
-            if re.search(r"^%s\s+" % (ups_pkgname), line):
-                found_ups_package   = True
-                package_line_number = i_l
-                break
-
-        if found_ups_package:
-            version = stdoutlines[package_line_number].split()[1]
-            upsdir  = stdoutlines[package_line_number].split()[-1]
-
-            ups_sourcedir = "%s/%s/%s/source" % (upsdir, ups_pkgname, version)
-
-            if not os.path.exists(ups_sourcedir):
-                # print "Unable to find expected ups source file directory %s, will not be able to save build info for %s in the run record" % (ups_sourcedir, pkgname)
-                continue
-
-            buildinfo_file1 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (ups_sourcedir,pkgname)
-            buildinfo_file2 = "%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (ups_sourcedir,pkgname.replace("_", "-"))
-
-            if os.path.exists(buildinfo_file1):
-                buildinfo_file = buildinfo_file1
-            elif os.path.exists(buildinfo_file2):
-                buildinfo_file = buildinfo_file2
-            else:
-                if buildinfo_file1 != buildinfo_file2:
-                    print(
-                        "Unable to find hoped-for %s BuildInfo file (%s or %s), will not be able to save build info for %s in the run record"
-                        % (pkgname, buildinfo_file1, buildinfo_file2, pkgname)
-                    )
-                else:
-                    print(
-                        "Unable to find hoped-for %s BuildInfo file (%s), will not be able to save build info for %s in the run record"
-                        % (pkgname, buildinfo_file1, pkgname)
-                    )
-
-                continue
-
-            pkg_build_infos[pkgname] = parse_buildinfo_file(buildinfo_file)
-            continue
-        else:
-            mrb_basedir = os.path.dirname(setup_script)
-            # print "No ups product for %s is set up by %s, will check for build info in local build subdirectory of %s" % (pkgname, setup_script, mrb_basedir)
-            builddir_as_list = [
-                builddir
-                for builddir in os.listdir(os.path.dirname(setup_script))
-                if re.search(r"build_.*\..*", builddir)
-            ]
-
-            if len(builddir_as_list) == 1:
-                builddir = builddir_as_list[0]
-                desired_file = "%s/%s/%s/%s/BuildInfo/GetPackageBuildInfo.cc" % (
-                    mrb_basedir,
-                    builddir,
-                    pkgname.replace("-", "_"),
-                    pkgname,
-                )
-                if os.path.exists(desired_file):
-                    pkg_build_infos[pkgname] = parse_buildinfo_file(desired_file)
-                else:
-                    # print "Unable to find a file with the name %s, will not be able to save build info for %s in the run record" % (desired_file, pkgname)
-                    pass
-
-            elif len(builddir_as_list) > 1:
-                print(
-                    "Warning: unable to find build info for %s as %s doesn't set up a ups product for it and there's more than one local build subdirectory in %s: %s"
-                    % (pkgname, setup_script, mrb_basedir, " ".join(builddir_as_list))
-                )
-                pass
-            else:
-                # print "No local build subdirectory was found in %s, no build info for %s will be saved in the run record" % (mrb_basedir, pkgname)
-                pass
-
-    return pkg_build_infos
 
 
 def fhicl_writes_root_file(fhicl_string):
@@ -943,272 +680,26 @@ def zero_out_last_subnet(network):
     return "%s0" % (res.group(1))
 
 
-def upsproddir_from_productsdir(productsdir):
-    for pp in productsdir.split(":"):
-        upsproddir = ""  # may not find what we're looking for
-        tt = pp.rstrip("/") + "/"  # make sure it ends with _single_ '/'
-        if (
-            os.path.isdir(tt)
-            and os.path.isfile(tt + "setup")
-            and os.path.isdir(tt + ".upsfiles")
-            and os.path.isdir(tt + "ups")
-        ):
-            upsproddir = pp.rstrip("/")  # make sure it does not end with '/'
-            break
-    return upsproddir
-
+# 2026-02-11 PM #def upsproddir_from_productsdir(productsdir):
+# 2026-02-11 PM #    for pp in productsdir.split(":"):
+# 2026-02-11 PM #        upsproddir = ""  # may not find what we're looking for
+# 2026-02-11 PM #        tt = pp.rstrip("/") + "/"  # make sure it ends with _single_ '/'
+# 2026-02-11 PM #        if (
+# 2026-02-11 PM #            os.path.isdir(tt)
+# 2026-02-11 PM #            and os.path.isfile(tt + "setup")
+# 2026-02-11 PM #            and os.path.isdir(tt + ".upsfiles")
+# 2026-02-11 PM #            and os.path.isdir(tt + "ups")
+# 2026-02-11 PM #        ):
+# 2026-02-11 PM #            upsproddir = pp.rstrip("/")  # make sure it does not end with '/'
+# 2026-02-11 PM #            break
+# 2026-02-11 PM #    return upsproddir
+# 2026-02-11 PM #
 
 def record_directory_info(recorddir):
     if not os.path.exists(recorddir):
         raise Exception('Directory "%s" doesn\'t exist, exiting...')
     stats = os.stat(recorddir)
     return "inode: %s" % (stats.st_ino)
-
-#------------------------------------------------------------------------------
-# socket.gethostname() does exactly this
-#------------------------------------------------------------------------------
-# def get_short_hostname():
-#     hostname = (
-#         Popen(
-#             "hostname -s",
-#             executable="/bin/bash",
-#             shell=True,
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.STDOUT, encoding="UTF-8"
-#         )
-#         .stdout.readlines()[0]
-#         .strip()
-#     )
-#     return hostname
-
-
-def main():
-
-    if len(sys.argv) > 1 and sys.argv[1] == "get_commit_info":
-        if len(sys.argv) != 5:
-            print(
-                make_paragraph(
-                    'Error: expected four arguments ("get_commit_info", the name of the package (dashes, not underscores), the full pathname of that package\'s git repository whose commit info you want, and the full pathname of the output directory where you want to save the commit info)'
-                )
-            )
-            sys.exit(1)
-        pkgname = sys.argv[2]
-        gitrepo = sys.argv[3]
-        outputdir = sys.argv[4]
-
-        if not os.path.exists(gitrepo):
-            print('Error: requested repo "%s" doesn\'t appear to exist' % (gitrepo))
-            sys.exit(2)
-
-        if not os.path.exists(outputdir):
-            print(
-                'Error: requested output directory "%s" doesn\'t appear to exist'
-                % (outputdir)
-            )
-            sys.exit(3)
-
-        filename = "%s/%s" % (outputdir, get_commit_info_filename(pkgname))
-
-        try:
-            outf = open(filename, "w")
-        except:
-            print('Error: problem opening the file "%s" for writing' % (filename))
-            sys.exit(4)
-
-        try:
-            outf.write(get_commit_info(pkgname, gitrepo))
-        except:
-            print('Error: problem getting the commit info from "%s"' % (gitrepo))
-            sys.exit(5)
-
-        sys.exit(0)
-
-    elif len(sys.argv) > 1 and sys.argv[1] == "upsproddir_from_productsdir":
-        if len(sys.argv) != 3:
-            print(
-                make_paragraph(
-                    "Error: expected 1 argument to upsproddir_from_productsdir: PRODUCTS_list"
-                )
-            )
-            sys.exit(1)
-
-        productsdir = sys.argv[2]
-        print(upsproddir_from_productsdir(productsdir))
-        sys.exit(0)
-    elif len(sys.argv) > 1 and sys.argv[1] == "record_directory_info":
-        if len(sys.argv) != 3:
-            print(
-                make_paragraph(
-                    "Error: expected 1 argument to record_directory_info: the name of an existing run records directory"
-                )
-            )
-            sys.exit(1)
-        print(record_directory_info(sys.argv[2]))
-        sys.exit(0)
-
-    paragraphed_string_test       = False
-    msgviewer_check_test          = False
-    execute_command_in_xterm_test = False
-    reformat_fhicl_document_test  = False
-    bash_unsetup_test             = False
-    get_commit_info_test          = False
-    get_build_info_test           = False
-    table_range_test              = False
-    get_private_networks_test     = False
-    enclosing_table_name_test     = True
-    enclosing_table_range_test    = True
-
-    if paragraphed_string_test:
-        sample_string = "Set this string to whatever string you want to pass to make_paragraph() for testing purposes"
-
-        paragraphed_string = make_paragraph(sample_string)
-
-        print
-        print("Sample string: ")
-        print(sample_string)
-
-        print
-        print("Paragraphed string: ")
-        print(paragraphed_string)
-
-    if msgviewer_check_test:
-        if is_msgviewer_running():
-            print("A msgviewer appears to be running")
-        else:
-            print("A msgviewer doesn't appear to be running")
-
-    if execute_command_in_xterm_test:
-        execute_command_in_xterm(os.environ["PWD"], "echo Hello world")
-        execute_command_in_xterm(
-            os.environ["PWD"], "echo You should see an xclock appear; xclock "
-        )
-
-    if reformat_fhicl_document_test:
-        assert (
-            False
-        ), "This test is deprecated until function signature is brought up-to-date"
-        inputstring = 'mytable: {   this: "and"        that: "and  the other"   }'
-        source_filename = (
-            Popen(
-                "mktemp", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-            )
-            .stdout.readlines()[0]
-            .strip()
-        )
-
-        # Note the setup string assumes cvmfs is available...
-        proddir = "/cvmfs/fermilab.opensciencegrid.org/products/artdaq"
-        print("This test assumes that %s is available" % (proddir))
-
-        with open(source_filename, "w") as source_file:
-            source_file.write(
-                "source %s/setup; setup fhiclcpp v4_05_01 -q prof:e14" % (proddir)
-            )
-
-        outputstring = "Not set"
-        try:
-            outputstring = reformat_fhicl_document(source_filename, inputstring)
-        except Exception:
-            print("Exception caught")
-
-        os.unlink(source_filename)
-
-        print("Input FHiCL string: ")
-        print(inputstring)
-        print
-        print("Output FHiCL string: ")
-        print(outputstring)
-        print
-
-    if bash_unsetup_test:
-        Popen(bash_unsetup_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    if get_commit_info_test:
-        pkgname = "artdaq"
-        gitrepo = "/home/jcfree/artdaq-demo_v3_04_01/srcs/artdaq"
-
-        print("Commit info for %s:" % (gitrepo))
-        print(get_commit_info(pkgname, gitrepo))
-
-    if get_build_info_test:
-        pkgnames = [
-            "artdaq-demo",
-            "artdaq-core-demo",
-            "artdaq",
-            "artdaq-utilities",
-            "artdaq-core",
-        ]
-        daq_setup_script = "/home/jcfree/artdaq-demo_v3_04_01/setupARTDAQDEMO"
-
-        pkg_build_infos_dict = get_build_info(pkgnames, daq_setup_script)
-        for pkg, buildinfo in pkg_build_infos_dict.items():
-            print("%s: %s" % (pkg, buildinfo))
-
-    if table_range_test:
-
-        assert ("TFM_DIR" in os.environ), "Need to have TFM environment sourced for table_range test"
-        filename = "%s/simple_test_config/pdune_swtrig_noRM/DFO.fcl" % (
-            os.environ["TFM_DIR"]
-        )
-        print("From file %s:" % (filename))
-
-        with open(filename) as inf:
-            inf_contents = inf.read()
-
-            (table_start, table_end) = table_range(inf_contents, "art")
-            print("Contents of table: ")
-            print(inf_contents[table_start:table_end])
-
-    if get_private_networks_test:
-        hosts = ["localhost"]
-
-        for host in hosts:
-            private_networks = get_private_networks(host)
-            print("%s: " % (host))
-            print([network.strip() for network in private_networks])
-
-    if enclosing_table_range_test or enclosing_table_name_test:
-        if len(sys.argv) != 3:
-            print(
-                make_paragraph(
-                    "Since at least one of enclosing_table_range_test and enclosing_table_name_test are true, you need to supply the name of a FHiCL file and then a token which is enclosed in a table in the file"
-                )
-            )
-            sys.exit(0)
-        filename = sys.argv[1]
-        token = sys.argv[2]
-
-        if not os.path.exists(filename):
-            raise Exception('Unable to find FHiCL file "%s"' % (filename))
-
-        full_fhicl_blob = open(filename).read()
-
-        if enclosing_table_range_test:
-            start, end = enclosing_table_range(full_fhicl_blob, token)
-
-            if start == -1 or end == -1:
-                raise Exception(
-                    'Uh-oh: unable to find an enclosing table around "%s"' % (token)
-                )
-
-            print
-            print(
-                "Enclosing table range starts at %d and ends at %d. Contents of table are between the =====s"
-                % (start, end)
-            )
-            print(
-                "======================================================================"
-            )
-            print(full_fhicl_blob[start:end])
-            print(
-                "======================================================================"
-            )
-            print
-
-        if enclosing_table_name_test:
-            tablename = enclosing_table_name(full_fhicl_blob, token)
-            print('Name of table enclosing "%s" found to be "%s"' % (token, tablename))
-
 
 def get_setup_commands(productsdir=None, spackdir=None, log_file=None):
     output = []

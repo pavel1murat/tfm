@@ -25,25 +25,27 @@ def launch_procs_on_host(self,host,
     
     self.print_log("d", oname+f': executing commands to launch processes on {host}',2)
 
-    # Before we try launching the processes, let's make sure there
-    # aren't any pre-existing processes listening on the same ports
-
-    # self.print_log("d","Before check for existing processes on %s" % host,2)
-    # breakpoint();
+#------------------------------------------------------------------------------
+# if stale processes exist, start from cleaning them up
+#------------------------------------------------------------------------------
     grepped_lines    = []
     preexisting_pids = rcu.get_pids("\|".join(
         ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
                                 host,grepped_lines)
 
-    TRACE.TRACE(4,f":001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}")
+    TRACE.INFO(f':001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}\n',TRACE_NAME)
     
     if self.attempt_existing_pid_kill and len(preexisting_pids) > 0:
         self.print_log("i", "Found existing processes on %s:%s" % (host,preexisting_pids))
-        TRACE.TRACE(4,f':0011: Found existing processes on {host} pids:{preexisting_pids}')
+        TRACE.INFO(f'Found existing processes on {host} pids:{preexisting_pids}')
 
         kill_procs_on_host(self, host, kill_art=True, use_force=True)
 
-        self.print_log("d","Before re-check for existing processes on %s" % (host),2)
+#------------------------------------------------------------------------------
+# check if cleanup was successful, if not, raise an exception (for now)
+#------------------------------------------------------------------------------
+        TRACE.INFO(f'Before re-check for existing processes on {host}')
+        
         grepped_lines    = []
         preexisting_pids = rcu.get_pids(
             "\|".join(
@@ -58,23 +60,22 @@ def launch_procs_on_host(self,host,
             grepped_lines,
         )
 
-    if len(preexisting_pids) > 0:
-        TRACE.DEBUG(1,f":003: preexisting_pids on {host}:{preexisting_pids}")
+        TRACE.INFO(f'host:{host} preexisting_pids:{preexisting_pids}',TRACE_NAME)
+        
+    if (len(preexisting_pids) > 0):
         self.print_log("e",rcu.make_paragraph(
             ("On host %s, found artdaq process(es) already existing which use the ports"
              " TFM was going to use; this may be the result of an improper cleanup from"
              " a prior run: " % host))
         )
         self.print_log("e","\n" + "\n".join(grepped_lines))
-        self.print_log("i",("...note that the process(es) may get automatically"
-                            " cleaned up during DAQInterface recovery\n"),
-        )
+
         raise Exception(rcu.make_paragraph(
                 ("TFM found previously-existing artdaq processes using desired ports;"
                  " see error message above for details"))
         )
 
-    self.print_log("d",oname+f': after check for existing processes on {host}',2)
+    TRACE.INFO(f'host:{host} : starting launch')
 #------------------------------------------------------------------------------
 # each command already terminated by ampersand
 #---v--------------------------------------------------------------------------
@@ -85,8 +86,9 @@ def launch_procs_on_host(self,host,
     if not rcu.host_is_local(host):
         launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
 
-    msg = oname + f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host],}\n{launchcmd}'
-    self.print_log("d",msg,2)
+    TRACE.INFO(f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host]}',TRACE_NAME)
+#    msg = oname + f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host],}\n{launchcmd}'
+    self.print_log("d",'\n'+launchcmd,2)
 
     proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
@@ -94,7 +96,7 @@ def launch_procs_on_host(self,host,
     out, _ = proc.communicate()
     status = proc.returncode
 
-    TRACE.TRACE(5,f'after execution on host:{host}: status:{status}')
+    TRACE.INFO(f'after execution on host:{host}: status:{status}',TRACE_NAME)
 
     if status != 0:
         self.print_log("e",
@@ -113,6 +115,7 @@ def launch_procs_on_host(self,host,
         self.print_log("d", "...host %s done." % host,2)
 #    breakpoint();
     return status  # end of launch_procs_on_host
+
 #------------------------------------------------------------------------------
 # JCF, Dec-18-18
 
