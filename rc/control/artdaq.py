@@ -397,8 +397,9 @@ class DataLogger(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
-        self._type    = DATA_LOGGER;
-        self.execname = 'datalogger'
+        self._type                 = DATA_LOGGER;
+        self.execname              = 'datalogger'
+        self.output_data_directory = None
 
 #-------^----------------------------------------------------------------------
 # define processes for p.type = DATA_LOGGER

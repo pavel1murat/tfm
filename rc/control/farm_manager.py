@@ -508,6 +508,8 @@ class FarmManager(Component):
                                           target             = "none",
                                           fhicl              = fcl_fn,
                                           prepend            = "")
+                    # data logger needs to know the output data directory
+                    p.output_data_directory = self.data_directory_override;
 
                     TRACE.INFO(f'created new datalogger label:{key_name}',TRACE_NAME)
                     
@@ -692,7 +694,6 @@ class FarmManager(Component):
         
         self.log_directory           = self.top_output_dir+'/logs'        # None
         self.record_directory        = self.top_output_dir+'/run_records' # None
-        self.data_directory_override = self.top_output_dir+'/data'        # None
         self.productsdir             = None
 
         self.fKeepRunning            = True
@@ -768,6 +769,8 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
+
+        self.data_directory_override             = os.path.expandvars(odb_client.odb_get(self.tfm_conf_path+'/data_directory_override'))
 
         self.ssh_timeout_in_seconds              = odb_client.odb_get(self.tfm_conf_path+"/ssh_timeout_in_seconds")# 30  ## was a local var somewhere
                                                 
@@ -2115,7 +2118,7 @@ class FarmManager(Component):
         timeout = timeout_dict[p.name]
 
         TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1")
-        self.set_status(p,1);
+        self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
 
         self.print_log("d","Sending transition %s to %s" % (command, p.label),3)

@@ -919,11 +919,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
                     p.fhicl_used = (p.fhicl_used[:start]+rootoutput_table+p.fhicl_used[end:])
 
-# 2026-02-07 PM #    for fhicl_key, fhicl_value in self.bootfile_fhicl_overwrites.items():
-# 2026-02-07 PM #        print(fhicl_key, fhicl_value)
-# 2026-02-07 PM #        for i_proc in range(len(self.procinfos)):
-# 2026-02-07 PM #            self.procinfos[i_proc].fhicl_used = re.sub(r"%s\s*:\s*\S+" % (fhicl_key),"%s: %s" % (fhicl_key, fhicl_value), self.procinfos[i_proc].fhicl_used )
-
     # JCF, Mar-27-2020
     # Issue #24231: bookkeep the init_fragment_count to reflect the number of
     # incoming serialized art events
