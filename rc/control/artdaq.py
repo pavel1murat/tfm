@@ -109,6 +109,9 @@ class BoardReader(Procinfo):
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
 
+        self._type    = BOARD_READER;
+        self.execname = 'boardreader'
+
 #------------------------------------------------------------------------------
 # boardreades only have destinations
 #------------------------------------------------------------------------------
@@ -200,6 +203,8 @@ class EventBuilder(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
+        self._type    = EVENT_BUILDER;
+        self.execname = 'eventbuilder'
         
     def init_connections(self):      # p = self
         TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
@@ -392,6 +397,8 @@ class DataLogger(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
+        self._type    = DATA_LOGGER;
+        self.execname = 'datalogger'
 
 #-------^----------------------------------------------------------------------
 # define processes for p.type = DATA_LOGGER
@@ -552,6 +559,9 @@ class Dispatcher(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
+        self._type    = DISPATCHER;
+        self.execname = 'dispatcher'
+        
 
 
     def init_connections(self):
@@ -698,6 +708,8 @@ class RoutingManager(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
+        self._type    = ROUTING_MANAGER;
+        self.execname = 'routing_manager'
 
 #------------------------------------------------------------------------------
 # define processes for p.type = ROUTINE_MANAGER

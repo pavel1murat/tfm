@@ -68,12 +68,13 @@ class Procinfo(object):
         self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
         self.init_fragment_count     = None;         ## for DLs, DSs
         self.odb_path                = None;
+        self.execname                = None;
 
-        if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
-        elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
-        elif (name == "DataLogger"    ) : self._type = DATA_LOGGER    ;
-        elif (name == "Dispatcher"    ) : self._type = DISPATCHER     ;
-        elif (name == "RoutingManager") : self._type = ROUTING_MANAGER;
+# 2026-02-19-PM #        if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
+# 2026-02-19-PM #        elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
+# 2026-02-19-PM #        elif (name == "DataLogger"    ) : self._type = DATA_LOGGER    ;
+# 2026-02-19-PM #        elif (name == "Dispatcher"    ) : self._type = DISPATCHER     ;
+# 2026-02-19-PM #        elif (name == "RoutingManager") : self._type = ROUTING_MANAGER;
 
         self.server = None
         xmlrpc_url  = "http://" + self.rpc_server() + "/RPC2"
@@ -158,70 +159,70 @@ class Procinfo(object):
                 return True
             return False
 
-    def recursive_include(self, filename):
-
-        if self.fhicl is not None:
-            for line in open(filename).readlines():
-                
-                if "#include" not in line:
-                    self.fhicl_used += line
-                else:
-                    res = re.search(r"^\s*#.*#include", line)
-
-                    if res:
-                        self.fhicl_used += line
-                        continue
-
-                    res = re.search(r"^\s*#include\s+\"(\S+)\"", line)
-
-                    if not res:
-                        raise Exception(
-                            make_paragraph(
-                                "Error in Procinfo::recursive_include: "
-                                'unable to parse line "%s" in %s' % (line, filename)
-                            )
-                        )
-
-                    included_file = res.group(1)
-
-                    if included_file[0] == "/":
-                        if not os.path.exists(included_file):
-                            raise Exception(
-                                make_paragraph(
-                                    "Error in "
-                                    "Procinfo::recursive_include: "
-                                    "unable to find file %s included in %s"
-                                    % (included_file, filename)
-                                )
-                            )
-                        else:
-                            self.recursive_include(included_file)
-                    else:
-                        found_file = False
-
-                        for dirname in self.ffp:
-                            if (
-                                os.path.exists(dirname + "/" + included_file)
-                                and not found_file
-                            ):
-                                self.recursive_include(
-                                    dirname + "/" + included_file
-                                )
-                                found_file = True
-
-                        if not found_file:
-
-                            ffp_string = ":".join(self.ffp)
-
-                            raise Exception(
-                                make_paragraph(
-                                    "Error in Procinfo::recursive_include: "
-                                    "unable to find file %s in list of "
-                                    "the following fhicl_file_paths: %s"
-                                    % (included_file, ffp_string)
-                                )
-                            )
-        return
+# 2026-02-19-PM #    def recursive_include(self, filename):
+# 2026-02-19-PM #
+# 2026-02-19-PM #        if self.fhicl is not None:
+# 2026-02-19-PM #            for line in open(filename).readlines():
+# 2026-02-19-PM #                
+# 2026-02-19-PM #                if "#include" not in line:
+# 2026-02-19-PM #                    self.fhicl_used += line
+# 2026-02-19-PM #                else:
+# 2026-02-19-PM #                    res = re.search(r"^\s*#.*#include", line)
+# 2026-02-19-PM #
+# 2026-02-19-PM #                    if res:
+# 2026-02-19-PM #                        self.fhicl_used += line
+# 2026-02-19-PM #                        continue
+# 2026-02-19-PM #
+# 2026-02-19-PM #                    res = re.search(r"^\s*#include\s+\"(\S+)\"", line)
+# 2026-02-19-PM #
+# 2026-02-19-PM #                    if not res:
+# 2026-02-19-PM #                        raise Exception(
+# 2026-02-19-PM #                            make_paragraph(
+# 2026-02-19-PM #                                "Error in Procinfo::recursive_include: "
+# 2026-02-19-PM #                                'unable to parse line "%s" in %s' % (line, filename)
+# 2026-02-19-PM #                            )
+# 2026-02-19-PM #                        )
+# 2026-02-19-PM #
+# 2026-02-19-PM #                    included_file = res.group(1)
+# 2026-02-19-PM #
+# 2026-02-19-PM #                    if included_file[0] == "/":
+# 2026-02-19-PM #                        if not os.path.exists(included_file):
+# 2026-02-19-PM #                            raise Exception(
+# 2026-02-19-PM #                                make_paragraph(
+# 2026-02-19-PM #                                    "Error in "
+# 2026-02-19-PM #                                    "Procinfo::recursive_include: "
+# 2026-02-19-PM #                                    "unable to find file %s included in %s"
+# 2026-02-19-PM #                                    % (included_file, filename)
+# 2026-02-19-PM #                                )
+# 2026-02-19-PM #                            )
+# 2026-02-19-PM #                        else:
+# 2026-02-19-PM #                            self.recursive_include(included_file)
+# 2026-02-19-PM #                    else:
+# 2026-02-19-PM #                        found_file = False
+# 2026-02-19-PM #
+# 2026-02-19-PM #                        for dirname in self.ffp:
+# 2026-02-19-PM #                            if (
+# 2026-02-19-PM #                                os.path.exists(dirname + "/" + included_file)
+# 2026-02-19-PM #                                and not found_file
+# 2026-02-19-PM #                            ):
+# 2026-02-19-PM #                                self.recursive_include(
+# 2026-02-19-PM #                                    dirname + "/" + included_file
+# 2026-02-19-PM #                                )
+# 2026-02-19-PM #                                found_file = True
+# 2026-02-19-PM #
+# 2026-02-19-PM #                        if not found_file:
+# 2026-02-19-PM #
+# 2026-02-19-PM #                            ffp_string = ":".join(self.ffp)
+# 2026-02-19-PM #
+# 2026-02-19-PM #                            raise Exception(
+# 2026-02-19-PM #                                make_paragraph(
+# 2026-02-19-PM #                                    "Error in Procinfo::recursive_include: "
+# 2026-02-19-PM #                                    "unable to find file %s in list of "
+# 2026-02-19-PM #                                    "the following fhicl_file_paths: %s"
+# 2026-02-19-PM #                                    % (included_file, ffp_string)
+# 2026-02-19-PM #                                )
+# 2026-02-19-PM #                            )
+# 2026-02-19-PM #        return
 #-------^----------------------------------------------------------------------
 #
 #---v--------------------------------------------------------------------------

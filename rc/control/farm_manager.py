@@ -363,6 +363,9 @@ class FarmManager(Component):
     def set_process_status(self,p,status):
         self.client.odb_set(p.odb_path+'/Status',status)
 
+    def set_status(self,status):
+        self.client.odb_set(self.tfm_conf_path+'/Status',status);
+        
 #------------------------------------------------------------------------------
 # 'public names' = short names , i.e. 'mu2edaq22'
 # TODO : this is a kludge, reimplement via :
@@ -685,7 +688,8 @@ class FarmManager(Component):
         self.midas_server_host       = os.path.expandvars(self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
         self.top_output_dir          = os.path.expandvars(self.client.odb_get("/Mu2e/OutputDir"));
 
-        TRACE.TRACE(7,f'top_output_dir:{self.top_output_dir}',TRACE_NAME);
+        TRACE.INFO(f'top_output_dir:{self.top_output_dir}',TRACE_NAME);
+        
         self.log_directory           = self.top_output_dir+'/logs'        # None
         self.record_directory        = self.top_output_dir+'/run_records' # None
         self.data_directory_override = self.top_output_dir+'/data'        # None
@@ -703,7 +707,7 @@ class FarmManager(Component):
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
         self._cmd_path               = '/Mu2e/Commands/DAQ/Tfm';
 
-        self.client.odb_set(self.tfm_conf_path+'/Status',1);
+        self.set_status(1);
 
         self.public_subnet           = odb_client.odb_get(self.daq_conf_path+'/PublicSubnet' )
         self.private_subnet          = odb_client.odb_get(self.daq_conf_path+'/PrivateSubnet')
@@ -762,8 +766,6 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
-#        self.package_hashes_to_save              = []
-#        self.package_versions                    = {}
         self.productsdir_for_bash_scripts        = None
         self.max_fragment_size_bytes             = None
 
@@ -795,7 +797,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # associate processes and subsystems
 #-------v----------------------------------------------------------------------
-        print('-------------------------- append processes to subsystems')
+        print(f'-------------------------- append processes to subsystems len(self.procinfos):{len(self.procinfos)}')
+        for p in self.procinfos:
+            TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+
+        print('-------------------------- append processes to subsystems .. .II')
         for p in self.procinfos:
             print (f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}')
             s           = self.subsystems[p.subsystem_id]
@@ -888,8 +894,17 @@ class FarmManager(Component):
             # step 2 : flatten the FCL ... in principle there could be errors to handle,
             # but first wait for them to thow up
             res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
-            p.fhicl      = new_fn;
-            p.fhicl_used = res.stdout;
+            if (res.returncode != 0):
+                msg = f'fhicl-dump {new_fn} failed with rc:{res.returncode}'
+                TRACE.ERROR(msg,TRACE_NAME)
+                self.client.msg(msg,1,"farm_manager");
+                self.set_process_status(p,-1)
+                self.set_status(-1)
+                # serious error, return at this point
+                return;
+            else:
+                p.fhicl      = new_fn;
+                p.fhicl_used = res.stdout;
             
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
@@ -954,7 +969,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         if (debug_level >= 0): self.debug_level = debug_level
 
-        self.client.odb_set(self.tfm_conf_path+'/Status',0);
+        self.set_status(0);
 
 
     def __del__(self):
@@ -2099,8 +2114,8 @@ class FarmManager(Component):
         
         timeout = timeout_dict[p.name]
 
-        self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 1",2)
-        self.client.odb_set(p.odb_path+'/Status',1);
+        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1")
+        self.set_status(p,1);
         p.state = self.verbing_to_states[command]
 
         self.print_log("d","Sending transition %s to %s" % (command, p.label),3)
@@ -2129,7 +2144,8 @@ class FarmManager(Component):
             else:
                 assert False, "Unknown command"
 
-            self.print_log("d",f"farm_manager::process_command p.pastreturned:\n{p.lastreturned}",3)
+            TRACE.INFO(f'p.label:{p.label} p.lastreturned:{p.lastreturned}',TRACE_NAME);
+            # self.print_log("d",f"farm_manager::process_command p.pastreturned:\n{p.lastreturned}",3)
                 
             if "with ParameterSet" in p.lastreturned:
                 p.lastreturned = p.lastreturned[0:200]+" // REMAINDER TRUNCATED BY TFM, SEE"
@@ -2181,7 +2197,7 @@ class FarmManager(Component):
 
             self.print_log("e", rcu.make_paragraph(output_message))
 
-        self.print_log("d",f"returning from process_command {command} for {p.label}",3)
+        TRACE.INFO(f"-- END: p.label:{p.label} command:{command}",TRACE_NAME)
         
         return  # From process_command
 #------------------------------------------------------------------------------
@@ -2249,7 +2265,6 @@ class FarmManager(Component):
             subsystems_in_order.reverse()
         
         starttime = time.time()
-        # self.print_log("i","[farm_manager::do_command(%s)]: sending transition to artdaq processes" % (command.upper()),1)
         TRACE.INFO(f'sending command:{command.upper()} to ARTDAQ processes',TRACE_NAME);
 
         proc_starttimes = {}
@@ -2299,7 +2314,8 @@ class FarmManager(Component):
                      # PM and mark the failure
                      self.set_process_status(p,-1)
 
-        TRACE.DEBUG(0,f'nfailed:{nfailed} self.debug_level:{self.debug_level}',TRACE_NAME)
+        TRACE.INFO(f'nfailed:{nfailed} self.debug_level:{self.debug_level}',TRACE_NAME)
+
         if ((self.debug_level >= 2) or (nfailed > 0)):
             
             for p in self.procinfos:
@@ -2315,8 +2331,7 @@ class FarmManager(Component):
                     max_time        = proc_endtimes[p.label] - proc_starttimes[p.label]
                     slowest_process = p.label
 
-            self.print_log("i","Longest individual transition: %s, %.1f seconds." % (slowest_process, max_time))
-            self.print_log("i",'All artdaq processes returned SUCCESS.')
+            TRACE.INFO(f'SUCCESS, longest individual transition: {slowest_process} , {max_time:%.1f} seconds')
 
         try:
             self.check_proc_transition(self.target_states[command])
@@ -2816,7 +2831,7 @@ class FarmManager(Component):
                     rootfile_cntr += 1
 
         endtime = time.time()
-        TRACE.INFO(f'-- END: CONFIG transition 002: step lasted {endtime - starttime:.1f} seconds',TRACE_NAME)
+        TRACE.INFO(f'-- END: time spent:{endtime - starttime:.1f} seconds',TRACE_NAME)
 
         return 0  # end of function
 
@@ -2834,7 +2849,7 @@ class FarmManager(Component):
             self.reset_variables()
             self.revert_failed_transition(failed_action)
 
-        self.print_log("i", "do_boot: BOOT transition underway, debug_level=%i" % (self.debug_level))
+        TRACE.INFO(f'BOOT transition underway, self.debug_level:{self.debug_level}',TRACE_NAME)
 
         self.fState = run_control_state.transition("init");
         self.fState.set_completed(0);
@@ -2848,20 +2863,16 @@ class FarmManager(Component):
             subsystem_line = "\nSubsystem %s: " % (ss)
 
             if len(self.subsystems[ss].sources) == 0:
-                subsystem_line += "subsystem source(s): None"
+                subsystem_line += "source(s): None"
             else:
-                subsystem_line += "subsystem source(s): %s" % (
-                    [", ".join(self.subsystems[ss].sources)] 
-                )
+                subsystem_line += "source(s): %s" % ([", ".join(self.subsystems[ss].sources)])
 
             if self.subsystems[ss].destination is None:
-                subsystem_line += ", subsystem destination: None"
+                subsystem_line += ", destination: None"
             else:
-                subsystem_line += ", subsystem destination: %s" % (
-                    self.subsystems[ss].destination
-                )
+                subsystem_line += ", destination: %s" % (self.subsystems[ss].destination)
 
-            self.print_log("d", subsystem_line + "\n", 2)
+            TRACE.INFO(f'subsystem_line:{subsystem_line}',TRACE_NAME)
 
         for ss in sorted(self.subsystems):
             for p in self.procinfos:

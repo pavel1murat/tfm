@@ -4,16 +4,16 @@ import tfm.rc.control.utilities as rcu;
 
 import TRACE ; TRACE_NAME="manage_proc"
 
-def bootfile_name_to_execname(bootfile_name):
-
-    if   "BoardReader"    in bootfile_name: execname = "boardreader"
-    elif "EventBuilder"   in bootfile_name: execname = "eventbuilder"
-    elif "DataLogger"     in bootfile_name: execname = "datalogger"
-    elif "Dispatcher"     in bootfile_name: execname = "dispatcher"
-    elif "RoutingManager" in bootfile_name: execname = "routing_manager"
-    else: assert False
-
-    return execname
+# 2026-02-19-PM #def bootfile_name_to_execname(bootfile_name):
+# 2026-02-19-PM #
+# 2026-02-19-PM #    if   "BoardReader"    in bootfile_name: execname = "boardreader"
+# 2026-02-19-PM #    elif "EventBuilder"   in bootfile_name: execname = "eventbuilder"
+# 2026-02-19-PM #    elif "DataLogger"     in bootfile_name: execname = "datalogger"
+# 2026-02-19-PM #    elif "Dispatcher"     in bootfile_name: execname = "dispatcher"
+# 2026-02-19-PM #    elif "RoutingManager" in bootfile_name: execname = "routing_manager"
+# 2026-02-19-PM #    else: assert False
+# 2026-02-19-PM #
+# 2026-02-19-PM #    return execname
 #------------------------------------------------------------------------------
 # assumes type(self)=FarmManager
 #------------------------------------------------------------------------------
@@ -30,8 +30,8 @@ def launch_procs_on_host(self,host,
 #------------------------------------------------------------------------------
     grepped_lines    = []
     preexisting_pids = rcu.get_pids("\|".join(
-        ["%s.*id:\s\+%s" % (bootfile_name_to_execname(p.name), p.port) for p in self.procinfos if p.host == host]),
-                                host,grepped_lines)
+        ["%s.*id:\s\+%s" % (p.execname, p.port) for p in self.procinfos if p.host == host]),
+                                    host,grepped_lines)
 
     TRACE.INFO(f':001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}\n',TRACE_NAME)
     
@@ -48,17 +48,8 @@ def launch_procs_on_host(self,host,
         
         grepped_lines    = []
         preexisting_pids = rcu.get_pids(
-            "\|".join(
-                [
-                    "%s.*id:\s\+%s"
-                    % (bootfile_name_to_execname(procinfo.name), procinfo.port)
-                    for procinfo in self.procinfos
-                    if procinfo.host == host
-                ]
-            ),
-            host,
-            grepped_lines,
-        )
+            "\|".join( ["%s.*id:\s\+%s" % (p.execname,p.port) for p in self.procinfos if p.host == host]),
+            host, grepped_lines)
 
         TRACE.INFO(f'host:{host} preexisting_pids:{preexisting_pids}',TRACE_NAME)
         
@@ -87,7 +78,6 @@ def launch_procs_on_host(self,host,
         launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
 
     TRACE.INFO(f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host]}',TRACE_NAME)
-#    msg = oname + f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host],}\n{launchcmd}'
     self.print_log("d",'\n'+launchcmd,2)
 
     proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
@@ -145,13 +135,11 @@ def launch_procs_base(self):
                             stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
     proc.wait();
 
-    self.print_log("d","manage_processes_direct::launch_procs_base: command executed in %f sec, rc=%d" % 
-                   (time.time()-start_time,proc.returncode),2)
+    TRACE.INFO(f'command executed in {time.time()-start_time} sec, rc={proc.returncode}',TRACE_NAME)
 
     if proc.returncode != 0:
-        self.print_log("e","\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
-                       % (status, "\n".join(cmds))
-        )
+        TRACE.ERROR('\nstatus:{status} when trying to run the following:\n%s\n' % ("\n".join(cmds)),TRACE_NAME)
+        
         self.print_log("e","STDOUT output: \n%s" % proc.stdout)
         self.print_log("e","STDERR output: \n%s" % proc.stderr)
 
@@ -227,7 +215,8 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host[p.host].append(f'source {self.daq_setup_script} {spack_env} >> {self.launch_attempt_files[p.host]} 2>&1 ')
 #            launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
 #------------------------------------------------------------------------------
-# ##TODO: this line is dangerous, don't need external env vars to be passed... get rid of it
+# ##TODO: minimize the use of external env vars .. a process gets flattened FHICL file,
+# why would it need a path?
 #------------------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
 
@@ -257,7 +246,7 @@ def launch_procs_base(self):
         base_launch_cmd = (
             '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %d"'
             % ( prepend,
-                bootfile_name_to_execname(p.name),
+                p.execname,
                 p.port,
                 p.rank,
                 p.label,
@@ -432,9 +421,7 @@ def get_pid_for_process_base(self, procinfo):
 
     assert procinfo in self.procinfos
 
-    greptoken = (
-        bootfile_name_to_execname(procinfo.name) + " -c .*" + procinfo.port + ".*"
-    )
+    greptoken = (procinfo.execname + " -c .*" + procinfo.port + ".*")
 
     grepped_lines = []
     pids = rcu.get_pids(greptoken, procinfo.host, grepped_lines)
@@ -505,7 +492,7 @@ def mopup_process_base(self, procinfo):
         # Mopup the ssh call on this side
         ssh_grepstring = "ssh.*%s.*%s -c.*%s" % (
             procinfo.host,
-            bootfile_name_to_execname(procinfo.name),
+            procinfo.execname,
             procinfo.label,
         )
         pids = rcu.get_pids(ssh_grepstring)
@@ -582,14 +569,12 @@ def get_pids_and_labels_on_host(self,host):
     # breakpoint()
     greptoken = (
         "[0-9]:[0-9][0-9]\s\+.*\(%s\).*application_name.*partition_number:\s*%s"
-        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in self.procinfos])),
+        % ("\|".join(set([p.execname for p in self.procinfos])),
             self.partition())
     )
     sshgreptoken = (
         "[0-9]:[0-9][0-9]\s\+ssh.*\(%s\).*application_name.*partition_number:\s*%s"
-        % ("\|".join(set([bootfile_name_to_execname(p.name) for p in self.procinfos])),
-            self.partition())
-    )
+        % ("\|".join(set([p.execname for p in self.procinfos])),self.partition()))
 
     grepped_lines = []
     pids = rcu.get_pids(greptoken, host, grepped_lines)
