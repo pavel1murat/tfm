@@ -128,7 +128,6 @@ class Procinfo(object):
 #          data network, where mu2edaq09 has the name of mu2edaq09-ctrl
 #------------------------------------------------------------------------------
     def rpc_server(self):
-#        return self.host+'-data:'+self.port;
         return self.host+':'+self.port;
 
     def print(self,text = None):
@@ -159,70 +158,6 @@ class Procinfo(object):
                 return True
             return False
 
-# 2026-02-19-PM #    def recursive_include(self, filename):
-# 2026-02-19-PM #
-# 2026-02-19-PM #        if self.fhicl is not None:
-# 2026-02-19-PM #            for line in open(filename).readlines():
-# 2026-02-19-PM #                
-# 2026-02-19-PM #                if "#include" not in line:
-# 2026-02-19-PM #                    self.fhicl_used += line
-# 2026-02-19-PM #                else:
-# 2026-02-19-PM #                    res = re.search(r"^\s*#.*#include", line)
-# 2026-02-19-PM #
-# 2026-02-19-PM #                    if res:
-# 2026-02-19-PM #                        self.fhicl_used += line
-# 2026-02-19-PM #                        continue
-# 2026-02-19-PM #
-# 2026-02-19-PM #                    res = re.search(r"^\s*#include\s+\"(\S+)\"", line)
-# 2026-02-19-PM #
-# 2026-02-19-PM #                    if not res:
-# 2026-02-19-PM #                        raise Exception(
-# 2026-02-19-PM #                            make_paragraph(
-# 2026-02-19-PM #                                "Error in Procinfo::recursive_include: "
-# 2026-02-19-PM #                                'unable to parse line "%s" in %s' % (line, filename)
-# 2026-02-19-PM #                            )
-# 2026-02-19-PM #                        )
-# 2026-02-19-PM #
-# 2026-02-19-PM #                    included_file = res.group(1)
-# 2026-02-19-PM #
-# 2026-02-19-PM #                    if included_file[0] == "/":
-# 2026-02-19-PM #                        if not os.path.exists(included_file):
-# 2026-02-19-PM #                            raise Exception(
-# 2026-02-19-PM #                                make_paragraph(
-# 2026-02-19-PM #                                    "Error in "
-# 2026-02-19-PM #                                    "Procinfo::recursive_include: "
-# 2026-02-19-PM #                                    "unable to find file %s included in %s"
-# 2026-02-19-PM #                                    % (included_file, filename)
-# 2026-02-19-PM #                                )
-# 2026-02-19-PM #                            )
-# 2026-02-19-PM #                        else:
-# 2026-02-19-PM #                            self.recursive_include(included_file)
-# 2026-02-19-PM #                    else:
-# 2026-02-19-PM #                        found_file = False
-# 2026-02-19-PM #
-# 2026-02-19-PM #                        for dirname in self.ffp:
-# 2026-02-19-PM #                            if (
-# 2026-02-19-PM #                                os.path.exists(dirname + "/" + included_file)
-# 2026-02-19-PM #                                and not found_file
-# 2026-02-19-PM #                            ):
-# 2026-02-19-PM #                                self.recursive_include(
-# 2026-02-19-PM #                                    dirname + "/" + included_file
-# 2026-02-19-PM #                                )
-# 2026-02-19-PM #                                found_file = True
-# 2026-02-19-PM #
-# 2026-02-19-PM #                        if not found_file:
-# 2026-02-19-PM #
-# 2026-02-19-PM #                            ffp_string = ":".join(self.ffp)
-# 2026-02-19-PM #
-# 2026-02-19-PM #                            raise Exception(
-# 2026-02-19-PM #                                make_paragraph(
-# 2026-02-19-PM #                                    "Error in Procinfo::recursive_include: "
-# 2026-02-19-PM #                                    "unable to find file %s in list of "
-# 2026-02-19-PM #                                    "the following fhicl_file_paths: %s"
-# 2026-02-19-PM #                                    % (included_file, ffp_string)
-# 2026-02-19-PM #                                )
-# 2026-02-19-PM #                            )
-# 2026-02-19-PM #        return
 #-------^----------------------------------------------------------------------
 #
 #---v--------------------------------------------------------------------------
