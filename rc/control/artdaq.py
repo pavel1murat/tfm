@@ -203,8 +203,9 @@ class EventBuilder(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
-        self._type    = EVENT_BUILDER;
-        self.execname = 'eventbuilder'
+        self._type              = EVENT_BUILDER;
+        self.execname           = 'eventbuilder'
+        self.art_analyzer_count = 1;                         # make 1 the default
         
     def init_connections(self):      # p = self
         TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
@@ -373,6 +374,15 @@ class EventBuilder(Procinfo):
                 s      = f'{key}: {self.init_fragment_count}\n';
                 new_text.append(s);
                 continue;
+
+            pattern = r'(?:[\w-]+\.)*art_analyzer_count'
+            match = re.search(pattern,line)
+            if (match):
+                key = match.group(0);
+                # in this case, replaces
+                s      = f'{key}: {self.art_analyzer_count}\n';
+                new_text.append(s);
+                continue;
     
             new_text.append(line);
 
@@ -406,7 +416,7 @@ class DataLogger(Procinfo):
 #------------------------------------------------------------------------------
     def init_connections(self):
 
-        print(f'--- p.label:{self.label} p.subsystem_id:{self.subsystem_id}');
+        TRACE.INFO(f'--- p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
         # DL has to have inputs from either own EBs or from EBs other subsystems
         # start from checking inputs
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
@@ -424,7 +434,7 @@ class DataLogger(Procinfo):
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_event_builders()
                     for eb in list_of_ebs:
-                        self.init_fragment_count += 1;
+                        self.init_fragment_count += eb.n_filter_processes;
                         
                         if (eb.max_event_size_bytes > self.max_event_size_bytes):
                             self.max_event_size_bytes =  eb.max_event_size_bytes
@@ -433,15 +443,18 @@ class DataLogger(Procinfo):
                         if (not eb in self.list_of_sources):
                             self.list_of_sources.append(eb);
                             eb.list_of_destinations.append(self);
+                            
+            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
 #-------------------------------^----------------------------------------------
 # no source subsystems or those start from DLs - look for local inputs
+# counting logic: an init fragment per each art process
 #-------v----------------------------------------------------------------------
         else:
             # subsystem has no official sources, there should be local EB's
             list_of_ebs = s.list_of_event_builders()
             if (len(list_of_ebs) > 0):
                 for eb in list_of_ebs:
-                    self.init_fragment_count += 1;
+                    self.init_fragment_count += eb.art_analyzer_count;
                     if (eb.max_event_size_bytes > self.max_event_size_bytes):
                         self.max_event_size_bytes =  eb.max_event_size_bytes
                         
@@ -453,6 +466,7 @@ class DataLogger(Procinfo):
                 # subsystem has no own EB's : trouble
                 raise Exception('DL: no EBs in the subsystem');
 
+            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
 #------------------------------------------------------------------------------
 # now - destinations ... not done yet
 #-------v----------------------------------------------------------------------
@@ -520,7 +534,7 @@ class DataLogger(Procinfo):
             if (match):
                 key = match.group(0);
                 # in this case, replaces
-                s      = f'{key}: {self.max_event_size_bytes}\n';
+                s      = f'{key}: {self.max_event_size_bytes+800000}\n';
                 new_text.append(s);
                 continue;
 

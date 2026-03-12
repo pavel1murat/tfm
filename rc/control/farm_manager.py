@@ -415,7 +415,7 @@ class FarmManager(Component):
             
             TRACE.DEBUG(0,f'node_artdaq_path:{node_artdaq_path}',TRACE_NAME)
             enabled = self.client.odb_get(node_artdaq_path+'/Enabled')
-            TRACE.DEBUG(0,f'short_node_name:{short_node_name} node_artdaq_path:{node_artdaq_path} enabled:{enabled}')
+            TRACE.DEBUG(0,f'short_node_name:{short_node_name} node_artdaq_path:{node_artdaq_path} enabled:{enabled}',TRACE_NAME)
             if (enabled == 0):  continue ;
 
             node_artdaq_dir = self.client.odb_get(node_artdaq_path)
@@ -444,6 +444,7 @@ class FarmManager(Component):
                     if (name == "AllowedProcessors"): allowed_processors = str(value)
                     if (name == "Target"):            target             = str(value)                        
                     if (name == "Prepend"):           prepend            = str(value)
+                    if (name == "ArtAnalyzerCount"):  art_analyzer_count = int(value)
 
                 TRACE.DEBUG(0,f'process:{key_name} rank:{rank} subsystem_id:{subsystem_id} target:{target} prepend:{prepend} allowed_processors:{allowed_processors}',TRACE_NAME)
                 # check the process subsystem - that could be disabled independently
@@ -463,7 +464,7 @@ class FarmManager(Component):
 # PM: this naming is something to get rid of - a Procinfo thing has a type, so a
 # name is an overkill ... later...
 #------------------------------------------------------------------------------
-                TRACE.DEBUG(0,f'label:{key_name} rank:{rank} port:{xmlrpc_port} fcl_fn:{fcl_fn}')
+                TRACE.DEBUG(0,f'label:{key_name} rank:{rank} port:{xmlrpc_port} fcl_fn:{fcl_fn}',TRACE_NAME)
 
                 if   (key_name[0:2] == 'br') :
                     if ('DTC' in subdir2.keys()):
@@ -540,6 +541,8 @@ class FarmManager(Component):
                                             target             = "none",
                                             fhicl              = fcl_fn,
                                             prepend            = "")
+                    if (art_analyzer_count):
+                        p.art_analyzer_count = art_analyzer_count
 
                     TRACE.INFO(f'created new eventbuilder label:{key_name}',TRACE_NAME)
 
@@ -590,7 +593,7 @@ class FarmManager(Component):
         self.list_of_subsystems = [];              # a list, not a dict... prepare for a transition
         
         path                    = self.daq_conf_path + "/Subsystems"
-        TRACE.INFO(f'-- START: path:{path}')
+        TRACE.INFO(f'-- START: path:{path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # expect only subsystem definitions in this subdirectory
 #------------------------------------------------------------------------------
@@ -946,7 +949,7 @@ class FarmManager(Component):
                     "FarmManager will exit. Look at the messages above, make any necessary "
                     "changes, and restart.\n")
             )
-            TRACE.TRACE(7,f"An exception was thrown when trying to read FarmManager settings;","FarmManager")
+            TRACE.TRACE(7,f"An exception was thrown when trying to read FarmManager settings;",TRACE_NAME)
             sys.exit(1)
 
         if self.use_messagefacility:
@@ -2117,7 +2120,7 @@ class FarmManager(Component):
         
         timeout = timeout_dict[p.name]
 
-        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1")
+        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
         self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
 
@@ -2334,7 +2337,7 @@ class FarmManager(Component):
                     max_time        = proc_endtimes[p.label] - proc_starttimes[p.label]
                     slowest_process = p.label
 
-            TRACE.INFO(f'SUCCESS, longest individual transition: {slowest_process} , {max_time:%.1f} seconds')
+            TRACE.INFO(f'SUCCESS, longest individual transition: {slowest_process} , {max_time:%.1f} seconds',TRACE_NAME)
 
         try:
             self.check_proc_transition(self.target_states[command])
