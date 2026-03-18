@@ -656,7 +656,18 @@ class FarmManager(Component):
         
         return
 
-
+#-------^----------------------------------------------------------------------
+# clear status of all processes in ODB to make everything look green
+#---v--------------------------------------------------------------------------
+    def clear_farm_status(self):
+        TRACE.INFO('-- START',TRACE_NAME)
+        for p in self.procinfos:
+            status = self.get_process_status(p);
+            TRACE.INFO(f'p.name:{p.name} p:status:{status}',TRACE_NAME)
+            if ( status != 0):
+                self.set_process_status(p,0);
+        TRACE.INFO('-- END',TRACE_NAME)
+        return
 #-------^----------------------------------------------------------------------
 # finally, the FarmManager constructor 
 # P.Murat: 'config_dir' - a single directory with all configuration and FCL files
