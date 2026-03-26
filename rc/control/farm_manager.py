@@ -3245,20 +3245,20 @@ class FarmManager(Component):
         # time.sleep(1);   # PM : I inserted that, was that really needed ? 
         self.fState = run_control_state.state("running")
 
-        self.print_log("i","START transition 005: complete, run=%d" % (self.run_number))
+        TRACE.INFO(f'-- END: START transition run:{self.run_number}',TRACE_NAME)
         return
 #------------------------------------------------------------------------------
 # STOP the run
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
-        self.print_log('i',f'-- START: STOP transition run:{self.run_number}')
+        TRACE.INFO(f'-- START: STOP transition run:{self.run_number}',TRACE_NAME)
 
         self.fState = run_control_state.transition("stop")
         self.fState.set_completed(0);
         run_stop_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
         self.save_metadata_value("FarmManager stop time",run_stop_time);
 
-        self.stop_datataking() # does nothing for now
+        self.stop_datataking()                        # does nothing for now
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_stop)
@@ -3266,13 +3266,14 @@ class FarmManager(Component):
             try:
                 self.do_command("Stop")
             except Exception:
+                TRACE.ERROR(f'failed to execute do_command("Stop")',TRACE_NAME)
                 self.print_log("d", traceback.format_exc(), 2)
                 self.alert_and_recover(
                     ('An exception was thrown when attempting to send the "stop" transition '
                      'to the artdaq processes; see messages above for more info'))
                 return
 
-        self.print_log('i','after do_command("Stop")')
+        TRACE.INFO(f'after do_command("Stop")',TRACE_NAME)
         self.execute_trace_script ("stop"    )
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
@@ -3283,8 +3284,9 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------
-        self.print_log('i','before do_command("Shutdown")')
+        TRACE.INFO(f'before do_command("Shutdown")',TRACE_NAME)
         self.do_command("Shutdown")
+        TRACE.INFO(f'after do_command("Shutdown")',TRACE_NAME)
         self.print_log('i','after do_command("Shutdown")')
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
@@ -3293,7 +3295,7 @@ class FarmManager(Component):
         time.sleep(1);
         self.fState = run_control_state.state("stopped")
 
-        self.print_log("i","-- END: STOP transition run=%06d" % (self.run_number))
+        TRACE.INFO(f'-- END: STOP transition run:{self.run_number}',TRACE_NAME)
         return
 #------------------------------------------------------------------------------
 #  SHUTDOWN transition - complete everything and exit
