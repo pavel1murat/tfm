@@ -401,6 +401,8 @@ class FarmManager(Component):
         TRACE.INFO(f'-- START: nodes_path:{nodes_path}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # in this directory, expect only nodes (labels)
+# 'self.artdaq' contains a list of nodes, which are enabled node in a running configuration
+# see artdaq.py
 #-------v----------------------------------------------------------------------
         for short_node_name in nodes_dir.keys():
             node_path    = nodes_path+'/'+short_node_name;
@@ -2741,9 +2743,10 @@ class FarmManager(Component):
 #          pmt is the only one left ..
 #---v--------------------------------------------------------------------------
     def make_logfile_dirs(self):
+        TRACE.INFO(f'-- START:',TRACE_NAME)
         logdir_commands_to_run_on_host = []
         permissions                    = "0775"
-        logdir_commands_to_run_on_host.append("mkdir -p -m %s %s" % (permissions, self.log_directory))
+        logdir_commands_to_run_on_host.append(f"mkdir -p -m {permissions} {self.log_directory}")
 
         for subdir in ["pmt"]:
             logdir_commands_to_run_on_host.append(
@@ -2754,9 +2757,9 @@ class FarmManager(Component):
             logdircmd = rcu.construct_checked_command(logdir_commands_to_run_on_host)
 
             if not rcu.host_is_local(host):
-                logdircmd = "timeout %d ssh -K -f %s '%s'" % (self.ssh_timeout_in_seconds,host,logdircmd)
+                logdircmd = f"timeout {self.ssh_timeout_in_seconds} ssh -K -f {host} '{logdircmd}'"
 
-            self.print_log("i", "farm_manager::make_logfile_dirs 004")
+            TRACE.INFO(f'checkpoint 004',TRACE_NAME)
             self.print_log("d", "farm_manager::make_logfile_dirs executing:\n%s" % (logdircmd),2)
 
             proc = subprocess.Popen(
@@ -2795,6 +2798,8 @@ class FarmManager(Component):
                      "this is likely due either to an ssh issue or a directory permissions issue")
                     % (host)
                 )
+
+        TRACE.INFO(f'-- END:',TRACE_NAME)
         return  # marks end of function
 
 #-------^----------------------------------------------------------------------
