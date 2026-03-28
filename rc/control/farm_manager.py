@@ -662,7 +662,7 @@ class FarmManager(Component):
 # clear status of all processes in ODB to make everything look green
 #---v--------------------------------------------------------------------------
     def clear_farm_status(self):
-        TRACE.INFO('-- START',TRACE_NAME)
+        TRACE.INFO(f'-- START self.procinfos:{self.procinfos}',TRACE_NAME)
         rc = 0
         for p in self.procinfos:
             status = self.get_process_status(p);
@@ -3046,7 +3046,7 @@ class FarmManager(Component):
         self.print_log("i", "CONFIG transition 007: reformatting FHICL done (%.1f seconds)." % (time.time() - starttime),2)
 
         starttime = time.time()
-        self.print_log("i", "CONFIG transition 008: bookkeeping the FHiCL documents...", 2)
+        TRACE.INFO("CONFIG transition 008: bookkeeping the FHiCL documents...",TRACE_NAME)
 
         try:
             self.bookkeeping_for_fhicl_documents()

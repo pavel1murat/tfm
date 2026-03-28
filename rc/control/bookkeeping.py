@@ -94,7 +94,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             )
         )
     
-    self.print_log("i", f'step 1: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 1: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 #------------------------------------------------------------------------------
 # Start calculating values (fragment counts, memory sizes, etc.)
@@ -151,9 +151,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # PM 2026-02-03                        % (procinfo.label))
 # PM 2026-02-03                )
     # debugging
-    dl = self.find_process("dl01")
-    print('------------------- 00001 DL01 test FCL');
-    print(dl.fhicl_used);
+    # dl = self.find_process("dl01")
+    # print('------------------- 00001 DL01 test FCL');
+    # print(dl.fhicl_used);
     
     self.print_log("i", f'step 2: took {time.time() - starttime} sec');
     starttime = time.time();
