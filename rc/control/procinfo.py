@@ -134,7 +134,7 @@ class Procinfo(object):
         if (text):
             print(f'{text}');
             
-        print(f'procinfo: subsystem_id:{self.subsystem_id:5} type:{self._type} label:{self.label:6} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
+        print(f'procinfo: ss_id:{self.subsystem_id:5} type:{self._type} label:{self.label:4} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
 
     def __lt__(self, other):
         if self.name != other.name:
