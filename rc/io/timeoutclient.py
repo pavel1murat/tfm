@@ -1,5 +1,8 @@
-from   tfm.rc.compatibility import xmlrpclib
-from   tfm.rc.compatibility import httplib
+#
+import xmlrpc.client as     xmlrpclib
+import http.client   as     httplib
+# from   tfm.rc.compatibility import xmlrpclib
+# from   tfm.rc.compatibility import httplib
 import socket
 import sys
 

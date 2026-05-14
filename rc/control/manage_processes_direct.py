@@ -4,6 +4,13 @@ import tfm.rc.control.utilities as rcu;
 
 import TRACE ; TRACE_NAME="manage_proc"
 
+#------------------------------------------------------------------------------
+# format (and location) of the PMT logfile - 
+# includes directory, run_number, host, user, partition (in integer), and a timestamp
+#------------------------------------------------------------------------------
+def pmt_log_filename_format(self):
+    return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
+
 # 2026-02-19-PM #def bootfile_name_to_execname(bootfile_name):
 # 2026-02-19-PM #
 # 2026-02-19-PM #    if   "BoardReader"    in bootfile_name: execname = "boardreader"
@@ -118,19 +125,23 @@ def launch_procs_on_host(self,host,
 def launch_procs_base(self):
     TRACE.INFO('--START:',TRACE_NAME)
     
-    mf_fcl = rcu.obtain_messagefacility_fhicl(self)
-    self.create_setup_fhiclcpp_if_needed()
+# 2025-05-11 PM    mf_fcl = rcu.generate_messagefacility_fhicl(self)    # writes the file and returns its name...
+# 2025-05-11 PM    self.create_setup_fhiclcpp_if_needed()            
+# 2025-05-11 PM
 
     cmds = []
+    
     cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
                 % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
+    
     cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi")
-    cmds.append("fhicl-dump -l $dump_arg -c %s" % (rcu.get_messagefacility_template_filename()))
+    cmds.append("fhicl-dump -l $dump_arg -c %s" % (self.mf_template_fn))
 
     cmd = "; ".join(cmds)
 
     self.print_log("d","manage_processes_direct::launch_procs_base 001: executing \n%s" % (cmd),2)
     start_time = time.time()
+    
     proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                             stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
     proc.wait();
@@ -146,25 +157,30 @@ def launch_procs_base(self):
         self.print_log("e",rcu.make_paragraph(
             ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
              "one or more syntax errors, or there was a problem running fhicl-dump")
-            % (rcu.get_messagefacility_template_filename()))
+            % (rcu.get_mf_template_fn))
         )
 
         raise Exception(
             ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
              "one or more syntax errors (Or there was a problem running fhicl-dump)")
-            % (rcu.get_messagefacility_template_filename())
+            % (self.get_mf_template_fn)
         )
 #------------------------------------------------------------------------------
-# copy message facility FCL to each remote host
+# if the MessageFacility FCL is stored in config dir, then each frontend can copy it
+# I think it is a good idea to also store the MF fcl in run_records directory
+# however, for now just copy message facility FCL to each remote host - its assumed location is in /tmp/
 #------------------------------------------------------------------------------
+    TRACE.INFO(f'start copying MF FCL everywhere',TRACE_NAME)
     for host in set([procinfo.host for procinfo in self.procinfos]):
         if not rcu.host_is_local(host):
-            cmd    = f"scp -p {mf_fcl}  {host}:{mf_fcl}"
+            cmd    = f"scp -p {self.mf_fcl_fn}  {host}:{self.mf_fcl_fn}"
             status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
 
             if status != 0:
                 raise Exception('ERROR in %s executing "%s"' % (launch_procs_base.__name__, cmd))
+
+    TRACE.INFO(f'done copying MF FCL everywhere',TRACE_NAME)
 #------------------------------------------------------------------------------
 # Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
 # Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
@@ -173,7 +189,7 @@ def launch_procs_base(self):
     launch_commands_to_run_on_host_background = {}
     launch_commands_on_host_to_show_user      = {}
 
-    self.launch_attempt_files                 = {}
+    self.launch_attempt_files                 = {} # pmt logfiles
 
     for p in self.procinfos:
 #------------------------------------------------------------------------------
@@ -183,10 +199,17 @@ def launch_procs_base(self):
         
         if p.host == "localhost":
             p.host = socket.gethostname(); ## rcu.get_short_hostname()
-            
+#------------------------------------------------------------------------------
+# this is a "smart" way to define env vars only once
+# a normal one would do it exactly the opposite way :
+# - loop over hosts enabled in the configuration,
+# - define the env vars,
+# - and then loop over the processes enabled on that node...
+#------------------------------------------------------------------------------
         if not p.host in launch_commands_to_run_on_host:
 #------------------------------------------------------------------------------
 # form the name of the PMT log file, assume know the run number
+# 'self.launch_attempt_files[p.host]' is the filename then ... oh, well
 #------------------------------------------------------------------------------
             fn_format = self.pmt_log_filename_format()
             self.launch_attempt_files[p.host] =  fn_format % (
@@ -195,6 +218,10 @@ def launch_procs_base(self):
             launch_commands_to_run_on_host           [p.host] = []
             launch_commands_to_run_on_host_background[p.host] = []
             launch_commands_on_host_to_show_user     [p.host] = []
+
+#------------------------------------------------------------------------------
+# form commands to be executed to launch ARTDAQ processes
+#------------------------------------------------------------------------------
 
             launch_commands_to_run_on_host[p.host].append("set +C")
             launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
@@ -213,7 +240,6 @@ def launch_procs_base(self):
             spack_env = s.stdout.strip().split()[-1];
             TRACE.INFO(f'spack_env:{spack_env}',TRACE_NAME)
             launch_commands_to_run_on_host[p.host].append(f'source {self.daq_setup_script} {spack_env} >> {self.launch_attempt_files[p.host]} 2>&1 ')
-#            launch_commands_to_run_on_host[p.host].append("source %s >> %s 2>&1 " % (self.daq_setup_script, self.launch_attempt_files[p.host]))
 #------------------------------------------------------------------------------
 # ##TODO: minimize the use of external env vars .. a process gets flattened FHICL file,
 # why would it need a path?
@@ -222,14 +248,19 @@ def launch_procs_base(self):
 
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % mf_fcl)
+            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % self.mf_fcl_fn)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PARTITION_NUMBER=%s"%self.partition())
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PORTS_PER_PARTITION=%s"%self.ports_per_partition)
             launch_commands_to_run_on_host[p.host].append("export ARTDAQ_BASE_PORT_NUMBER=%s"%self.base_port_number)
-            launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
+
+#------------------------------------------------------------------------------
+# done with the env vars... why would one need to check availability of the BR?
+#------------------------------------------------------------------------------
+# 2025-05-09 PM            launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
 #------------------------------------------------------------------------------
 # Assume if this works, eventbuilder, etc. are also there
-# with spack, all executable commands should be available from the $PATH
+# with spack, all executable commands should be available from the $PATH (mostly, $PACK_VIEW/bin)
+# cleanup of the shared memory is a good thing
 #-----------v------------------------------------------------------------------
             launch_commands_to_run_on_host[p.host].append(
                 "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["SPACK_VIEW"],self.partition(),self.launch_attempt_files[p.host])
@@ -242,17 +273,16 @@ def launch_procs_base(self):
                 else:
                     launch_commands_on_host_to_show_user[p.host].append(res.group(1))
 
-        prepend = p.prepend.strip('"')
+        prepend         = p.prepend.strip('"')
         base_launch_cmd = (
-            '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %d"'
-            % ( prepend,
-                p.execname,
-                p.port,
-                p.rank,
-                p.label,
-                self.partition())
-        )
-        
+                        '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %d"'
+                        % ( prepend,
+                            p.execname,
+                            p.port,
+                            p.rank,
+                            p.label,
+                            self.partition())
+                    )
         if p.allowed_processors is not None:
             base_launch_cmd = f'taskset --cpu-list {p.allowed_processors} {base_launch_cmd}'
         elif self.allowed_processors is not None:
@@ -265,8 +295,10 @@ def launch_procs_base(self):
         launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
 
 #------------------------------------------------------------------------------
+# ok, a list of commands is formed 
 # execute commands - submit jobs, one [long] ssh command  string per host
 #------------------------------------------------------------------------------
+    TRACE.INFO('start python-threaded ssh submission of the jobs... beware of GIL',TRACE_NAME)
     threads = []
     for host in launch_commands_to_run_on_host:
         t = rcu.RaisingThread(
@@ -284,6 +316,14 @@ def launch_procs_base(self):
 
     for t in threads:
         t.join()
+
+#------------------------------------------------------------------------------
+# provision for the next step: 
+# generate job submission script for given configuration and save it to the config directory
+# also want to copy it to the records directory
+# so far, not used
+#------------------------------------------------------------------------------
+    self.generate_job_submission_script();
 
     TRACE.INFO('--END: submission threads finished',TRACE_NAME)
     

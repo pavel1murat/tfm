@@ -1,7 +1,8 @@
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-from   tfm.rc.compatibility    import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+# from   tfm.rc.compatibility    import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+from   xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 from   tfm.rc.io.timeoutclient import TimeoutServerProxy
 from   tfm.rc.threading        import threaded
 

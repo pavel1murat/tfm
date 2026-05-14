@@ -1,10 +1,19 @@
 #!/bin/env/python
 
 import os, sys, argparse, glob, inspect, re, subprocess
-
-from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
+import tfm.rc.control.utilities as rcu
+from   tfm.rc.control.procinfo  import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
 
 import TRACE ; TRACE_NAME='artdaq'
+#------------------------------------------------------------------------------
+# returns the name like /scratch/mu2e/mu2etrk/daquser_002_v001/logs/pmt/pmt_050030_${nodename}_mu2etrk_partition_11_20260513154539
+#------------------------------------------------------------------------------
+def pmt_log_fn(log_directory,run_number,partition):
+    TRACE.INFO(f'-- START: run_number:{run_number} user:{os.environ.get("USER")} partition:{partition}');
+    fn = f'{log_directory}/pmt/pmt_{run_number:06d}_${{nodename}}_{os.environ.get("USER")}_partition_{partition:02d}_{rcu.date_and_time_filename()}'
+    TRACE.INFO(f'-- END: fn:{fn}')
+    return fn
+
 #------------------------------------------------------------------------------
 # list_of_processes is either a p.list_of_destinations or a p.list_of_sources
 #------------------------------------------------------------------------------
@@ -68,19 +77,17 @@ def source_string(p,transfer_plugin):
 #------------------------------------------------------------------------------
 
 class Node:
-
+    
     def __init__(self, name, node_artdaq_odb_path):
         self.name                 = name;
         self.node_artdaq_odb_path = node_artdaq_odb_path;
         self.list_of_processes    = []
 
     def add_process(self,p):
-        self.list_of_processes.append(p);
-
+        self.list_of_processes.append(p);        
 
 #------------------------------------------------------------------------------
 class Artdaq:
-
     def __init__(self):
         self.list_of_nodes = []
 
@@ -434,7 +441,7 @@ class DataLogger(Procinfo):
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_event_builders()
                     for eb in list_of_ebs:
-                        self.init_fragment_count += eb.n_filter_processes;
+                        self.init_fragment_count += eb.art_analyzer_count;
                         
                         if (eb.max_event_size_bytes > self.max_event_size_bytes):
                             self.max_event_size_bytes =  eb.max_event_size_bytes

@@ -18,7 +18,6 @@ import threading, time, traceback
 import  TRACE
 TRACE_NAME="farm_manager"
 
-import tfm.rc.control.artdaq
 import midas.client
 #------------------------------------------------------------------------------
 # debugging printout
@@ -186,6 +185,14 @@ class FarmManager(Component):
         self.subsystems         = {}            # don't really need a dict
         self.list_of_subsystems = []            # prepare for a transition
         return
+
+#------------------------------------------------------------------------------
+# format (and location) of the PMT logfile - 
+# includes directory, run_number, host, user, partition (in integer), and a timestamp
+#---v--------------------------------------------------------------------------
+    def pmt_log_filename_format(self):
+        return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
+
 #------^-----------------------------------------------------------------------
 # want run number to be always printed with 6 digits
 # called from get_config_info_base (config_functions_local.py)
@@ -220,13 +227,6 @@ class FarmManager(Component):
 #                return p;
 
 #        return None
-
-#------------------------------------------------------------------------------
-# format (and location) of the PMT logfile - 
-# includes directory, run_number, host, user, partition (in integer), and a timestamp
-#---v--------------------------------------------------------------------------
-    def pmt_log_filename_format(self):
-        return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
 
     def odb_cmd_path(self):
         return self._cmd_path;
@@ -659,6 +659,103 @@ class FarmManager(Component):
         return
 
 #-------^----------------------------------------------------------------------
+# update FCLs - substitute the parameter defaults with values calculated for active configuration
+#---v--------------------------------------------------------------------------
+    def write_updated_fcls(self):
+        TRACE.DEBUG(0,f'-- START',TRACE_NAME)
+
+        tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
+        for p in self.procinfos:
+#------------------------------------------------------------------------------
+# to decouple the update step, need to pass the transfer plugin and the output directory
+#------------------------------------------------------------------------------
+            updated_fcl = p.update_fhicl(self.transfer);
+#-----------^-----------------------------------------------------------------
+#  write updated FCL but not yet flattened to /tmp, to create input for fhicl-dump
+#  for checking
+#  TODO: make sure that the directory exists
+#-----------v------------------------------------------------------------------
+            new_fn = f'{tmp_dir}/{p.label}.fcl'
+            TRACE.INFO(f'p.name:{p.name} new_fn:{new_fn}',TRACE_NAME)
+            with open(new_fn,'w') as f:
+                f.writelines(line for line in updated_fcl)
+#------------------------------------------------------------------------------
+# step 2 : flatten the FCL to see if there are errors to handle,
+#------------------------------------------------------------------------------
+            res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
+            if (res.returncode != 0):
+                msg = f'fhicl-dump {new_fn} failed with rc:{res.returncode}'
+                TRACE.ERROR(msg,TRACE_NAME)
+                self.client.msg(msg,1,"farm_manager");
+                self.set_process_status(p,-1)
+                self.set_status(-1)
+                # serious error, return at this point
+                return;
+            else:
+                p.fhicl      = new_fn;
+                p.fhicl_used = res.stdout;
+
+        TRACE.DEBUG(0,f'-- END',TRACE_NAME)
+            
+#-------^----------------------------------------------------------------------
+# the script is to be sourced by the processes spawned by the node_frontends
+# assume, (the Mu2e case) that all trigger farm nodes have common home area
+# need to know the run number - can't call from the constructor
+#---v--------------------------------------------------------------------------
+    def generate_job_submission_script(self):
+
+        fn = f'{self.config_dir}/start_artdaq_processes.sh'
+        
+        with open(fn,'w') as f:
+            # first - environment variables
+            f.write(f'# the file is auto-generated, don''t edit\n')
+            f.write(f'set +C\n')
+            f.write('source $MU2E_DAQ_DIR/config/scripts/auto_setup.sh\n')
+            # some variables may be redefined, but unlikely
+            f.write(f'export MIDAS_SERVER_HOST={self.midas_server_host}\n');
+            f.write(f'export MIDAS_EXPT_NAME={os.environ.get("MIDAS_EXPT_NAME")}\n');
+            f.write(f'export FHICL_FILE_PATH={os.environ.get("FHICL_FILE_PATH")}\n')  # should be already defined
+            f.write(f'export ARTDAQ_RUN_NUMBER={self.run_number}\n')
+            f.write(f'export ARTDAQ_LOG_ROOT={self.log_directory}\n')
+            f.write(f'export ARTDAQ_LOG_FHICL={self.mf_fcl_fn}\n')
+            f.write(f'export ARTDAQ_PARTITION_NUMBER={self.partition}\n')
+            f.write(f'export ARTDAQ_PORTS_PER_PARTITION={self.ports_per_partition}\n')
+            f.write(f'export ARTDAQ_BASE_PORT_NUMBER={self.base_port_number}\n')
+            
+            f.write('\nnodename=`hostname -s`\n')
+            # pmt_log_fn includes ${nodename}
+            pmt_log_fn = artdaq.pmt_log_fn(self.log_directory,self.run_number,self.partition())
+            f.write(f'\npmt_log_fn={pmt_log_fn}\n')
+            f.write(f'{os.environ["SPACK_VIEW"]}/bin/mopup_shmem.sh {self.partition()} --force >> $pmt_log_fn 2>&1\n')
+#------------------------------------------------------------------------------
+# loop over enabled nodes - only enabled nodes made it into the list
+#------------------------------------------------------------------------------
+            first = 1;
+            for node in self.artdaq.list_of_nodes:
+                if (first == 1):
+                    f.write(f'\nif   [ nodename == "{node.name}" ] ; then\n')
+                    first = 0;
+                else:
+                    f.write(f'elif [ nodename == "{node.name}" ] ; then\n')
+
+                for p in node.list_of_processes:
+
+                    base_launch_cmd = f'nohup {p.execname:12} -c "id: {p.port} commanderPluginType: xmlrpc rank: {p.rank} application_name: {p.label} partition_number: {self.partition()}"'
+        
+                    if p.allowed_processors is not None:
+                        base_launch_cmd = f'taskset --cpu-list {p.allowed_processors} {base_launch_cmd}'
+                    elif self.allowed_processors is not None:
+                        base_launch_cmd = f"taskset --cpu-list {self.allowed_processors} {base_launch_cmd}"
+
+                    # base_launch_cmd = "valgrind --tool=callgrind %s" % (base_launch_cmd)
+                    launch_cmd = f'{base_launch_cmd} >> $pmt_log_fn 2>&1 &'
+
+                    f.write('    '+launch_cmd+'\n');
+
+            f.write('fi\n')
+
+            
+#-------^----------------------------------------------------------------------
 # clear status of all processes in ODB to make everything look green
 #---v--------------------------------------------------------------------------
     def clear_farm_status(self):
@@ -688,6 +785,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # Initialize Component, the base class of FarmManager
 # P.M.not sur why the base class is needed at all - nothing else inherits from it
+# partition is defined in the Component constructor
 #------------------------------------------------------------------------------
         Component.__init__(self,
                            name         = name,
@@ -703,6 +801,8 @@ class FarmManager(Component):
         self.mu2e_daq_dir            = os.path.expandvars(self.client.odb_get('/Mu2e/MU2E_DAQ_DIR'));
         self.spackdir                = self.mu2e_daq_dir + '/spack'
         self.daq_setup_script        = os.path.expandvars(self.client.odb_get('/Mu2e/DaqSetupScript'))
+        self.mu2e_config_dir         = os.path.expandvars(self.client.odb_get("/Mu2e/ConfigDir"));
+            
         self.artdaq                  = artdaq.Artdaq();
 
         self.midas_server_host       = os.path.expandvars(self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
@@ -782,6 +882,17 @@ class FarmManager(Component):
         self.use_messagefacility    = bool(odb_client.odb_get(self.tfm_conf_path+"/use_messagefacility"))
         self.fake_messagefacility   = False
         self._validate_setup_script = odb_client.odb_get(self.tfm_conf_path+"/validate_setup_script")
+
+#------------------------------------------------------------------------------
+# handle everything related to MF FCL in one place and just once
+# if that changes, just restart TFM
+#------------------------------------------------------------------------------
+        self.mf_template_fn         = os.environ.get("MU2E_DAQ_DIR")+"/config/MessageFacility.fcl"
+        self.mf_fcl_fn              = f'/tmp/messagefacility_partition{self.partition()}_{self.fUser}.fcl'
+
+        self.create_setup_fhiclcpp_if_needed()  # launch_procs_base does the same
+        self.generate_messagefacility_fhicl()
+
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
 #-------v----------------------------------------------------------------------
@@ -801,7 +912,7 @@ class FarmManager(Component):
         self.advanced_memory_usage               = bool(odb_client.odb_get(self.tfm_conf_path+"/advanced_memory_usage"))
         self.strict_fragment_id_mode             = bool(odb_client.odb_get(self.tfm_conf_path+"/strict_fragment_id_mode"))
         self.attempt_existing_pid_kill           = bool(odb_client.odb_get(self.tfm_conf_path+"/kill_existing_processes"))
-        self.max_configurations_to_list          = 1000000
+# 2025-05-11 PM        self.max_configurations_to_list          = 1000000
         self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_unique_rootfile_labels"))
         self.disable_private_network_bookkeeping = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_pn_bookkeeping"))
         self.allowed_processors                  = None
@@ -897,36 +1008,10 @@ class FarmManager(Component):
         s = artdaq.host_map_string(self.procinfos,'')
         print(f'{s}')
 #------------------------------------------------------------------------------
-# now update fcls - to decouple that code, need to pass the transfer plugin
-# and the output directory name
+# now update fcls and write updated ones to /tmp/partition_{..}/{config_name}
 #------------------------------------------------------------------------------
-        tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
-        for p in self.procinfos:
-            updated_fcl = p.update_fhicl(self.transfer);
-#-----------^-----------------------------------------------------------------
-#  write updated FCL but not yet flattened to /tmp, to create input for fhicl-dump
-#  for checking
-#  TODO: make sure that the directory exists
-#-----------v------------------------------------------------------------------
-            new_fn = f'{tmp_dir}/{p.label}.fcl'
-            with open(new_fn,'w') as f:
-                f.writelines(line for line in updated_fcl)
-                
-            # step 2 : flatten the FCL ... in principle there could be errors to handle,
-            # but first wait for them to thow up
-            res = subprocess.run(['fhicl-dump', new_fn],capture_output=True,text=True);
-            if (res.returncode != 0):
-                msg = f'fhicl-dump {new_fn} failed with rc:{res.returncode}'
-                TRACE.ERROR(msg,TRACE_NAME)
-                self.client.msg(msg,1,"farm_manager");
-                self.set_process_status(p,-1)
-                self.set_status(-1)
-                # serious error, return at this point
-                return;
-            else:
-                p.fhicl      = new_fn;
-                p.fhicl_used = res.stdout;
-            
+        self.write_updated_fcls();
+
 #------------------------------------------------------------------------------
 # P.M. so far, intentionally, handle only one source and one destination - haven't 
 #      seen any configuration with a subsystem having two sources. 
@@ -954,18 +1039,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # now, read settings file - should become executing python
 #-------v----------------------------------------------------------------------
-        try:
-            self.read_settings()
-        except:
-            self.print_log("e", traceback.format_exc())
-            self.print_log("e",
-                rcu.make_paragraph(
-                    "An exception was thrown when trying to read FarmManager settings; "
-                    "FarmManager will exit. Look at the messages above, make any necessary "
-                    "changes, and restart.\n")
-            )
-            TRACE.TRACE(7,f"An exception was thrown when trying to read FarmManager settings;",TRACE_NAME)
-            sys.exit(1)
+        self.read_settings()
 
         if self.use_messagefacility:
             try:
@@ -978,19 +1052,40 @@ class FarmManager(Component):
                 pass
 
         if not os.access(self.record_directory, os.W_OK | os.X_OK):
-            self.print_log("e",rcu.make_paragraph(
-                    ("FarmManager launch failed since it's been determined that you don't have"
-                     " write access to the run records directory \"%s\"")
-                    % (self.record_directory)))
+            TRACE.ERROR(f'no write access to the run records directory{self.record_directory}, EXIT(1)')
             sys.exit(1)
 
-        TRACE.INFO(f'FarmManager lanched in partition {self.partition()} is "{self.state()}" state, listening on port {self.rpc_port()}',TRACE_NAME)
+#------------------------------------------------------------------------------
+# create quick setup file to be sourced at the worker nodes.
+# 
+#------------------------------------------------------------------------------
+        self.daq_quick_setup_script = f'{self.mu2e_config_dir}/scripts/quick_setup.sh'
+        
+        if ( (not os.path.exists(self.daq_quick_setup_script)) or
+             (os.path.getmtime(self.daq_setup_script) > os.path.getmtime(self.daq_quick_setup_script)) ):
+
+            # start from variables.
+            result = os.popen("bash -c 'declare -p'").read()
+    
+            # convert 'declare -x VAR[=value]' → 'export VAR[=value]'
+            # converted = re.sub(r'declare -x\s+([A-Za-z_][A-Za-z0-9_]*)(=(.*))?',r'export \1\3',result)
+    
+            # Write to file
+            with open(self.daq_quick_setup_script, "w") as f:
+                f.write(result) # converted)
+
+            # and append the function definitions
+            cmd = f'declare -f >> {self.daq_quick_setup_script}'
+            os.system(cmd)
+
 #------------------------------------------------------------------------------
 # P.M. if debug_level is defined on the command line, override the config file settings
 #------------------------------------------------------------------------------
         if (debug_level >= 0): self.debug_level = debug_level
 
         self.set_status(0);
+
+        TRACE.INFO(f'-- END: FarmManager lanched in partition {self.partition()} is "{self.state()}" state, listening on port {self.rpc_port()}',TRACE_NAME)
 
 
     def __del__(self):
@@ -1192,6 +1287,8 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def read_settings(self):
 
+        TRACE.INFO("-- START:",TRACE_NAME)
+        
         for subdir in [self.log_directory, self.record_directory, self.data_directory_override]:
             if (not os.path.exists(subdir)): os.makedirs(subdir)
             if (subdir == self.record_directory):
@@ -1267,8 +1364,9 @@ class FarmManager(Component):
             self.boardreader_priorities_on_stop = self.boardreader_priorities
 
 #-------v----------------------------------------------------------------------
-        TRACE.TRACE(7,":002: before check_boot_info",TRACE_NAME)
+        TRACE.INFO("before check_boot_info()",TRACE_NAME)
         self.check_boot_info()
+        TRACE.INFO("-- END",TRACE_NAME)
         return
 #------------------------------------------------------------------------------
 #
@@ -1409,7 +1507,11 @@ class FarmManager(Component):
     def launch_msgviewer(self):
         cmds            = []
         port_to_replace = 30000
+
+        
         msgviewer_fhicl = "/tmp/msgviewer_partition%d_%s.fcl" % (self.partition(),self.fUser)
+
+        
         cmds           += rcu.get_setup_commands(self.productsdir, self.spackdir)
         cmds.append(". %s for_running" % (self.daq_setup_script))
         cmds.append("which msgviewer")
@@ -2495,7 +2597,9 @@ class FarmManager(Component):
                 else:
                     p.priority = 999
         return
-
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
     def check_run_record_integrity(self):
         inode_basename = ".record_directory_info"
         inode_fullname = "%s/%s" % (self.record_directory, inode_basename)
@@ -2538,6 +2642,7 @@ class FarmManager(Component):
                                " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
                     raise Exception(rcu.make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
         return
+
 #------------------------------------------------------------------------------
 # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
 #---v--------------------------------------------------------------------------
@@ -2596,15 +2701,73 @@ class FarmManager(Component):
                         % (os.environ["TFM_SETUP_FHICLCPP"])
                     )
                 )
+
+
+
+# 2026-05-11 PM#------------------------------------------------------------------------------
+# 2026-05-11 PM# PM better to get rid of the env var
+# 2026-05-11 PM#------------------------------------------------------------------------------
+# 2026-05-11 PMdef get_messagefacility_template_filename():
+# 2026-05-11 PM    if "TFM_MESSAGEFACILITY_FHICL" in os.environ.keys():
+# 2026-05-11 PM        messagefacility_fhicl_filename = os.environ.get("TFM_MESSAGEFACILITY_FHICL")
+# 2026-05-11 PM    else:
+# 2026-05-11 PM        messagefacility_fhicl_filename = os.environ.get("MU2E_DAQ_DIR")+"/config/MessageFacility.fcl"
+# 2026-05-11 PM
+# 2026-05-11 PM    return messagefacility_fhicl_filename
+# 2026-05-11 PM
 #------------------------------------------------------------------------------
-# P.Murat: factor out fhiclcpp stuff
+# P.Murat: not only this function returns the filename, it also writes out the file 
+# itself. This is how the MessageFacility log filenames are formed
+#------------------------------------------------------------------------------
+    def generate_messagefacility_fhicl(self):
+
+        have_artdaq_mfextensions = self.have_artdaq_mfextensions();
+
+        default_contents = """
+
+# This file was automatically generated as %s at %s on host %s, and is
+# the default file DAQInterface uses to determine how to modify the
+# standard MessageFacility configuration found in artdaq-core
+# v3_02_01's configureMessageFacility.cc file. You can edit the
+# contents below to change the behavior of how/where MessageFacility
+# messages are sent, though keep in mind that this FHiCL will be
+# nested inside a table. Or you can use a different file by setting
+# the environment variable TFM_MESSAGEFACILITY_FHICL to the
+# name of the other file.
+
+udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_INTEGER_VALUE host : "%s" }
+
+""" % (self.mf_template_fn, rcu.date_and_time(),socket.gethostname(),socket.gethostname(),)
+
+        if not os.path.exists(self.mf_fcl_fn):
+            with open(self.mf_fcl_fn, "w") as outf_mf:
+                outf_mf.write(default_contents)
+    
+            processed_mf_fcl_fn = tfm.mf_fcl_fn;
+    
+            with open(self.mf_template_fn) as inf_mf:
+                with open(self.mf_fcl_fn, "w") as outf_mf:
+                    for line in inf_mf.readlines():
+                        res = re.search(r"^\s*udp", line)
+                        if not res:
+                            outf_mf.write(line)
+                        elif have_artdaq_mfextensions:
+                            outf_mf.write(
+                                re.sub("port\s*:\s*\S+","port: %d"%(10005+tfm.partition()*1000),line,)
+                            )
+                        else:  # Note that a completely-empty (i.e., free even of comments) messagefacility fhicl filename will cause an error...
+                            outf_mf.write(
+                                "\n# udp table for MsgViewer not used since artdaq_mfextensions not available\n"
+                            )
+    
+        return
+    
+#-------^----------------------------------------------------------------------
+# P.Murat: factor out fhiclcpp stuff, 
 #---v--------------------------------------------------------------------------
     def do_fhiclcpp_stuff(self):
 
-        self.create_setup_fhiclcpp_if_needed()
-        rcu.obtain_messagefacility_fhicl(self)
-
-        self.print_log("i", "%s::do_fhiclcpp_stuff 001" %(__file__),2)
+        TRACE.INFO(f'do_fhiclcpp_stuff 001',TRACE_NAME)
 
         cmds = []
 
@@ -2612,8 +2775,8 @@ class FarmManager(Component):
             % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)), 
                os.environ["TFM_SETUP_FHICLCPP"])
         )
-        cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
-        cmds.append("fhicl-dump -l $dump_arg -c %s" % (rcu.get_messagefacility_template_filename()))
+        cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0; else dump_arg=none; fi")
+        cmds.append("fhicl-dump -l $dump_arg -c %s" % (self.mf_template_fn))
 
         proc = subprocess.Popen("; ".join(cmds),
                                 executable="/bin/bash",
@@ -2622,7 +2785,7 @@ class FarmManager(Component):
                                 stderr=subprocess.PIPE,
                                 encoding="utf-8")
 
-        self.print_log("d", "%s:do_fhiclcpp_stuff 002" % (__file__),2)
+        TRACE.INFO(f'o_fhiclcpp_stuff 002');
         out, err = proc.communicate()
         status   = proc.returncode
 
@@ -2635,14 +2798,14 @@ class FarmManager(Component):
                 rcu.make_paragraph(
                     ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                      " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                    % (rcu.get_messagefacility_template_filename())
+                    % (self.get_mf_template_fn)
                 ),
             )
 
             raise Exception(
                 ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                  " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                % (rcu.get_messagefacility_template_filename())
+                % (rcu.get_mf_template_fn)
             )
         return
 
@@ -2819,10 +2982,11 @@ class FarmManager(Component):
             outf.write("%s\n" % config)
     
         print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
-        print(rcu.make_paragraph(
-            "Please note that for the time being, the optional max_configurations_to_list variable "
-            "is only applicable when working with the database")
-        )
+
+# 2025-05-11 PM        print(rcu.make_paragraph(
+# 2025-05-11 PM            "Please note that for the time being, the optional max_configurations_to_list variable "
+# 2025-05-11 PM            "is only applicable when working with the database")
+# 2025-05-11 PM        )
     
         # print(flush=True)
         sys.stdout.flush()
@@ -2838,22 +3002,22 @@ class FarmManager(Component):
         TRACE.INFO(f'-- START',TRACE_NAME)
 
         starttime     = time.time()
-        rootfile_cntr = 0
-        
-#------------------------------------------------------------------------------
-# it looks that here we're checking availability of the FCL files for the processes 
-# which are already running ? is the idea that one would re-upload the FCL files?
-# self.config_dir contains only FCL files 
-#-------v------------------------------------------------------------------------------
-        for p in self.procinfos:
-            if (not self.disable_unique_rootfile_labels and (p.is_eventbuilder() or p.is_datalogger())):
-                fhicl_before_sub     = p.fhicl_used
-                rootfile_cntr_prefix = "dl"
-                p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
-
-                if p.fhicl_used != fhicl_before_sub:
-                    rootfile_cntr += 1
-
+# 2026-05-13 PM        rootfile_cntr = 0
+# 2026-05-13 PM        
+# 2026-05-13 PM#------------------------------------------------------------------------------
+# 2026-05-13 PM# it looks that here we're checking availability of the FCL files for the processes 
+# 2026-05-13 PM# which are already running ? is the idea that one would re-upload the FCL files?
+# 2026-05-13 PM# self.config_dir contains only FCL files 
+# 2026-05-13 PM#-------v------------------------------------------------------------------------------
+# 2026-05-13 PM        for p in self.procinfos:
+# 2026-05-13 PM            if (not self.disable_unique_rootfile_labels and (p.is_eventbuilder() or p.is_datalogger())):
+# 2026-05-13 PM                fhicl_before_sub     = p.fhicl_used
+# 2026-05-13 PM                rootfile_cntr_prefix = "dl"
+# 2026-05-13 PM                p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
+# 2026-05-13 PM
+# 2026-05-13 PM                if p.fhicl_used != fhicl_before_sub:
+# 2026-05-13 PM                    rootfile_cntr += 1
+# 2026-05-13 PM
         endtime = time.time()
         TRACE.INFO(f'-- END: time spent:{endtime - starttime:.1f} seconds',TRACE_NAME)
 
@@ -3066,7 +3230,7 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         TRACE.INFO("CONFIG transition 010: before self.launch_procs",TRACE_NAME)
         self.called_launch_procs = True
-        self.launch_procs_time   = time.time()  # Will be used when checking logfile's timestamps
+        self.launch_procs_time   = time.time()  # Will be used when checking logfile timestamps
 
         start_time = time.time();
         try:
@@ -3092,23 +3256,18 @@ class FarmManager(Component):
         rc = self.check_launch_results();
         if (rc != 0): return;
 
-#         self.print_log("i", "CONFIG transition 012: before create_time_server_proxy")
-# 
-#         rc = self.create_time_server_proxy();
-#         if (rc != 0): return;
-
-        self.print_log("i", "CONFIG transition 013: before self.manage_processes")
+        TRACE.INFO(f"CONFIG transition 013: before self.manage_processes",TRACE_NAME)
 #------------------------------------------------------------------------------
 # define names of all logfiles
 #-------v----------------------------------------------------------------------
         rc = self.get_lognames();
-        if (rc != 0): return;
+        if (rc != 0):                                  return;
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submission
 #-------v----------------------------------------------------------------------
         self.tmp_run_record = "/tmp/run_record_attempted_%s/%d" % (self.fUser,self.partition())
 
-        self.print_log("i", f"CONFIG transition 014: self.tmp_run_record={self.tmp_run_record}")
+        TRACE.INFO(f"CONFIG transition 014: self.tmp_run_record:{self.tmp_run_record}")
 
         self.semipermanent_run_record = "/tmp/run_record_attempted_%s/%s" % (self.fUser,
                                                                              datetime.now().strftime("%Y-%m-%d-%H:%M:%S.%f"))
@@ -3116,7 +3275,7 @@ class FarmManager(Component):
 
         if os.path.exists(self.tmp_run_record): shutil.rmtree(self.tmp_run_record)
 
-        self.print_log("i", "CONFIG transition 015: saving the run record", 1)
+        TRACE.INFO("CONFIG transition 015: saving the run record")
         starttime = time.time()
 
         try:
@@ -3130,7 +3289,7 @@ class FarmManager(Component):
                            ),
             )
 
-        self.print_log("i", "CONFIG transition 0151: save_run_record() done in %.1f seconds" % (time.time() - starttime))
+        TRACE.INFO(f'CONFIG transition 0151: save_run_record() done in {time.time() - starttime:.1f} seconds')
 
         try:
             self.check_config()
@@ -3158,7 +3317,7 @@ class FarmManager(Component):
 
             starttime = time.time()
 
-            self.print_log("i","Ensuring FHiCL documents will be archived in the output *.root files",2)
+            TRACE.INFO(f"Ensuring FHiCL documents will be archived in the output *.root files")
 
             labeled_fhicl_documents = []
 
@@ -3175,7 +3334,7 @@ class FarmManager(Component):
         self.complete_state_change("configuring")
         self.fState.set_completed(90);
 
-        self.print_log("i", "CONFIG transition 017",2)
+        TRACE.INFO(f"CONFIG transition 017")
 
         if self.manage_processes:
             self.print_log("i", ("Process manager logfiles:\n%s" 
@@ -3189,7 +3348,7 @@ class FarmManager(Component):
         # time.sleep(1)
         self.fState = run_control_state.state("configured")
 
-        self.print_log("i", "CONFIG transition 018: completed")
+        TRACE.INFO(f"-- END: CONFIG transition completed",TRACE_NAME)
         return
 
 #------------------------------------------------------------------------------
@@ -3198,7 +3357,7 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_start_running(self):
 
-        self.print_log("i","START transition underway for run %06d" % (self.run_number))
+        TRACE.INFO(f"START transition underway for run {self.run_number:6}",TRACE_NAME)
         # breakpoint()
         self.fState = run_control_state.transition("start")
 
@@ -3207,12 +3366,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # start TRACE ??? (__file__)
 #-------v----------------------------------------------------------------------
-        self.print_log("i","START transition 002: [farm_manager::do_start_running]: before execute_trace_script")
+        TRACE.INFO(f"START transition 002: before execute_trace_script",TRACE_NAME)
 
         self.execute_trace_script("start")
 
-        self.print_log("i","START transition 003: [farm_manager::do_start_running] self.manage_processes=%i" % 
-                       (self.manage_processes))
+        TRACE.INFO('START transition 003: self.manage_processes={self.manage_processes}')
 
         if self.manage_processes:
             self.readjust_process_priorities(self.boardreader_priorities_on_start)
@@ -3231,11 +3389,11 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
         start_time = datetime.now(timezone.utc).strftime("%a %b  %-d %H:%M:%S %Z %Y");
 
-        self.print_log("i", "START transition 004: record_directory:%s run_number: %06d" 
-                       % (self.record_directory,self.run_number))
+        TRACE.INFO(f'START transition 004: record_directory:{self.record_directory} run_number:{self.run_number:6}')
 
         self.save_metadata_value("FarmManager start time",start_time);
-        self.print_log("i", "Run info can be found locally at %s" % (self.run_record_directory()))
+
+        TRACE.INFO(f'Run info can be found locally at {self.run_record_directory()}')
 
         self.complete_state_change("starting")
 #------------------------------------------------------------------------------
@@ -3247,6 +3405,7 @@ class FarmManager(Component):
 
         TRACE.INFO(f'-- END: START transition run:{self.run_number}',TRACE_NAME)
         return
+
 #------------------------------------------------------------------------------
 # STOP the run
 #---v--------------------------------------------------------------------------
@@ -3315,14 +3474,14 @@ class FarmManager(Component):
 #---v--------------------------------------------------------------------------
     def do_terminate(self):
 
-        self.print_log("i", "\n%s: TERMINATE transition underway\n" % (rcu.date_and_time()))
+        TRACE.INFO(f"-- START: TERMINATE transition underway")
 
         if self.manage_processes:
 
             self.process_manager_cleanup()
 
             starttime = time.time()
-            self.print_log("i", "Sending shutdown transition to artdaq processes...", 1, False)
+            TRACE.INFO(f"Sending shutdown transition to artdaq processes")
 
             proc_starttimes = {}
             proc_endtimes   = {}
@@ -3354,7 +3513,7 @@ class FarmManager(Component):
                         procinfo.state = self.target_states["Shutdown"]
 
             endtime = time.time()
-            self.print_log("i", "%s::do_terminate: done (%.1f seconds)." % (_-file,endtime - starttime),2)
+            TRACE.INFO(f"done in {endtime - starttime:.1f} seconds")
 
             if self.debug_level >= 2 or len(
                 [
@@ -3363,23 +3522,21 @@ class FarmManager(Component):
                     if procinfo.lastreturned != "Success"
                 ]
             ):
-                for procinfo in self.procinfos:
-                    total_time = (
-                        proc_endtimes[procinfo.label] - proc_starttimes[procinfo.label]
-                    )
+                for p in self.procinfos:
+                    total_time = (proc_endtimes[p.label] - proc_starttimes[p.label])
                     self.print_log(
                         "i",
                         "%s at %s:%s, after %.1f seconds returned string was:\n%s\n"
                         % (
-                            procinfo.label,
-                            procinfo.host,
-                            procinfo.port,
+                            p.label,
+                            p.host,
+                            p.port,
                             total_time,
-                            procinfo.lastreturned,
+                            p.lastreturned,
                         ),
                     )
             else:
-                self.print_log("i", 'All artdaq processes returned "Success".')
+                TRACE.INFO(f"i", 'All artdaq processes returned "Success".')
 
             try:
                 self.kill_procs()
