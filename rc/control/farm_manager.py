@@ -66,6 +66,7 @@ except:
     from tfm.rc.control.all_functions_noop     import check_config_base
 
 from tfm.rc.control.manage_processes_direct import launch_procs_base
+from tfm.rc.control.manage_processes_direct import check_launch_results_base
 from tfm.rc.control.manage_processes_direct import kill_procs_base
 from tfm.rc.control.manage_processes_direct import check_proc_heartbeats_base
 from tfm.rc.control.manage_processes_direct import find_process_manager_variable_base
@@ -1103,6 +1104,7 @@ class FarmManager(Component):
     do_enable                             = do_enable_base
     do_disable                            = do_disable_base
     launch_procs                          = launch_procs_base
+    check_launch_results                  = check_launch_results_base
     kill_procs                            = kill_procs_base
     check_proc_heartbeats                 = check_proc_heartbeats_base
     find_process_manager_variable         = find_process_manager_variable_base
@@ -2810,84 +2812,11 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         return
 
 #------------------------------------------------------------------------------
-# P.Murat: in order to structure the code, make check_launch_results a separate function
-#---v--------------------------------------------------------------------------
-    def check_launch_results(self):
-
-        num_launch_procs_checks = 0
-
-        while True:
-            num_launch_procs_checks += 1
-
-            self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
-                % (num_launch_procs_checks, self.max_num_launch_procs_checks),1)
-#------------------------------------------------------------------------------
-# "False" here means "don't consider it an error if all processes aren't found"
-#-----------v------------------------------------------------------------------
-            found_processes = self.check_proc_heartbeats(False)
-            self.print_log("i","found %d of %d processes." % (len(found_processes),len(self.procinfos)))
-
-            assert type(found_processes) is list, rcu.make_paragraph(
-                "check_proc_heartbeats needs to return a list of procinfos"
-                " corresponding to the processes it found alive"
-            )
-
-            if len(found_processes) == len(self.procinfos):
-
-                self.print_log("i", "All processes appear to be up")
-                break
-            else:
-                time.sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
-                if num_launch_procs_checks >= self.max_num_launch_procs_checks:
-                    missing_processes = [
-                        procinfo
-                        for procinfo in self.procinfos
-                        if procinfo not in found_processes
-                    ]
-
-                    self.print_log(
-                        "e",
-                        "\nThe following desired artdaq processes failed to launch:\n%s"
-                        % (
-                            ", ".join(
-                                [
-                                    "%s at %s:%s"
-                                    % (procinfo.label, procinfo.host, procinfo.port)
-                                    for procinfo in missing_processes
-                                ]
-                            )
-                        ),
-                    )
-                    self.print_log("e",
-                                   rcu.make_paragraph(
-                                    ('In order to investigate what happened, you can try re-running with "debug level"'
-                                     ' set to 4. If that doesn\'t help, you can directly recreate'
-                                     ' what FarmManager did by doing the following:')
-                                   ),
-                    )
-
-                    for host in set([p.host for p in self.procinfos if p in missing_processes]):
-                        self.print_log("i",
-                                       ("\nPerform a clean login to %s, source the FarmManager environment, "
-                                        "and execute the following:\n%s")
-                                       % (host, "\n".join(launch_procs_actions[host])),
-                        )
-
-                    self.process_launch_diagnostics(missing_processes)
-
-                    self.alert_and_recover(
-                        ('Problem launching the artdaq processes; scroll above '
-                        'the output from the "RECOVER" transition for more info')
-                    )
-                    return -1
-        return 0
-
-#------------------------------------------------------------------------------
 #       get_lognames : returns 0 in case of success, -1 otherwise
 #---v--------------------------------------------------------------------------
     def get_lognames(self):
         starttime = time.time()
-        self.print_log("i","[farm_manager::get_lognames]: determining logfiles associated with the artdaq processes",1) 
+        TRACE.INFO("-- START:determining logfiles associated with the artdaq processes",TRACE_NAME) 
         try:
             self.process_manager_log_filenames = self.get_process_manager_log_filenames()
             self.get_artdaq_log_filenames()
@@ -2898,8 +2827,8 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
             return -1;
 
         endtime = time.time()
-        self.print_log("i", "[farm_manager::get_lognames]: done (%.1f seconds)." % (endtime - starttime))
-        return 0;  # end of get_lognames
+        TRACE.INFO(f'-- END , done in {(endtime - starttime):.1f} seconds',TRACE_NAME)
+        return 0
 
 #------------------------------------------------------------------------------
 # P.Murat: make_logfile_dirs is a well-defined action - make it a separate function
@@ -3233,35 +3162,21 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         self.launch_procs_time   = time.time()  # Will be used when checking logfile timestamps
 
         start_time = time.time();
-        try:
-#------------------------------------------------------------------------------
-# this is where the processes are launched - 
-#-----------v------------------------------------------------------------------
-            launch_procs_actions = self.launch_procs()
+        # this includes the check
+        rc = self.launch_procs()
 
-            assert type(launch_procs_actions) is dict, rcu.make_paragraph(
-                ("The launch_procs function needs to return a dictionary whose keys are the names of the hosts"
-                 " on which it ran commands, and whose values are those commands"))
-
-        except Exception:
-            self.print_log("e", traceback.format_exc())
-            self.alert_and_recover("An exception was thrown in launch_procs(), see traceback above for more info")
-            return
-
-        self.print_log("i", "CONFIG transition 011 : done, launching processes took %f sec" % 
-                       (time.time()-start_time))
+        TRACE.INFO(f'CONFIG transition 011 : done, rc:{rc}, launching took {(time.time()-start_time):.3f} sec')
 #------------------------------------------------------------------------------
 # start checking if the launch was successful
 #-------v----------------------------------------------------------------------
-        rc = self.check_launch_results();
-        if (rc != 0): return;
+        if (rc != 0):                                       return;
 
         TRACE.INFO(f"CONFIG transition 013: before self.manage_processes",TRACE_NAME)
 #------------------------------------------------------------------------------
 # define names of all logfiles
 #-------v----------------------------------------------------------------------
         rc = self.get_lognames();
-        if (rc != 0):                                  return;
+        if (rc != 0):                                       return;
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submission
 #-------v----------------------------------------------------------------------

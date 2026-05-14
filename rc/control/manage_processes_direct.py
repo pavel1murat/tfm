@@ -21,7 +21,82 @@ def pmt_log_filename_format(self):
 # 2026-02-19-PM #    else: assert False
 # 2026-02-19-PM #
 # 2026-02-19-PM #    return execname
+
+
 #------------------------------------------------------------------------------
+# P.Murat: in order to structure the code, make check_launch_results a separate function
+#---v--------------------------------------------------------------------------
+def check_launch_results_base(self,launch_procs_actions):
+
+    num_launch_procs_checks = 0
+
+    while True:
+        num_launch_procs_checks += 1
+
+        self.print_log("i","Checking that processes are up (check %d of a max of %d checks)..."
+            % (num_launch_procs_checks, self.max_num_launch_procs_checks),1)
+#------------------------------------------------------------------------------
+# "False" here means "don't consider it an error if all processes aren't found"
+#-----------v------------------------------------------------------------------
+        found_processes = self.check_proc_heartbeats(False)
+        self.print_log("i","found %d of %d processes." % (len(found_processes),len(self.procinfos)))
+
+        assert type(found_processes) is list, rcu.make_paragraph(
+            "check_proc_heartbeats needs to return a list of procinfos"
+            " corresponding to the processes it found alive"
+        )
+
+        if len(found_processes) == len(self.procinfos):
+
+            self.print_log("i", "All processes appear to be up")
+            break
+        else:
+            time.sleep(self.launch_procs_wait_time / self.max_num_launch_procs_checks)
+            if num_launch_procs_checks >= self.max_num_launch_procs_checks:
+                missing_processes = [
+                    procinfo
+                    for procinfo in self.procinfos
+                    if procinfo not in found_processes
+                ]
+
+                self.print_log(
+                    "e",
+                    "\nThe following desired artdaq processes failed to launch:\n%s"
+                    % (
+                        ", ".join(
+                            [
+                                "%s at %s:%s"
+                                % (procinfo.label, procinfo.host, procinfo.port)
+                                for procinfo in missing_processes
+                            ]
+                        )
+                    ),
+                )
+                self.print_log("e",
+                               rcu.make_paragraph(
+                                ('In order to investigate what happened, you can try re-running with "debug level"'
+                                 ' set to 4. If that doesn\'t help, you can directly recreate'
+                                 ' what FarmManager did by doing the following:')
+                               ),
+                )
+
+                for host in set([p.host for p in self.procinfos if p in missing_processes]):
+                    self.print_log("i",
+                                   ("\nPerform a clean login to %s, source the FarmManager environment, "
+                                    "and execute the following:\n%s")
+                                   % (host, "\n".join(launch_procs_actions[host])),
+                    )
+
+                self.process_launch_diagnostics(missing_processes)
+
+                self.alert_and_recover(
+                    ('Problem launching the artdaq processes; scroll above '
+                    'the output from the "RECOVER" transition for more info')
+                )
+                return -1
+    return 0
+
+#---^--------------------------------------------------------------------------
 # assumes type(self)=FarmManager
 #------------------------------------------------------------------------------
 def launch_procs_on_host(self,host,
@@ -325,11 +400,77 @@ def launch_procs_base(self):
 #------------------------------------------------------------------------------
     self.generate_job_submission_script();
 
-    TRACE.INFO('--END: submission threads finished',TRACE_NAME)
+    rc = self.check_launch_results(launch_commands_on_host_to_show_user);
     
-    return launch_commands_on_host_to_show_user
+    TRACE.INFO(f'--END: submission and check finished, rc:{rc}',TRACE_NAME)
+    
+    return rc 
+
+#------------------------------------------------------------------------------
+# generate job submission script and send a command to each node
+def launch_procs_new_base(self):
+    TRACE.INFO('--START:',TRACE_NAME)
+
+    self.generate_job_submission_script();
+#------------------------------------------------------------------------------
+# trigger job submission
+#------------------------------------------------------------------------------
+    cmd_name = 'start_processes'
+    for node in self.artdaq.list_of_nodes:
+        cmd_odb_path     = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
+        cmd_odb_par_path = cmd_odb_path+'/'+cmd_name
+        self.client.odb_set(cmd_odb_path+'/Name',cmd_name);
+        self.client.odb_set(cmd_odb_path+'/ParameterPath',cmd_odb_par_path)
+        self.client.odb_set(cmd_odb_path+'/logfile',f'{node.name}_artdaq');
+
+        node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
+        self.client.odb_set(node_conf_odb_path+'/Status',1);
+
+        timeout_ms = 20000;
+        self.client.odb_set(cmd_odb_path+'/timeout_ms',20000);
+
+        self.client.odb_set(cmd_odb_path+'/Finished',0);
+        self.client.odb_set(cmd_odb_path+'/Run',1);
+
+#------------------------------------------------------------------------------
+# wait for completion reports
+#---v--------------------------------------------------------------------------
+    n_nodes        = len(self.artdaq.list_of_nodes)
+    n_not_finished = n_nodes;
+    finished       = [0] * n_nodes;
+    
+    wait_time      = 0;
+    while ((n_not_finished > 0) and (wait_time < timeout_ms)):
+        sleep_time_ms = 100.0;               # 
+        time.sleep(sleep_time_ms/1000.0);
+        wait_time += sleep_time;
+        
+        for i in range(n_nodes):
+            if (finished[i] == 1) :                         continue
+            
+            node = self.artdaq.list_of_nodes[i]
+            cmd_odb_path = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
+            finished[i]  = self.client.odb_get(cmd_odb_path+'/Finished')
+            if (finished[i] == 1):
+                node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
+                self.client.odb_set(node_conf_odb_path+'/Status',0);
+                n_not_finished -= 1;
+
+    rc = 0;
+    if (n_not_finished > 0):
+        rc = -1
+        for node in self.artdaq.list_of_nodes:
+            if (finished[i] == 0):
+                node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
+                self.client.odb_set(node_conf_odb_path+'/Status',-1)
+        
+    TRACE.INFO(f'--END: n_not_finished:{n_not_finished} rc:{rc}',TRACE_NAME)
+    
+    return rc;
 
 
+
+#------------------------------------------------------------------------------
 def process_launch_diagnostics_base(self, procinfos_of_failed_processes):
     for host in set([procinfo.host for procinfo in procinfos_of_failed_processes]):
         self.print_log("e",
