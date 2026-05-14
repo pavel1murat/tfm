@@ -537,7 +537,7 @@ class FarmManager(Component):
                                             rank, ##               = rank ,
                                             host, ##               = host ,          # at this point, store long (with '-ctrl' names)
                                             str(xmlrpc_port),
-                                            timeout, ##            = self.eventbuilder_timeout,
+                                            self.eventbuilder_timeout,   ## timeout
                                             key_name  ,
                                             subsystem_id, ##          = subsystem_id,
                                             allowed_processors = None,
@@ -2243,7 +2243,7 @@ class FarmManager(Component):
         self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
 
-        self.print_log("d","Sending transition %s to %s" % (command, p.label),3)
+        TRACE.INFO(f'Sending transition {command} to {p.label}')
 
         try:
             if command == "Init":
@@ -3375,14 +3375,14 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 #  SHUTDOWN transition - complete everything and exit
 #---v--------------------------------------------------------------------------
     def do_shutdown(self):
-        self.print_log("i",f'-- START: run:{self.run_number:06d}')
+        TRACE.INFO(f'-- START: run:{self.run_number:06d}',TRACE_NAME)
 
         if (self.fState.get_name() == "stopped"):
             self.fKeepRunning = False
         else:
-            self.print_log('i',f'ERROR: state:{self.fState.get_name()}')
+            TRACE.ERROR(f'state:{self.fState.get_name()}',TRACE_NAME)
 
-        self.print_log("i",f'-- END: run:{self.run_number:06d}')
+        TRACE.INFO(f'-- END: run:{self.run_number:06d}',TRACE_NAME)
         return
 #------------------------------------------------------------------------------
 #  TERMINATE transition - what does it really do ?
