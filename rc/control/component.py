@@ -29,7 +29,7 @@ class ServerThread(threading.Thread):
     def __init__(self,host='localhost',port=6000,funcs = {}):
         threading.Thread.__init__(self)
         self.server = SimpleXMLRPCServer((host,port),requestHandler=RequestHandler)
-        TRACE.TRACE(7,"start server",TRACE_NAME)
+        TRACE.INFO("start server",TRACE_NAME)
 
         # self.localServer.register_function(getTextA) #just return a string
         self.server.register_introspection_functions()      
@@ -39,18 +39,19 @@ class ServerThread(threading.Thread):
     def kill(self):
         self.server.quit = 1
 
-        TRACE.TRACE(7,"killing server",TRACE_NAME)
+        TRACE.INFO("killing server",TRACE_NAME)
         return 1
 
     def run(self):
          self.server.serve_forever()
 
     def serve_forever(self):
+        TRACE.INFO("starting",TRACE_NAME)
         self.quit = 0
         while not self.quit:
             self.handle_request()
             
-        TRACE.TRACE(7,"quitting",TRACE_NAME)
+        TRACE.INFO("quitting",TRACE_NAME)
         return
 
 #------------------------------------------------------------------------------

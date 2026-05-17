@@ -40,16 +40,17 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
     other_allowed_versions = ["v3_02_01a"]
 
-    version = "v3_13_01";
-    
-    s = subprocess.run(['spack','find', 'artdaq'],stdout=subprocess.PIPE,encoding='utf-8');
-    
-    for l in s.stdout.splitlines():
-        w = l.split('@')
-        if (w[0] == 'artdaq'):
-            version = w[1];
-            if (version == 'develop'): version = 'v9_99_99';
-            break;
+    version = "v4_03_00";
+# 2026-05-17 PM  no point in wasting time on each submission
+
+# 2026-05-17 PM     s = subprocess.run(['spack','find', 'artdaq'],stdout=subprocess.PIPE,encoding='utf-8');
+# 2026-05-17 PM     
+# 2026-05-17 PM     for l in s.stdout.splitlines():
+# 2026-05-17 PM         w = l.split('@')
+# 2026-05-17 PM         if (w[0] == 'artdaq'):
+# 2026-05-17 PM             version = w[1];
+# 2026-05-17 PM             if (version == 'develop'): version = 'v9_99_99';
+# 2026-05-17 PM             break;
         
     res = re.search(r"v([0-9]+)_([0-9]+)_([0-9]+)(.*)", version)
 
@@ -108,15 +109,14 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         max_fragment_sizes = []
 
         for p in self.procinfos:
-            TRACE.INFO(f'p.label:{p.label} looking for max_fragment_size_bytes',TRACE_NAME);
-            print(p.fhicl_used);
+            TRACE.DEBUG(1,f'p.label:{p.label} looking for max_fragment_size_bytes, uncomment next line to print the whole FCL',TRACE_NAME);
+            # print(p.fhicl_used);
                 
-            res = re.findall(
-                r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",
-                p.fhicl_used,
-            )
             # breakpoint()
             if p.type() == BOARD_READER:
+                # handling regexps seems to be a very slow procedure, try to optimize
+                res = re.findall(r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",p.fhicl_used)
+
                 if len(res) > 0:
                     max_fragment_size_token = res[-1]
 
@@ -134,28 +134,23 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         )
 
             else:
-                if len(res) > 0:
+                lines = p.fhicl_used.split('\n');
+                found = False
+                pattern = 'max_fragment_size_bytes'
+                
+                for line in lines:
+                    if (pattern in line):
+                        found = True;
+                        break;
+                    
+                if found:
                     raise Exception(
                         make_paragraph(
                             (f'max_fragment_size_bytes is found in the FHiCL document for {p.label} ;' 
                              "this parameter is not allowed for non-BoardReader artdaq processes"))
                     )
-
-# PM 2026-02-03            if "max_event_size_bytes" in procinfo.fhicl_used:
-# PM 2026-02-03                raise Exception(
-# PM 2026-02-03                    make_paragraph(
-# PM 2026-02-03                        ('max_event_size_bytes is found in the FHiCL document for %s; '
-# PM 2026-02-03                         'this parameter must not appear in FHiCL documents when "advanced_memory_usage" '
-# PM 2026-02-03                         'is set to true. This is because TFM calculates '
-# PM 2026-02-03                         'and then adds this parameter during bookkeeping.')
-# PM 2026-02-03                        % (procinfo.label))
-# PM 2026-02-03                )
-    # debugging
-    # dl = self.find_process("dl01")
-    # print('------------------- 00001 DL01 test FCL');
-    # print(dl.fhicl_used);
     
-    self.print_log("i", f'step 2: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 2: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # Now loop over the boardreaders again to determine
@@ -294,7 +289,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     for ss in self.subsystems:
         fragment_ids[ss] = calculate_subsystem_fragment_ids(ss)
 
-    self.print_log("i", f'step 4: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 4: took {time.time() - starttime} sec');
     starttime = time.time();
 
     # If we have advanced memory usage switched on, then make sure the
@@ -308,13 +303,13 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # PM 2026-02-03 #    print('------------------- 00002 DL01 test FCL');
 # PM 2026-02-03 #    print(dl.fhicl_used);
 
-    self.print_log("i", f'step 5: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 5: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 #------------------------------------------------------------------------------
 # Check for places where Fragment IDs need to be filled in
 #------------------------------------------------------------------------------
     for p in self.procinfos:
-        TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+        TRACE.DEBUG(1,f'p.label:{p.label}',TRACE_NAME)
         if ("BoardReader" not in p.name and "RoutingManager" not in p.name):
             if re.search(r"\n[^#]*fragment_ids\s*:\s*\[[0-9, ]*\]",p.fhicl_used,):
                 p.fhicl_used = re.sub(
@@ -324,7 +319,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     p.fhicl_used,
                 )
 
-    self.print_log("i", f'step 6: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 6: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # debugging
@@ -368,7 +363,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
     subsystems_without_dataloggers        = (    []   )  
 
-    self.print_log("i", f'step 7: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 7: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # Couple of sanity checks
@@ -421,7 +416,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
                 )
 
-    self.print_log("i", f'step 8: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 8: took {time.time() - starttime} sec');
     starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
@@ -438,6 +433,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         if (re.search(r"\n\s*sends_no_fragments\s*:\s*[Tt]rue",p.fhicl_used) or
                             re.search(r"\n\s*generated_fragments_per_event\s*:\s*0",p.fhicl_used)):
                             nonsending_boardreaders.append(p.label)
+
+    TRACE.INFO(f'step 9: took {time.time() - starttime} sec');
+    starttime = time.time();
 
     for p in self.procinfos:
         if (p.is_datalogger() or p.is_dispatcher()) :
@@ -458,9 +456,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # also, that seems to be somehow convoluted with the assumptions about the subnet addresses....
 #------------------------------------------------------------------------------
         if self.request_address is None:
-            TRACE.TRACE(7,f'procinfo:{p}',TRACE_NAME);
+            TRACE.DEBUG(1,f'procinfo:{p}',TRACE_NAME);
             ss = p.subsystem; ## self.subsystems[p.subsystem_id]    # PM: 'p.subsystem_id' is a string
-            TRACE.TRACE(7,f'ss:{ss}',TRACE_NAME);
+            TRACE.DEBUG(1,f'ss:{ss}',TRACE_NAME);
             request_address = "227.128.%d.%d" % (self.partition(),128 + ss.index)
         else:
             request_address = self.request_address
@@ -470,7 +468,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         p.fhicl_used = re.sub('request_address\s*:\s*["0-9\.]+',
                               'request_address: "%s"' % (request_address.strip('"')),
                               p.fhicl_used)
-
 #------------------------------------------------------------------------------
 # PM if partition is defined, redefine it... don't really need partition in FCL at all
 #------------------------------------------------------------------------------
@@ -520,7 +517,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         not self.disable_private_network_bookkeeping or len(private_networks_seen) == 0
     ), "See Aug-15-2019 comment in bookkeeping.py"
 
-    self.print_log("i", f'step 10: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 10: took {time.time() - starttime} sec');
     starttime = time.time();
 
     table_update_addresses   = {}
@@ -677,7 +674,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                     % (str(subsystem_id),", ".join(processes_involved_in_requests)))
                     )
 
-    self.print_log("i", f'step 11: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 11: took {time.time() - starttime} sec');
     starttime = time.time();
 
     # JCF, Apr-18-2019
@@ -755,7 +752,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # end of bookkeep_table_for_router_process , add return to help navigation
 #------------------------------------------------------------------------------
 
-    self.print_log("i", f'step 12: took {time.time() - starttime} sec');
+    TRACE.INFO(f'step 12: took {time.time() - starttime} sec');
     starttime = time.time();
 
     for i_proc in range(len(self.procinfos)):
@@ -860,16 +857,14 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     i_proc, di_subsystem, "routing_token_config", "Dispatcher"
                 )
 
-    self.print_log("i", f'step 13: took {time.time() - starttime} sec');
     TRACE.INFO(f'step 13: took {time.time() - starttime} sec',TRACE_NAME);
-    
 #------------------------------------------------------------------------------
 # if a BoardReader writes an output file, update firstLoggerRank as well
 #------------------------------------------------------------------------------
     starttime       = time.time();
     firstLoggerRank = 9999999
     for p in self.procinfos:
-        TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME);
+        TRACE.DEBUG(1,f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME);
         if fhicl_writes_root_file(p.fhicl_used):
             if p.rank < firstLoggerRank:
                 firstLoggerRank = p.rank
@@ -888,9 +883,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # P.Murat: one could have process types, not names - no need to do 
 #          the string comparison every time... that also is much more error-prone
 #------------------------------------------------------------------------------
-            self.print_log("i", f'p.label:{p.label} p.type():{p.type()}');
+            TRACE.DEBUG(1,f'p.name:{p.name} p.label:{p.label} p.type():{p.type()} p.fhicl:{p.fhicl}',TRACE_NAME);
             if (p.is_eventbuilder() or p.is_datalogger()):
-                TRACE.INFO(f'p.name:{p.name} p.fhicl:{p.fhicl}',TRACE_NAME)
                 if fhicl_writes_root_file(p.fhicl_used):
 #------------------------------------------------------------------------------
 # 17-Apr-2018, KAB: switched to using the "enclosing_table_range" function, 
@@ -951,9 +945,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         return False
 
-    self.print_log("i", f'step 14: took {time.time() - starttime} sec');
-    starttime = time.time();
-
+    TRACE.INFO(f'step 14: took {time.time() - starttime} sec');
 #------------------------------------------------------------------------------
 # define 'init_fragment_count' if it is > 0 and is not defined explicitly
 #------------------------------------------------------------------------------
@@ -965,8 +957,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #                     procinfo.fhicl_used,
 #                 )
 
-    self.print_log("i", f'step 5: took {time.time() - starttime} sec');
-    TRACE.INFO('-- END',TRACE_NAME)
+    TRACE.INFO(f'-- END',TRACE_NAME)
     return
 
 # def bookkeeping_for_fhicl_documents_artdaq_v4_base(self):

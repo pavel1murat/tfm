@@ -13,6 +13,8 @@ from   tfm.rc.control.utilities import make_paragraph
 # from   tfm.rc.control.utilities import get_commit_info
 # from   tfm.rc.control.utilities import get_commit_info_filename
 # from   tfm.rc.control.utilities import get_build_info
+import TRACE
+TRACE_NAME = "save_run_record"
 #------------------------------------------------------------------------------
 # Save the FHiCL documents which were used to initialize the artdaq processes
 #------------------------------------------------------------------------------
@@ -20,7 +22,7 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # Step 1: save them into a temporary directory - no need - can write directly to the permanent position
 #------------------------------------------------------------------------------
-    self.print_log("d", "%s:save_record_base 001" % (__file__),2)
+    TRACE.INFO("-- START",TRACE_NAME)
 
     outdir = self.record_directory+'/%06d'%self.run_number # self.tmp_run_record
 
@@ -33,7 +35,7 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # P.M. assume the directory has been created
 #---v--------------------------------------------------------------------------
-    self.print_log("d", "%s:save_record_base 002" % (__file__),2)
+    TRACE.INFO(f"002, record directory created",TRACE_NAME)
 
     for procinfo in self.procinfos:
         outf = open(outdir + "/" + procinfo.label + ".fcl", "w")
@@ -52,12 +54,11 @@ def save_run_record_base(self):
                         % (__file__,getframeinfo(currentframe()).lineno,new_fn))
         return
 
-    self.print_log("d", "%s:save_record_base 003" % (__file__),2)
 #------------------------------------------------------------------------------
 # save information about ARTDAQ processes, ordered by rank 
 # P.M. better to have it first ordered by the host
 #------------------------------------------------------------------------------
-    self.print_log("d", "%s:save_record_base 004" % (__file__),2)
+    TRACE.INFO(f"004",TRACE_NAME)
     ranksfilename = "%s/ranks.txt" % (outdir)
 
     with open(ranksfilename, "w") as ranksfile:
@@ -75,7 +76,7 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 # P.M. why this one is needed at all ? - why not the full environment ?
 #------------------------------------------------------------------------------
-    self.print_log("d", "%s:save_record_base 005" % (__file__),2)
+    TRACE.INFO(f"005",TRACE_NAME)
 
     environfilename = "%s/environment.txt" % (outdir)
     with open(environfilename, "w") as environfile:
@@ -88,7 +89,7 @@ def save_run_record_base(self):
 # JCF, Dec-4-2016: 
 #                  changed to metadata.txt, as this is executed before the start transition
 #------------------------------------------------------------------------------
-    self.print_log("d", "%s:save_record_base 006" % (__file__),2)
+    TRACE.INFO(f"006",TRACE_NAME)
 
     outf = open(outdir + "/metadata.txt", "w")
 
@@ -117,7 +118,7 @@ def save_run_record_base(self):
 
     # buildinfo_packages = [pkg for pkg in self.package_hashes_to_save]  
 
-    self.print_log("d", "%s:save_record_base 0061" % (__file__),2)
+#    self.print_log("d", "%s:save_record_base 0061" % (__file__),2)
 #------------------------------------------------------------------------------
 # this is the step which takes 12 seconds, mostly useless
 # for the demo example it returns 
@@ -131,37 +132,34 @@ def save_run_record_base(self):
 #------------------------------------------------------------------------------
 #    package_buildinfo_dict = {} # get_build_info(buildinfo_packages, self.daq_setup_script)
     
-    self.print_log("d", "%s:save_record_base 00611" % (__file__),2)
+    TRACE.INFO("00611",TRACE_NAME)
 
-    if self.manage_processes:
-
-        logtuples = [
-            ("process manager", self.process_manager_log_filenames),
-            ("boardreader"    , self.boardreader_log_filenames),
-            ("eventbuilder"   , self.eventbuilder_log_filenames),
-            ("datalogger"     , self.datalogger_log_filenames),
-            ("dispatcher"     , self.dispatcher_log_filenames),
-            ("routingmanager" , self.routingmanager_log_filenames),
-        ]
-
-        for logtuple in logtuples:
-
-            outf.write("\n")
-            outf.write("\n%s logfiles: " % logtuple[0])
-
-            for filename in logtuple[1]:
-                outf.write("\n" + filename)
+# 2026-05-15 PM    if self.manage_processes:
+# 2026-05-15 PM
+# 2026-05-15 PM        logtuples = [
+# 2026-05-15 PM            ("process manager", self.process_manager_log_filenames),
+# 2026-05-15 PM            ("boardreader"    , self.boardreader_log_filenames),
+# 2026-05-15 PM            ("eventbuilder"   , self.eventbuilder_log_filenames),
+# 2026-05-15 PM            ("datalogger"     , self.datalogger_log_filenames),
+# 2026-05-15 PM            ("dispatcher"     , self.dispatcher_log_filenames),
+# 2026-05-15 PM            ("routingmanager" , self.routingmanager_log_filenames),
+# 2026-05-15 PM        ]
+# 2026-05-15 PM
+# 2026-05-15 PM        for logtuple in logtuples:
+# 2026-05-15 PM
+# 2026-05-15 PM            outf.write("\n")
+# 2026-05-15 PM            outf.write("\n%s logfiles: " % logtuple[0])
+# 2026-05-15 PM
+# 2026-05-15 PM            for filename in logtuple[1]:
+# 2026-05-15 PM                outf.write("\n" + filename)
 
     outf.write("\n")
     outf.close()
-
-    self.print_log("d", "%s:save_record_base 007" % (__file__),2)
 #------------------------------------------------------------------------------
 # make the directory read-only
 #------------------------------------------------------------------------------
     os.chmod(outdir, 0o555)
-    # self.print_log("d","%s: Saved run record in %s"%(__file__,outdir),2)
-    self.print_log("d","Saved run record in %s"%(outdir),2)
+    TRACE.INFO(f"-- END: Saved run record in {outdir}",TRACE_NAME)
 
     return
 

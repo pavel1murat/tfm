@@ -7,10 +7,20 @@ from   tfm.rc.control.procinfo  import Procinfo, BOARD_READER, EVENT_BUILDER, DA
 import TRACE ; TRACE_NAME='artdaq'
 #------------------------------------------------------------------------------
 # returns the name like /scratch/mu2e/mu2etrk/daquser_002_v001/logs/pmt/pmt_050030_${nodename}_mu2etrk_partition_11_20260513154539
+# it looks that the node name on the local network is used
 #------------------------------------------------------------------------------
-def pmt_log_fn(log_directory,run_number,partition):
+def pmt_log_fn(log_directory,partition,run_number):
     TRACE.INFO(f'-- START: run_number:{run_number} user:{os.environ.get("USER")} partition:{partition}');
     fn = f'{log_directory}/pmt/pmt_{run_number:06d}_${{nodename}}_{os.environ.get("USER")}_partition_{partition:02d}_{rcu.date_and_time_filename()}'
+    TRACE.INFO(f'-- END: fn:{fn}')
+    return fn
+
+#------------------------------------------------------------------------------
+# pass nodename explicitly - not sure how who is the end user
+#------------------------------------------------------------------------------
+def pmt_log_fn_node(nodename,log_directory,partition,run_number):
+    TRACE.INFO(f'-- START: node:{node} run_number:{run_number} user:{os.environ.get("USER")} partition:{partition}');
+    fn = f'{log_directory}/pmt/pmt_{run_number:06d}_{nodename}_{os.environ.get("USER")}_partition_{partition:02d}_{rcu.date_and_time_filename()}'
     TRACE.INFO(f'-- END: fn:{fn}')
     return fn
 
@@ -135,16 +145,16 @@ class BoardReader(Procinfo):
                 eb.list_of_sources.append(self);
         else:
             # subsystem has only BRs, check subsystem destination
-            print(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}')
+            TRACE.INFO(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}',TRACE_NAME)
             if (s.destination != None):
                 # subsystem has a destination, that has to have event builders
-                print(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"')
+                TRACE.INFO(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"',TRACE_NAME)
                 sd = s.dS;                  # destination subsystem, ## self.subsystems[s.destination];
                 list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
-                print(f'-- [BoardReader::init_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}')
+                TRACE.DEBUG(1,f'-- [BoardReader::init_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}',TRACE_NAME)
                 
                 for eb in list_of_ebs:
-                    print(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}')
+                    TRACE.INFO(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}',TRACE_NAME)
                     self.list_of_destinations.append(eb);
                     eb.list_of_sources.append(self);
             else:
@@ -157,7 +167,7 @@ class BoardReader(Procinfo):
 #------------------------------------------------------------------------------
     def update_fhicl(self,transfer_plugin):
         # step 1 : read and replace - start from BRs
-        TRACE.INFO(f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        TRACE.DEBUG(1,f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
     
         with open(self.fhicl,'r') as f:
             lines = f.readlines()
@@ -186,7 +196,7 @@ class BoardReader(Procinfo):
 
             new_text.append(line)
         
-        TRACE.INFO(f'--END: self.label:{self.label}',TRACE_NAME)
+        TRACE.DEBUG(1,f'--END: self.label:{self.label}',TRACE_NAME)
         return new_text;
 
 
@@ -223,8 +233,8 @@ class EventBuilder(Procinfo):
 
         # BRs should already be covered, check for input from other EBs
 
-        print(f's.sources:{s.sources}');
-        print(f'process.list_of_sources:{self.list_of_sources}');
+        # print(f's.sources:{s.sources}');
+        # print(f'process.list_of_sources:{self.list_of_sources}');
 
         sum_fragment_size_bytes  = 0;               # sum of the BR's input
         max_event_size_bytes     = 0;               # max event from input EB's
@@ -259,14 +269,13 @@ class EventBuilder(Procinfo):
             TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
         else:
 #-------^----------------------------------------------------------------------
-# subsystem doesn't have inputs, look at local BRs - those are already in the list
-# of inputs
+# subsystem doesn't have inputs, look at local BRs - those already are in the list of inputs
 #-----------v------------------------------------------------------------------
             for br in self.list_of_sources:
-                print(f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}')
+                TRACE.DEBUG(1,f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}',TRACE_NAME)
                 sum_fragment_size_bytes += br.max_fragment_size_bytes
 
-                print(f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}')
+                TRACE.DEBUG(1,f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}',TRACE_NAME)
 
 
         self.max_fragment_size_bytes = sum_fragment_size_bytes;
@@ -321,8 +330,7 @@ class EventBuilder(Procinfo):
 #------------------------------------------------------------------------------
     def update_fhicl(self, transfer_plugin):
         # step 1 : read and replace - start from BRs
-        print('------ EB: update_fhicl')
-        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+        TRACE.DEBUG(1,f'EB : self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
         
         with open(self.fhicl,'r') as f:
             lines = f.readlines()
@@ -393,6 +401,7 @@ class EventBuilder(Procinfo):
     
             new_text.append(line);
 
+        TRACE.DEBUG(1,f'END',TRACE_NAME)
         return new_text;
             
 #------------------------------------------------------------------------------
@@ -423,7 +432,7 @@ class DataLogger(Procinfo):
 #------------------------------------------------------------------------------
     def init_connections(self):
 
-        TRACE.INFO(f'--- p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
+        TRACE.INFO(f'-- START: p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
         # DL has to have inputs from either own EBs or from EBs other subsystems
         # start from checking inputs
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to

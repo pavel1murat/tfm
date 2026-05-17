@@ -1,6 +1,7 @@
 #
 import random, string, os, sys, subprocess, socket, time, re, copy;
 import tfm.rc.control.utilities as rcu;
+import tfm.rc.control.artdaq    as artdaq
 
 import TRACE ; TRACE_NAME="manage_proc"
 
@@ -209,12 +210,12 @@ def launch_procs_base(self):
     cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
                 % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
     
-    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none;fi")
-    cmds.append("fhicl-dump -l $dump_arg -c %s" % (self.mf_template_fn))
+    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
+    cmds.append(f'fhicl-dump -l $dump_arg -c {self.mf_template_fn}')
 
     cmd = "; ".join(cmds)
 
-    self.print_log("d","manage_processes_direct::launch_procs_base 001: executing \n%s" % (cmd),2)
+    TRACE.INFO(f'executing cmd:{cmd}',TRACE_NAME)
     start_time = time.time()
     
     proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
@@ -226,20 +227,16 @@ def launch_procs_base(self):
     if proc.returncode != 0:
         TRACE.ERROR('\nstatus:{status} when trying to run the following:\n%s\n' % ("\n".join(cmds)),TRACE_NAME)
         
-        self.print_log("e","STDOUT output: \n%s" % proc.stdout)
-        self.print_log("e","STDERR output: \n%s" % proc.stderr)
-
-        self.print_log("e",rcu.make_paragraph(
-            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
-             "one or more syntax errors, or there was a problem running fhicl-dump")
-            % (rcu.get_mf_template_fn))
-        )
-
-        raise Exception(
-            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
-             "one or more syntax errors (Or there was a problem running fhicl-dump)")
-            % (self.get_mf_template_fn)
-        )
+# 2026-05-15 PM        self.print_log("e","STDOUT output: \n%s" % proc.stdout)
+# 2026-05-15 PM        self.print_log("e","STDERR output: \n%s" % proc.stderr)
+# 2026-05-15 PM
+# 2026-05-15 PM        self.print_log("e",rcu.make_paragraph(
+# 2026-05-15 PM            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
+# 2026-05-15 PM             "one or more syntax errors, or there was a problem running fhicl-dump")
+# 2026-05-15 PM            % (rcu.get_mf_template_fn))
+# 2026-05-15 PM        )
+# 2026-05-15 PM
+        raise Exception(f'ERROR expanding {self.mf_template_fn}')
 #------------------------------------------------------------------------------
 # if the MessageFacility FCL is stored in config dir, then each frontend can copy it
 # I think it is a good idea to also store the MF fcl in run_records directory
@@ -248,12 +245,16 @@ def launch_procs_base(self):
     TRACE.INFO(f'start copying MF FCL everywhere',TRACE_NAME)
     for host in set([procinfo.host for procinfo in self.procinfos]):
         if not rcu.host_is_local(host):
-            cmd    = f"scp -p {self.mf_fcl_fn}  {host}:{self.mf_fcl_fn}"
+            # ssh to remote node:/tmp
+            cmd    = f"scp -p {self.config_dir}/{self.mf_fcl_fn}  {host}:/tmp/{self.mf_fcl_fn}"
             status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
                                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
 
             if status != 0:
                 raise Exception('ERROR in %s executing "%s"' % (launch_procs_base.__name__, cmd))
+        else:
+            # just copy to /tmp
+            shutil.copy2(f'{self.config_dir}/{self.mf_fcl_fn}', f'/tmp/{self.mf_fcl_fn}')
 
     TRACE.INFO(f'done copying MF FCL everywhere',TRACE_NAME)
 #------------------------------------------------------------------------------
@@ -408,7 +409,7 @@ def launch_procs_base(self):
 
 #------------------------------------------------------------------------------
 # generate job submission script and send a command to each node
-def launch_procs_new_base(self):
+def launch_procs_base_new(self):
     TRACE.INFO('--START:',TRACE_NAME)
 
     self.generate_job_submission_script();
@@ -426,7 +427,7 @@ def launch_procs_new_base(self):
         node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
         self.client.odb_set(node_conf_odb_path+'/Status',1);
 
-        timeout_ms = 20000;
+        timeout_ms = 80000;
         self.client.odb_set(cmd_odb_path+'/timeout_ms',20000);
 
         self.client.odb_set(cmd_odb_path+'/Finished',0);
@@ -439,11 +440,11 @@ def launch_procs_new_base(self):
     n_not_finished = n_nodes;
     finished       = [0] * n_nodes;
     
-    wait_time      = 0;
-    while ((n_not_finished > 0) and (wait_time < timeout_ms)):
-        sleep_time_ms = 100.0;               # 
+    wait_time_ms   = 0;
+    while ((n_not_finished > 0) and (wait_time_ms < timeout_ms)):
+        sleep_time_ms = 200.0;               # 
         time.sleep(sleep_time_ms/1000.0);
-        wait_time += sleep_time;
+        wait_time_ms += sleep_time_ms;
         
         for i in range(n_nodes):
             if (finished[i] == 1) :                         continue
@@ -451,6 +452,7 @@ def launch_procs_new_base(self):
             node = self.artdaq.list_of_nodes[i]
             cmd_odb_path = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
             finished[i]  = self.client.odb_get(cmd_odb_path+'/Finished')
+            TRACE.DEBUG(1,f'wait_time_ms:{wait_time_ms:5} i:{i} node:{node.name} cmd_odb_path:{cmd_odb_path} finished:{finished[i]}',TRACE_NAME)
             if (finished[i] == 1):
                 node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
                 self.client.odb_set(node_conf_odb_path+'/Status',0);
@@ -464,7 +466,7 @@ def launch_procs_new_base(self):
                 node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
                 self.client.odb_set(node_conf_odb_path+'/Status',-1)
         
-    TRACE.INFO(f'--END: n_not_finished:{n_not_finished} rc:{rc}',TRACE_NAME)
+    TRACE.INFO(f'--END: n_not_finished:{n_not_finished} rc:{rc} wait_time_ms:{wait_time_ms}',TRACE_NAME)
     
     return rc;
 
@@ -479,7 +481,7 @@ def process_launch_diagnostics_base(self, procinfos_of_failed_processes):
                        % (host, host, self.launch_attempt_files[host])
         )
 
-
+#------------------------------------------------------------------------------
 def kill_procs_on_host(self, host, kill_art=False, use_force=False):
 
     artdaq_pids, labels_of_found_processes = get_pids_and_labels_on_host(self,host)
@@ -544,6 +546,7 @@ def kill_procs_on_host(self, host, kill_art=False, use_force=False):
             self.print_log("d","Finished kill of the artdaq-associated art processes on %s" % (host),2)
     return
 
+#------------------------------------------------------------------------------
 def kill_procs_base(self):
 
     for host in set([p.host for p in self.procinfos]):
@@ -558,27 +561,32 @@ def kill_procs_base(self):
 
     return
 
+# 2026-05-15 PM#------------------------------------------------------------------------------
+# 2026-05-15 PM# returns the name of the most recent PMT logfile on a given host
+# 2026-05-15 PM# filenames are not prepended wit the host name
+# 2026-05-15 PM#------------------------------------------------------------------------------
+# 2026-05-15 PMdef get_process_manager_log_filename(self, host, run_number):
+# 2026-05-15 PM
+# 2026-05-15 PM    fn_format = self.pmt_log_filename_format();
+# 2026-05-15 PM    pattern   = fn_format % (self.log_directory, run_number, host,self.fUser,self.partition(),"*")
+# 2026-05-15 PM    cmd       = "ls -tr1 "+pattern+" | tail -1"
+# 2026-05-15 PM
+# 2026-05-15 PM    if not rcu.host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)
+# 2026-05-15 PM
+# 2026-05-15 PM    x  = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+# 2026-05-15 PM    fn = x.stdout.readlines()[0].decode("utf-8").strip()
+# 2026-05-15 PM    return fn
+
 #------------------------------------------------------------------------------
-# returns the name of the most recent PMT logfile on a given host 
+# self.log_girectory is the same on all nodes (/scratch/mu2e/mu2etrk/.../logs)
 #------------------------------------------------------------------------------
-def get_process_manager_log_filename(self, host):
-
-    fn_format = self.pmt_log_filename_format();
-    pattern   = fn_format % (self.log_directory,self.run_number,host,self.fUser,self.partition(),"*")
-    cmd       = "ls -tr1 "+pattern+" | tail -1"
-
-    if not rcu.host_is_local(host): cmd = "ssh -f %s '%s'" % (host,cmd)
-
-    x  = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-    fn = x.stdout.readlines()[0].decode("utf-8").strip()
-    return fn
-
-
-def get_process_manager_log_filenames_base(self):
+def get_process_manager_log_filenames_base(self,run_number):
     output = []
 
     for host in set([p.host for p in self.procinfos]):
-        output.append(get_process_manager_log_filename(self,host))
+        #  fn = get_process_manager_log_filename(self,host,run_number)
+        fn = artdaq.pmt_log_fn_node(host,self.log_directory,self.partition(),run_number)
+        output.append(fn)
 
     return output
 

@@ -66,6 +66,7 @@ except:
     from tfm.rc.control.all_functions_noop     import check_config_base
 
 from tfm.rc.control.manage_processes_direct import launch_procs_base
+from tfm.rc.control.manage_processes_direct import launch_procs_base_new
 from tfm.rc.control.manage_processes_direct import check_launch_results_base
 from tfm.rc.control.manage_processes_direct import kill_procs_base
 from tfm.rc.control.manage_processes_direct import check_proc_heartbeats_base
@@ -374,7 +375,7 @@ class FarmManager(Component):
 # that is to be executed on the right node... for now, live with a kludge 
 #------------------------------------------------------------------------------
     def hostname_on_private_subnet(self,public_hostname):
-        TRACE.INFO(f'-- START: private subnet:{self.private_subnet} public_hostname:{public_hostname}',TRACE_NAME)
+        TRACE.DEBUG(1,f'-- START: private subnet:{self.private_subnet} public_hostname:{public_hostname}',TRACE_NAME)
         
         hname = 'undefined'
         if (self.private_subnet == '192.168.157'):
@@ -386,7 +387,7 @@ class FarmManager(Component):
         elif (self.private_subnet == '10.226.9'):
             hname = public_hostname+'-data'
 
-        TRACE.INFO(f'-- END: hname:{hname}',TRACE_NAME)
+        TRACE.DEBUG(1,f'-- END: hname:{hname}',TRACE_NAME)
         
         return hname;
 
@@ -453,7 +454,7 @@ class FarmManager(Component):
                 # check the process subsystem - that could be disabled independently
                 s = self.find_subsystem(subsystem_id);
                 if (s == None):
-                    TRACE.ERROR(f'requested process:{key_name} belongs to disabled subsystem:{subsystem_id}. Process not initialized',TRACE_NAME);
+                    TRACE.ERROR(f'requested process:{key_name} belongs to disabled subsystem:{_dirsubsystem_id}. Process not initialized',TRACE_NAME);
                     continue;
 
                 timeout     = 30;                 # seconds ... better be 60
@@ -493,7 +494,7 @@ class FarmManager(Component):
                                            target             = "none",
                                            fhicl              = fcl_fn,
                                            prepend            = "")
-                    TRACE.INFO(f'created new boardreader label:{key_name}',TRACE_NAME)
+                    TRACE.DEBUG(1,f'created new boardreader label:{key_name}',TRACE_NAME)
                     
                     # for a BR, a 'fragment' and an 'event' is the same, for all other processes, event size is calculated
                     
@@ -515,7 +516,7 @@ class FarmManager(Component):
                     # data logger needs to know the output data directory
                     p.output_data_directory = self.data_directory_override;
 
-                    TRACE.INFO(f'created new datalogger label:{key_name}',TRACE_NAME)
+                    TRACE.DEBUG(1,f'created new datalogger label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'ds') :
                     p = artdaq.Dispatcher('Dispatcher',
@@ -530,7 +531,7 @@ class FarmManager(Component):
                                           fhicl              = fcl_fn,
                                           prepend            = "")
 
-                    TRACE.INFO(f'created new dispatcher label:{key_name}',TRACE_NAME)
+                    TRACE.DEBUG(1,f'created new dispatcher label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'eb') :
                     p = artdaq.EventBuilder('EventBuilder',
@@ -547,7 +548,7 @@ class FarmManager(Component):
                     if (art_analyzer_count):
                         p.art_analyzer_count = art_analyzer_count
 
-                    TRACE.INFO(f'created new eventbuilder label:{key_name}',TRACE_NAME)
+                    TRACE.DEBUG(1,f'created new eventbuilder label:{key_name} p.art_analyzer_count:{p.art_analyzer_count}',TRACE_NAME)
 
                     
                 elif (key_name[0:2] == 'rm') :
@@ -563,17 +564,18 @@ class FarmManager(Component):
                                               fhicl              = fcl_fn,
                                               prepend            = "")
 
-                    TRACE.INFO(f'created new routing  manager label:{key_name}',TRACE_NAME)
+                    TRACE.DEBUG(1,f'created new routing  manager label:{key_name}',TRACE_NAME)
 
                 else:
                     raise Exception(f'ERROR: undefined process type:{label} for {host}')
                 
-                p.odb_path = process_odb_path;
+                p.odb_path      = process_odb_path;
+                p.log_directory = self.log_directory;
                 
                 if (p.server == None):
                     self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
                 else:
-                    p.print();
+                    # p.print();
                     self.procinfos.append(p)
 
                 node.add_process(p);
@@ -608,7 +610,7 @@ class FarmManager(Component):
                     continue ;
             
             subdir_path=path+f'/{ss_id}'
-            self.print_log('i',f'subdir_path:{subdir_path}')
+            TRACE.DEBUG(1,f'subdir_path:{subdir_path}',TRACE_NAME)
             # disabled subsystems will be ignored, keep them around to minimize reconfiguring the ODB
             # that comes at a cost of skipping the disabled subsystems everywhere
             enabled = data['Enabled']
@@ -629,17 +631,19 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #------------------------------------------------------------------------------
-            s.print()
+            TRACE.INFO('uncomment the next line to print the subsystem',TRACE_NAME)
+            # s.print()
             self.subsystems[s.id] = s
             self.list_of_subsystems.append(s);    # duplicate, prepare for a transition
 #-----------^------------------------------------------------------------------
 # associative array - a dict, so subsystem ID is a string !
 #-------v----------------------------------------------------------------------
-        self.print_log('i',f'N subsystems:{len(self.list_of_subsystems)}')
+        TRACE.INFO(f'N subsystems:{len(self.list_of_subsystems)}',TRACE_NAME)
 #------------------------------------------------------------------------------
 # all subsystems created, cross-link them to avoid multiple searches later
 #------------------------------------------------------------------------------
         for s in self.list_of_subsystems:
+            TRACE.INFO(f'subsystem ID:{s.id} s.enabled:{s.enabled}',TRACE_NAME)
             if (s.enabled == 0) : continue;
             # s.sources is a list of subsystem labels
             for ss in s.sources:
@@ -650,7 +654,7 @@ class FarmManager(Component):
             if s.destination != None:
                 s.dS = self.find_subsystem(s.destination)
 
-            s.print();
+            # s.print();
 #------------------------------------------------------------------------------
 # done with subsystems. However, at this point a subsystem
 # doesn't know about its processes - that should come later
@@ -702,6 +706,8 @@ class FarmManager(Component):
 # the script is to be sourced by the processes spawned by the node_frontends
 # assume, (the Mu2e case) that all trigger farm nodes have common home area
 # need to know the run number - can't call from the constructor
+# if artdaq processes run on the same node as TFM, then there should be a node_frontend
+# running on the same node as well, it would copy the  MF file to /tmp
 #---v--------------------------------------------------------------------------
     def generate_job_submission_script(self):
 
@@ -711,22 +717,35 @@ class FarmManager(Component):
             # first - environment variables
             f.write(f'# the file is auto-generated, don''t edit\n')
             f.write(f'set +C\n')
-            f.write('source $MU2E_DAQ_DIR/config/scripts/auto_setup.sh\n')
+            f.write(f'export MU2E_DAQ_DIR={os.environ.get("MU2E_DAQ_DIR")}\n');
+            f.write('source $MU2E_DAQ_DIR/config/scripts/quick_setup.sh\n')
             # some variables may be redefined, but unlikely
             f.write(f'export MIDAS_SERVER_HOST={self.midas_server_host}\n');
             f.write(f'export MIDAS_EXPT_NAME={os.environ.get("MIDAS_EXPT_NAME")}\n');
             f.write(f'export FHICL_FILE_PATH={os.environ.get("FHICL_FILE_PATH")}\n')  # should be already defined
             f.write(f'export ARTDAQ_RUN_NUMBER={self.run_number}\n')
             f.write(f'export ARTDAQ_LOG_ROOT={self.log_directory}\n')
-            f.write(f'export ARTDAQ_LOG_FHICL={self.mf_fcl_fn}\n')
-            f.write(f'export ARTDAQ_PARTITION_NUMBER={self.partition}\n')
+            f.write(f'export ARTDAQ_LOG_FHICL=/tmp/{self.mf_fcl_fn}\n')
+            f.write(f'export ARTDAQ_PARTITION_NUMBER={self.partition()}\n')
             f.write(f'export ARTDAQ_PORTS_PER_PARTITION={self.ports_per_partition}\n')
             f.write(f'export ARTDAQ_BASE_PORT_NUMBER={self.base_port_number}\n')
+
+            # copy messagefacility file
+            f.write(f'cp {self.config_dir}/{self.mf_fcl_fn} /tmp/.')
+
+            f.write('\nnodename=`hostname -s`\n')      # need hostname on the local network.... may be
+#------------------------------------------------------------------------------
+# create logfile directory for PMT
+#------------------------------------------------------------------------------
+            f.write(f'echo creating {self.log_directory}/pmt\n');
+            f.write(f'if [ ! -d {self.log_directory}/pmt ] ; then mkdir -p -m 0775 {self.log_directory}/pmt ; fi\n');
             
-            f.write('\nnodename=`hostname -s`\n')
             # pmt_log_fn includes ${nodename}
-            pmt_log_fn = artdaq.pmt_log_fn(self.log_directory,self.run_number,self.partition())
+            pmt_log_fn = artdaq.pmt_log_fn(self.log_directory,self.partition(),self.run_number)
             f.write(f'\npmt_log_fn={pmt_log_fn}\n')
+#------------------------------------------------------------------------------
+# 
+            f.write(f'{os.environ["MU2E_DAQ_DIR"]}/config/scripts/cleanup_partition {self.partition()} >| $pmt_log_fn 2>&1\n')
             f.write(f'{os.environ["SPACK_VIEW"]}/bin/mopup_shmem.sh {self.partition()} --force >> $pmt_log_fn 2>&1\n')
 #------------------------------------------------------------------------------
 # loop over enabled nodes - only enabled nodes made it into the list
@@ -734,10 +753,10 @@ class FarmManager(Component):
             first = 1;
             for node in self.artdaq.list_of_nodes:
                 if (first == 1):
-                    f.write(f'\nif   [ nodename == "{node.name}" ] ; then\n')
+                    f.write(f'\nif   [ $nodename == "{node.name}" ] ; then\n')
                     first = 0;
                 else:
-                    f.write(f'elif [ nodename == "{node.name}" ] ; then\n')
+                    f.write(f'elif [ $nodename == "{node.name}" ] ; then\n')
 
                 for p in node.list_of_processes:
 
@@ -754,6 +773,7 @@ class FarmManager(Component):
                     f.write('    '+launch_cmd+'\n');
 
             f.write('fi\n')
+            f.write('sleep 1\n')
 
             
 #-------^----------------------------------------------------------------------
@@ -888,11 +908,14 @@ class FarmManager(Component):
 # handle everything related to MF FCL in one place and just once
 # if that changes, just restart TFM
 #------------------------------------------------------------------------------
-        self.mf_template_fn         = os.environ.get("MU2E_DAQ_DIR")+"/config/MessageFacility.fcl"
-        self.mf_fcl_fn              = f'/tmp/messagefacility_partition{self.partition()}_{self.fUser}.fcl'
+        self.mf_template_fcl         = os.environ.get("MU2E_DAQ_DIR")+"/config/artdaq/MessageFacility.fcl"
+        ## self.mf_fcl_fn              = f'/tmp/messagefacility_partition{self.partition()}_{self.fUser}.fcl'
+        self.mf_fcl_fn              = f'messagefacility_partition{self.partition()}_{self.fUser}.fcl'
 
         self.create_setup_fhiclcpp_if_needed()  # launch_procs_base does the same
-        self.generate_messagefacility_fhicl()
+        
+        if (self.use_messagefacility) :
+            self.generate_messagefacility_fhicl()
 
 #------------------------------------------------------------------------------
 # move initialization from read_settings()
@@ -930,16 +953,16 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # associate processes and subsystems
 #-------v----------------------------------------------------------------------
-        print(f'-------------------------- append processes to subsystems len(self.procinfos):{len(self.procinfos)}')
-        for p in self.procinfos:
-            TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
+# 2026-05-17 PM         print(f'-------------------------- append processes to subsystems len(self.procinfos):{len(self.procinfos)}')
+# 2026-05-17 PM         for p in self.procinfos:
+# 2026-05-17 PM             TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
 
-        print('-------------------------- append processes to subsystems .. .II')
+        TRACE.INFO('-------------------------- append processes to subsystems .. .II',TRACE_NAME)
         for p in self.procinfos:
             print (f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}')
             s           = self.subsystems[p.subsystem_id]
             p.subsystem = s;                        # finally, defined
-            s.print()
+            # s.print()
 #------------------------------------------------------------------------------
 # a subsystem has 5 lists of processes, separate for each type - is that still needed ?
 #------------------------------------------------------------------------------
@@ -948,7 +971,7 @@ class FarmManager(Component):
             if (s.max_type < p.type()): s.max_type = p.type();
             if (s.min_type > p.type()): s.min_type = p.type();
 
-        print('-------------------------- subsystems supposedly initialized')
+        TRACE.INFO('-------------------------- subsystems supposedly initialized',TRACE_NAME)
         for s in self.subsystems.values():
             s.print()
 
@@ -964,7 +987,7 @@ class FarmManager(Component):
 #
 # DL --> DS
 #------------------------------------------------------------------------------
-        print('-------------------------- init_process_connections')
+        TRACE.INFO('-------------------------- init_process_connections',TRACE_NAME)
         for p in self.procinfos:
             p.init_connections();
 
@@ -988,29 +1011,30 @@ class FarmManager(Component):
 # don't forget about smth max_fragment_size_bytes....
 # want to print what we got
 #-------v----------------------------------------------------------------------
-        print(f'----------- AAA processed self.procinfos: print sources and destinations')
+        TRACE.INFO(f'-- AAA processed self.procinfos: use TRACE level DEBUG+1 to print sources and destinations',TRACE_NAME)
         for p in self.procinfos:
             print(f'p.subsystem:{p.subsystem.id} p.rank:{p.rank} p.label:{p.label}')
             if (p.list_of_sources == None):
-                print('  -- sources: None');
+                TRACE.DEBUG(1,'  -- sources: None',TRACE_NAME);
             else:
-                print('  -- sources:')
+                TRACE.DEBUG(1,'  -- sources:',TRACE_NAME)
                 for p1 in p.list_of_sources:
                     p1.print();
 
             if (p.list_of_destinations == None):
-                print('  -- destinations: None');
+                TRACE.DEBUG(1,'  -- destinations: None',TRACE_NAME);
             else:
-                print('  -- destinations:')
+                TRACE.DEBUG(1,'  -- destinations:',TRACE_NAME)
                 for p1 in p.list_of_destinations:
                     p1.print();
 
-        print(f'----------- excersize printing the host_map')
+        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
         s = artdaq.host_map_string(self.procinfos,'')
         print(f'{s}')
 #------------------------------------------------------------------------------
 # now update fcls and write updated ones to /tmp/partition_{..}/{config_name}
 #------------------------------------------------------------------------------
+        TRACE.INFO(f'----------- write updated fcls',TRACE_NAME)
         self.write_updated_fcls();
 
 #------------------------------------------------------------------------------
@@ -1104,6 +1128,8 @@ class FarmManager(Component):
     do_enable                             = do_enable_base
     do_disable                            = do_disable_base
     launch_procs                          = launch_procs_base
+#    launch_procs                          = launch_procs_base
+    launch_procs                          = launch_procs_base_new
     check_launch_results                  = check_launch_results_base
     kill_procs                            = kill_procs_base
     check_proc_heartbeats                 = check_proc_heartbeats_base
@@ -1416,7 +1442,7 @@ class FarmManager(Component):
 
                 self.print_log("w", rcu.make_paragraph(errmsg))
 
-                self.print_log("w","\nSee logfile %s for details" % (self.determine_logfilename(p)))
+                self.print_log("w","\nSee logfile %s for details" % (self.determine_logfile(p)))
 
                 if (
                     "BoardReader" in p.name
@@ -1437,7 +1463,9 @@ class FarmManager(Component):
 #
 #------------------------------------------------------------------------------
     def have_artdaq_mfextensions(self):
-
+        TRACE.INFO('-- START',TRACE_NAME)
+        tstart = time.time()
+        
         try:
             self.artdaq_mfextensions_booleans
         except:
@@ -1467,6 +1495,8 @@ class FarmManager(Component):
 
         ok = (status == 0);
         self.artdaq_mfextensions_booleans[self.daq_setup_script] = ok;
+        
+        TRACE.INFO(f'-- END, time spent {time.time()-tstart}',TRACE_NAME)
         return ok
 #------------------------------------------------------------------------------
 # P.Murat: someone really likes typing... don't go there - see above!
@@ -1553,7 +1583,7 @@ class FarmManager(Component):
     # literal Python exception got thrown at some point.
 
     def check_proc_exceptions(self):
-
+        TRACE.INFO('--START:',TRACE_NAME)
         if self.exception: return
 
         for procinfo in self.procinfos:
@@ -1637,11 +1667,15 @@ class FarmManager(Component):
                     "Processes remaining:\n%s"
                     % ("\n".join([procinfo.label for procinfo in self.procinfos])),
                 )
+                               
+        TRACE.INFO('-- END:',TRACE_NAME)
+        return;
 
-#------------------------------------------------------------------------------
+#-------^----------------------------------------------------------------------
 #
 #---v--------------------------------------------------------------------------
     def init_process_requirements(self):
+        TRACE.INFO('-- START:',TRACE_NAME)
         self.overriding_process_requirements = []
 
         def num_processes_required_by_fraction(regexp, fraction):
@@ -1723,11 +1757,14 @@ class FarmManager(Component):
                             ('Error in file %s: line "%s" does not parse as "<process label regexp> '
                              '<process fraction required> <process count required>"')
                             % (os.environ["TFM_PROCESS_REQUIREMENTS_LIST"],line))
+                               
+        TRACE.INFO('-- END:',TRACE_NAME)
 
 #------------------------------------------------------------------------------
 # P.Murat: here comes a really long one
 #------------------------------------------------------------------------------
     def throw_exception_if_losing_process_violates_requirements(self, procinfo):
+        TRACE.INFO('-- START:',TRACE_NAME)
 
         process_matches_requirements_regexp = False  # As in, the requirements found in $TFM_PROCESS_REQUIREMENTS_LIST
         # should it exist
@@ -1814,7 +1851,10 @@ class FarmManager(Component):
                      "to the file referred to by the TFM_PROCESS_REQUIREMENTS_LIST environment variable"
                      % (procinfo.label)))
                 )
+                               
+        TRACE.INFO('-- END:',TRACE_NAME)
 
+#------------------------------------------------------------------------------
     def determine_logfilename(self, procinfo):
         loglists = [ self.boardreader_log_filenames,
                      self.eventbuilder_log_filenames,
@@ -1903,13 +1943,16 @@ class FarmManager(Component):
 # at this point the log files are already created and the farm manager 
 # just reads the last ones created... Where the log file names are defined ?
 #------------------------------------------------------------------------------
-    def get_artdaq_log_filenames(self):
+    def get_artdaq_log_filenames(self,run_number):
 
         self.boardreader_log_filenames    = []
         self.eventbuilder_log_filenames   = []
         self.datalogger_log_filenames     = []
         self.dispatcher_log_filenames     = []
         self.routingmanager_log_filenames = []
+        
+# 2026-05-15 PM do we need this at all ? - who uses this ?
+        return
 
         for host in set([procinfo.host for procinfo in self.procinfos]):
 
@@ -2011,112 +2054,112 @@ class FarmManager(Component):
 
         self.print_log("d", "\n", 2)
 
-#------------------------------------------------------------------------------
-#
-#---v--------------------------------------------------------------------------
-    def fill_package_versions(self, packages):
-
-        cmd             = ""
-        needed_packages = []
-
-        for package in packages:
-            if package in self.package_versions:
-                continue
-            else:
-                needed_packages.append(package if self.productsdir != None else package.replace("_", "-"))
-
-        if (len(needed_packages) == 0): return
-
-        if "tfm" in packages:
-            assert (len(packages) == 1), ("Note to developer: you'll probably need to refactor "
-                                          "save_run_records.py if you want to get the version "
-                                          "of other packages alongside the version of FarmManager")
-                                       
-            cmd = "ups active | sed -r -n 's/^artdaq_daqinterface\\s+(\\S+).*/artdaq_daqinterface \\1/p'"
-        elif self.productsdir != None:
-            cmd = (
-                "%s ; . %s; ups active | sed -r -n 's/^(%s)\\s+(\\S+).*/\\1 \\2/p'"
-                % (
-                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-                    self.daq_setup_script,
-                    "|".join(needed_packages),
-                )
-            )
-        elif self.spackdir != None:
-            cmd = (
-                "%s ; . %s; spack find --loaded | sed -r -n 's/^(%s)@(\\S+).*/\\1 \\2/p'" % (
-                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-                    self.daq_setup_script,
-                    "|".join(needed_packages),                
-                )
-            )
-
-        if cmd != "":
-            proc = subprocess.Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-                encoding="utf-8",
-            )
-
-            out, err = proc.communicate()
-            stdoutlines = out.strip().split("\n")
-            stderrlines = err.strip().split("\n")
-
-            for line in stderrlines:
-                if not line or not line.strip():
-                    stderrlines.remove(line)
-                elif "type: unsetup: not found" in line:
-                    self.print_log("w", line)
-                    stderrlines.remove(line)
-                elif re.search(
-                    r"INFO: mrb v\d_\d\d_\d\d requires cetmodules >= \d\.\d\d\.\d\d to run: attempting to configure\.\.\.v\d_\d\d_\d\d OK",
-                    line,
-                ):
-                    self.print_log("i", line)
-                    stderrlines.remove(line)
-
-            if len(stderrlines) > 0:
-                raise Exception(
-                    'Error in %s: the command "%s" yields output to stderr:\n"%s"'
-                    % (
-                        self.fill_package_versions.__name__,
-                        cmd,
-                        "".join(stderrlines),
-                    )
-                )
-
-            if len(stdoutlines) == 0:
-                print(traceback.format_exc())
-                raise Exception(
-                    'Error in %s: the command "%s" yields no output to stdout'
-                    % (self.fill_package_versions.__name__, cmd)
-                )
-
-            for line in stdoutlines:
-                if re.search(r"^(%s)\s+" % ("|".join(needed_packages)), line):
-                    (package, version) = line.split()
-
-                    if not re.search(r"v[0-9]+_[0-9]+_[0-9]+.*", version):
-                        raise Exception(
-                            rcu.make_paragraph(
-                                ('Error in %s: the version of the package "%s" this function has determined, '
-                                 '"%s", is not the expected v<int>_<int>_<int>optionalextension format')
-                                % (self.fill_package_versions.__name__,package,version)
-                            )
-                        )
-                    # print('package=%s type(package)=%s' % (package,type(package)))
-                    self.package_versions[package.replace("-", "_")] = version
-
-        for package in packages:
-            if package not in self.package_versions:
-                self.print_log("w",
-                               'Warning: there was a problem trying to determine the version of package "%s"'
-                               % (package)
-                )
+# 2026-05-15 PM#------------------------------------------------------------------------------
+# 2026-05-15 PM#
+# 2026-05-15 PM#---v--------------------------------------------------------------------------
+# 2026-05-15 PM    def fill_package_versions(self, packages):
+# 2026-05-15 PM
+# 2026-05-15 PM        cmd             = ""
+# 2026-05-15 PM        needed_packages = []
+# 2026-05-15 PM
+# 2026-05-15 PM        for package in packages:
+# 2026-05-15 PM            if package in self.package_versions:
+# 2026-05-15 PM                continue
+# 2026-05-15 PM            else:
+# 2026-05-15 PM                needed_packages.append(package if self.productsdir != None else package.replace("_", "-"))
+# 2026-05-15 PM
+# 2026-05-15 PM        if (len(needed_packages) == 0): return
+# 2026-05-15 PM
+# 2026-05-15 PM        if "tfm" in packages:
+# 2026-05-15 PM            assert (len(packages) == 1), ("Note to developer: you'll probably need to refactor "
+# 2026-05-15 PM                                          "save_run_records.py if you want to get the version "
+# 2026-05-15 PM                                          "of other packages alongside the version of FarmManager")
+# 2026-05-15 PM                                       
+# 2026-05-15 PM            cmd = "ups active | sed -r -n 's/^artdaq_daqinterface\\s+(\\S+).*/artdaq_daqinterface \\1/p'"
+# 2026-05-15 PM        elif self.productsdir != None:
+# 2026-05-15 PM            cmd = (
+# 2026-05-15 PM                "%s ; . %s; ups active | sed -r -n 's/^(%s)\\s+(\\S+).*/\\1 \\2/p'"
+# 2026-05-15 PM                % (
+# 2026-05-15 PM                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
+# 2026-05-15 PM                    self.daq_setup_script,
+# 2026-05-15 PM                    "|".join(needed_packages),
+# 2026-05-15 PM                )
+# 2026-05-15 PM            )
+# 2026-05-15 PM        elif self.spackdir != None:
+# 2026-05-15 PM            cmd = (
+# 2026-05-15 PM                "%s ; . %s; spack find --loaded | sed -r -n 's/^(%s)@(\\S+).*/\\1 \\2/p'" % (
+# 2026-05-15 PM                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
+# 2026-05-15 PM                    self.daq_setup_script,
+# 2026-05-15 PM                    "|".join(needed_packages),                
+# 2026-05-15 PM                )
+# 2026-05-15 PM            )
+# 2026-05-15 PM
+# 2026-05-15 PM        if cmd != "":
+# 2026-05-15 PM            proc = subprocess.Popen(
+# 2026-05-15 PM                cmd,
+# 2026-05-15 PM                executable="/bin/bash",
+# 2026-05-15 PM                shell=True,
+# 2026-05-15 PM                stdout=subprocess.PIPE,
+# 2026-05-15 PM                stderr=subprocess.PIPE,
+# 2026-05-15 PM                stdin=subprocess.PIPE,
+# 2026-05-15 PM                encoding="utf-8",
+# 2026-05-15 PM            )
+# 2026-05-15 PM
+# 2026-05-15 PM            out, err = proc.communicate()
+# 2026-05-15 PM            stdoutlines = out.strip().split("\n")
+# 2026-05-15 PM            stderrlines = err.strip().split("\n")
+# 2026-05-15 PM
+# 2026-05-15 PM            for line in stderrlines:
+# 2026-05-15 PM                if not line or not line.strip():
+# 2026-05-15 PM                    stderrlines.remove(line)
+# 2026-05-15 PM                elif "type: unsetup: not found" in line:
+# 2026-05-15 PM                    self.print_log("w", line)
+# 2026-05-15 PM                    stderrlines.remove(line)
+# 2026-05-15 PM                elif re.search(
+# 2026-05-15 PM                    r"INFO: mrb v\d_\d\d_\d\d requires cetmodules >= \d\.\d\d\.\d\d to run: attempting to configure\.\.\.v\d_\d\d_\d\d OK",
+# 2026-05-15 PM                    line,
+# 2026-05-15 PM                ):
+# 2026-05-15 PM                    self.print_log("i", line)
+# 2026-05-15 PM                    stderrlines.remove(line)
+# 2026-05-15 PM
+# 2026-05-15 PM            if len(stderrlines) > 0:
+# 2026-05-15 PM                raise Exception(
+# 2026-05-15 PM                    'Error in %s: the command "%s" yields output to stderr:\n"%s"'
+# 2026-05-15 PM                    % (
+# 2026-05-15 PM                        self.fill_package_versions.__name__,
+# 2026-05-15 PM                        cmd,
+# 2026-05-15 PM                        "".join(stderrlines),
+# 2026-05-15 PM                    )
+# 2026-05-15 PM                )
+# 2026-05-15 PM
+# 2026-05-15 PM            if len(stdoutlines) == 0:
+# 2026-05-15 PM                print(traceback.format_exc())
+# 2026-05-15 PM                raise Exception(
+# 2026-05-15 PM                    'Error in %s: the command "%s" yields no output to stdout'
+# 2026-05-15 PM                    % (self.fill_package_versions.__name__, cmd)
+# 2026-05-15 PM                )
+# 2026-05-15 PM
+# 2026-05-15 PM            for line in stdoutlines:
+# 2026-05-15 PM                if re.search(r"^(%s)\s+" % ("|".join(needed_packages)), line):
+# 2026-05-15 PM                    (package, version) = line.split()
+# 2026-05-15 PM
+# 2026-05-15 PM                    if not re.search(r"v[0-9]+_[0-9]+_[0-9]+.*", version):
+# 2026-05-15 PM                        raise Exception(
+# 2026-05-15 PM                            rcu.make_paragraph(
+# 2026-05-15 PM                                ('Error in %s: the version of the package "%s" this function has determined, '
+# 2026-05-15 PM                                 '"%s", is not the expected v<int>_<int>_<int>optionalextension format')
+# 2026-05-15 PM                                % (self.fill_package_versions.__name__,package,version)
+# 2026-05-15 PM                            )
+# 2026-05-15 PM                        )
+# 2026-05-15 PM                    # print('package=%s type(package)=%s' % (package,type(package)))
+# 2026-05-15 PM                    self.package_versions[package.replace("-", "_")] = version
+# 2026-05-15 PM
+# 2026-05-15 PM        for package in packages:
+# 2026-05-15 PM            if package not in self.package_versions:
+# 2026-05-15 PM                self.print_log("w",
+# 2026-05-15 PM                               'Warning: there was a problem trying to determine the version of package "%s"'
+# 2026-05-15 PM                               % (package)
+# 2026-05-15 PM                )
 #------------------------------------------------------------------------------
 #
 #---v--------------------------------------------------------------------------
@@ -2239,11 +2282,11 @@ class FarmManager(Component):
         
         timeout = timeout_dict[p.name]
 
-        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
+        TRACE.INFO(f"-- START: sending transition command:{command} to p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
         self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
 
-        TRACE.INFO(f'Sending transition {command} to {p.label}')
+        # TRACE.INFO(f'Sending transition {command} to {p.label}')
 
         try:
             if command == "Init":
@@ -2278,11 +2321,11 @@ class FarmManager(Component):
 
             if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
                 p.state = self.target_states[command]
-                self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",2)
+                TRACE.INFO(f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",TRACE_NAME)
                 self.set_process_status(p,0);
 
         except Exception:
-            self.print_log("i",f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",2)
+            TRACE.ERROR(f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",TRACE_NAME)
             self.set_process_status(p,-1);
             self.exception = True
 
@@ -2320,7 +2363,7 @@ class FarmManager(Component):
                     )
                 )
 
-            self.print_log("e", rcu.make_paragraph(output_message))
+            TRACE.ERROR(rcu.make_paragraph(output_message),TRACE_NAME)
 
         TRACE.INFO(f"-- END: p.label:{p.label} command:{command}",TRACE_NAME)
         
@@ -2390,14 +2433,14 @@ class FarmManager(Component):
             subsystems_in_order.reverse()
         
         starttime = time.time()
-        TRACE.INFO(f'sending command:{command.upper()} to ARTDAQ processes',TRACE_NAME);
+        TRACE.INFO(f'sending command:{command.upper()} to ARTDAQ processes, set TRACE debug level 1 for mode details',TRACE_NAME);
 
         proc_starttimes = {}
         proc_endtimes   = {}
         for subsystem in subsystems_in_order:
             TRACE.DEBUG(0,f'subsystem:{subsystem}',TRACE_NAME);
             for proctype in proctypes_in_order:
-                TRACE.DEBUG(0,f'proctype:{proctype}',TRACE_NAME);
+                TRACE.DEBUG(1,f'proctype:{proctype}',TRACE_NAME);
                 priorities_used = {}
 
                 for p in self.procinfos:
@@ -2406,12 +2449,12 @@ class FarmManager(Component):
                         priorities_used[p.priority] = p
 
                 priority_rankings = sorted(priorities_used.keys())
-                TRACE.DEBUG(0,f'priority_rankings:{priority_rankings}',TRACE_NAME);
+                TRACE.DEBUG(1,f'priority_rankings:{priority_rankings}',TRACE_NAME);
 
                 for priority in priority_rankings:
                     proc_threads = {}
                     for p in self.procinfos:
-                        TRACE.DEBUG(0,f'p.label:{p.label} command:{command}',TRACE_NAME);
+                        TRACE.DEBUG(1,f'p.label:{p.label} command:{command}',TRACE_NAME);
                         if (proctype in p.name and priority == p.priority and p.subsystem.id == subsystem):
                             self.set_process_status(p,1)
                             t = rcu.RaisingThread(target=self.process_command, args=(p,command))
@@ -2419,8 +2462,8 @@ class FarmManager(Component):
                             proc_starttimes[p.label] = time.time()
                             t.start()
 
-                    TRACE.DEBUG(0,'printing proc_threads',TRACE_NAME)
-                    print(f'proc_threads:{proc_threads}')
+                    TRACE.DEBUG(0,'to print proc_threads uncomment the line below',TRACE_NAME)
+                    # print(f'proc_threads:{proc_threads}')
                     
                     for label in proc_threads:
                         proc_threads[label].join()
@@ -2429,9 +2472,8 @@ class FarmManager(Component):
         if self.exception:
             raise Exception(rcu.make_paragraph("An exception was thrown during the %s transition." % (command)))
 
-        endtime = time.time()
-        self.print_log("i", "[farm_manager::do_command(%s)]: done in %.1f seconds." 
-                       % (command.upper(),endtime - starttime))
+        TRACE.INFO(f"[farm_manager::do_command({command.upper()})]: done in {(time.time() - starttime):.1f} seconds.",TRACE_NAME)
+
         nfailed = 0;
         for p in self.procinfos:
             if (p.lastreturned != "Success"):
@@ -2499,12 +2541,12 @@ class FarmManager(Component):
 # in self.procinfos by procinfo_index via "add_config_archive_entry"
 #---v--------------------------------------------------------------------------
     def archive_documents(self, labeled_fhicl_documents):
-
+        TRACE.INFO('-- START',TRACE_NAME)
         for p in self.procinfos:
             if (("EventBuilder" in p.name) or ("DataLogger" in p.name)):
                 if rcu.fhicl_writes_root_file(p.fhicl_used):
                     for label, contents in labeled_fhicl_documents:
-                        self.print_log("d","Saving FHiCL for %s to %s" % (label, p.label),3)
+                        TRACE.DEBUG(1,f'Saving FHiCL for {label} to {p.label}',TRACE_NAME)
                         try:
                             p.lastreturned = p.server.daq.add_config_archive_entry(label,contents)
                         except:
@@ -2524,9 +2566,12 @@ class FarmManager(Component):
                                     % (label, p.label)
                                 )
                             )
+        TRACE.INFO('-- END',TRACE_NAME)
         return
 
+
     def update_archived_metadata(self):
+        TRACE.INFO('-- START',TRACE_NAME)
         fn = self.metadata_filename();
         with open(fn) as f:
             contents = f.read()
@@ -2534,6 +2579,7 @@ class FarmManager(Component):
             contents = re.sub('"', '"', contents)
 
         self.archive_documents([("metadata", 'contents: "\n%s\n"\n' % (contents))])
+        TRACE.INFO('-- END',TRACE_NAME)
 
     def add_ranks_from_ranksfile(self):
 
@@ -2578,6 +2624,7 @@ class FarmManager(Component):
 #          GOSH, is it true that the priority is encoded in the name? 
 #---v--------------------------------------------------------------------------
     def readjust_process_priorities(self, priority_list):
+        TRACE.INFO('-- START',TRACE_NAME)
 
         for p in self.procinfos:
             if "BoardReader" in p.name:
@@ -2598,11 +2645,15 @@ class FarmManager(Component):
                         )
                 else:
                     p.priority = 999
+
+        TRACE.INFO('-- END',TRACE_NAME)
         return
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
     def check_run_record_integrity(self):
+        TRACE.INFO('-- START',TRACE_NAME)
+
         inode_basename = ".record_directory_info"
         inode_fullname = "%s/%s" % (self.record_directory, inode_basename)
         if os.path.exists(inode_fullname):
@@ -2643,12 +2694,18 @@ class FarmManager(Component):
                                " PLEASE INVESTIGATE WHETHER THERE ARE ANY MISSING RUN RECORDS"
                                " AS THIS MAY RESULT IN RUN NUMBER DUPLICATION.")
                     raise Exception(rcu.make_paragraph(message % (runrec,self.record_directory,inode_fullname,inode_fullname)))
+
+        TRACE.INFO('-- END',TRACE_NAME)
         return
 
 #------------------------------------------------------------------------------
 # Eric Flumerfelt, August 21, 2023: Yuck, package manager dependent stuff...
+# the environment variable TFM_SETUP_FHICLCPP should exist
+# for TFM, os.environ["TFM_SETUP_FHICLCPP"] is defined by the TFM MIDAS frontend, tfm_fe.py
+# the function creates a script to setup fhicl-cpp .... 
 #---v--------------------------------------------------------------------------
     def create_setup_fhiclcpp_if_needed(self):
+        TRACE.INFO('-- START',TRACE_NAME)
         if not os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
             self.print_log("w",
                            rcu.make_paragraph(
@@ -2659,35 +2716,36 @@ class FarmManager(Component):
             with open(os.environ["TFM_SETUP_FHICLCPP"], "w") as outf:
                 outf.write("\n".join(rcu.get_setup_commands(self.productsdir, self.spackdir)))
                 outf.write("\n\n")
-                if self.productsdir != None:
-                    lines = subprocess.Popen(
-                        '%s;ups list -aK+ fhiclcpp | sort -n'
-                        % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir))),
-                        executable="/bin/bash",
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                    ).stdout.readlines()
-                    if len(lines) > 0:
-                        fhiclcpp_to_setup_line = lines[-1].decode("utf-8")
-                    else:
-                        os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
-                        raise Exception(
-                            rcu.make_paragraph(
-                                'Unable to find fhiclcpp ups product in products directory "%s" '
-                                % (self.productsdir)
-                            )
-                        )
-
-                    outf.write(
-                        "setup %s %s -q %s\n"
-                        % (
-                            fhiclcpp_to_setup_line.split()[0],
-                            fhiclcpp_to_setup_line.split()[1],
-                            fhiclcpp_to_setup_line.split()[3],
-                        )
-                    )
-                elif self.spackdir != None:
+# 2026-05-16 PM                 if self.productsdir != None:
+# 2026-05-16 PM                     lines = subprocess.Popen(
+# 2026-05-16 PM                         '%s;ups list -aK+ fhiclcpp | sort -n'
+# 2026-05-16 PM                         % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir))),
+# 2026-05-16 PM                         executable="/bin/bash",
+# 2026-05-16 PM                         shell=True,
+# 2026-05-16 PM                         stdout=subprocess.PIPE,
+# 2026-05-16 PM                         stderr=subprocess.STDOUT,
+# 2026-05-16 PM                     ).stdout.readlines()
+# 2026-05-16 PM                     if len(lines) > 0:
+# 2026-05-16 PM                         fhiclcpp_to_setup_line = lines[-1].decode("utf-8")
+# 2026-05-16 PM                     else:
+# 2026-05-16 PM                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
+# 2026-05-16 PM                         raise Exception(
+# 2026-05-16 PM                             rcu.make_paragraph(
+# 2026-05-16 PM                                 'Unable to find fhiclcpp ups product in products directory "%s" '
+# 2026-05-16 PM                                 % (self.productsdir)
+# 2026-05-16 PM                             )
+# 2026-05-16 PM                         )
+# 2026-05-16 PM 
+# 2026-05-16 PM                     outf.write(
+# 2026-05-16 PM                         "setup %s %s -q %s\n"
+# 2026-05-16 PM                         % (
+# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[0],
+# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[1],
+# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[3],
+# 2026-05-16 PM                         )
+# 2026-05-16 PM                     )
+# 2026-05-16 PM                 elif self.spackdir != None:
+                if self.spackdir != None:
                     outf.write("spack load --first fhicl-cpp")
 
             if os.path.exists(os.environ["TFM_SETUP_FHICLCPP"]):
@@ -2703,8 +2761,9 @@ class FarmManager(Component):
                         % (os.environ["TFM_SETUP_FHICLCPP"])
                     )
                 )
-
-
+            
+        TRACE.INFO('-- END',TRACE_NAME)
+        return
 
 # 2026-05-11 PM#------------------------------------------------------------------------------
 # 2026-05-11 PM# PM better to get rid of the env var
@@ -2720,10 +2779,13 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # P.Murat: not only this function returns the filename, it also writes out the file 
 # itself. This is how the MessageFacility log filenames are formed
+# what is the port number 21005 (10000+11*1000+5) for partition 11? - reserved for the MessageFacility?
 #------------------------------------------------------------------------------
     def generate_messagefacility_fhicl(self):
 
-        have_artdaq_mfextensions = self.have_artdaq_mfextensions();
+        TRACE.INFO(f'-- START: ',TRACE_NAME)
+        
+        have_artdaq_mfextensions = 0 # TODO handle this correctly #  self.have_artdaq_mfextensions();
 
         default_contents = """
 
@@ -2739,29 +2801,35 @@ class FarmManager(Component):
 
 udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_INTEGER_VALUE host : "%s" }
 
-""" % (self.mf_template_fn, rcu.date_and_time(),socket.gethostname(),socket.gethostname(),)
+""" % (self.mf_template_fcl, rcu.date_and_time(),socket.gethostname(),socket.gethostname(),)
 
-        if not os.path.exists(self.mf_fcl_fn):
-            with open(self.mf_fcl_fn, "w") as outf_mf:
+        mf_fcl_fn = self.config_dir+'/'+self.mf_fcl_fn;
+        
+        TRACE.INFO(f'self.config_dir:{self.config_dir} mf_fcl_fn:{mf_fcl_fn} exists:{os.path.exists(mf_fcl_fn)}',TRACE_NAME);
+
+        if not os.path.exists(self.mf_template_fcl):
+            with open(self.mf_template_fcl, "w") as outf_mf:
                 outf_mf.write(default_contents)
     
-            processed_mf_fcl_fn = tfm.mf_fcl_fn;
+            # output of preprocessing is stored in the config dir
+            processed_mf_fcl_fn = self.config_dir+'/'+self.mf_fcl_fn;
     
-            with open(self.mf_template_fn) as inf_mf:
-                with open(self.mf_fcl_fn, "w") as outf_mf:
+            with open(self.mf_template_fcl) as inf_mf:
+                with open(mf_fcl_fn, "w") as outf_mf:
                     for line in inf_mf.readlines():
                         res = re.search(r"^\s*udp", line)
                         if not res:
                             outf_mf.write(line)
                         elif have_artdaq_mfextensions:
                             outf_mf.write(
-                                re.sub("port\s*:\s*\S+","port: %d"%(10005+tfm.partition()*1000),line,)
+                                re.sub("port\s*:\s*\S+","port: %d"%(10005+self.partition()*1000),line,)
                             )
                         else:  # Note that a completely-empty (i.e., free even of comments) messagefacility fhicl filename will cause an error...
                             outf_mf.write(
                                 "\n# udp table for MsgViewer not used since artdaq_mfextensions not available\n"
                             )
     
+        TRACE.INFO(f'-- END: ',TRACE_NAME)
         return
     
 #-------^----------------------------------------------------------------------
@@ -2769,7 +2837,7 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 #---v--------------------------------------------------------------------------
     def do_fhiclcpp_stuff(self):
 
-        TRACE.INFO(f'do_fhiclcpp_stuff 001',TRACE_NAME)
+        TRACE.INFO(f'-- START: ',TRACE_NAME)
 
         cmds = []
 
@@ -2778,19 +2846,23 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
                os.environ["TFM_SETUP_FHICLCPP"])
         )
         cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0; else dump_arg=none; fi")
-        cmds.append("fhicl-dump -l $dump_arg -c %s" % (self.mf_template_fn))
+        cmds.append("fhicl-dump -l $dump_arg -c %s" % (self.mf_template_fcl))
 
-        proc = subprocess.Popen("; ".join(cmds),
+        cmd = "; ".join(cmds);
+        TRACE.INFO(f'001 cmd:{cmd}',TRACE_NAME)
+
+        proc = subprocess.Popen(cmd,
                                 executable="/bin/bash",
                                 shell=True,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 encoding="utf-8")
 
-        TRACE.INFO(f'o_fhiclcpp_stuff 002');
         out, err = proc.communicate()
         status   = proc.returncode
 
+        TRACE.INFO(f'status:{status}');
+        
         if status != 0:
             self.print_log("e","\nNonzero return value (%d) resulted when trying to run the following:\n%s\n"
                            % (status, "\n".join(cmds)))
@@ -2800,31 +2872,33 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
                 rcu.make_paragraph(
                     ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                      " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                    % (self.get_mf_template_fn)
+                    % (self.mf_template_fcl)
                 ),
             )
 
             raise Exception(
                 ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain"
                  " one or more syntax errors (Or there was a problem running fhicl-dump)")
-                % (rcu.get_mf_template_fn)
+                % (self.mf_template_fcl)
             )
+        TRACE.INFO(f'-- END: ',TRACE_NAME)
         return
 
 #------------------------------------------------------------------------------
-#       get_lognames : returns 0 in case of success, -1 otherwise
+# get_lognames : returns 0 in case of success, -1 otherwise
+# process manager has only one log file per run
 #---v--------------------------------------------------------------------------
-    def get_lognames(self):
+    def get_lognames(self,run_number):
         starttime = time.time()
         TRACE.INFO("-- START:determining logfiles associated with the artdaq processes",TRACE_NAME) 
-        try:
-            self.process_manager_log_filenames = self.get_process_manager_log_filenames()
-            self.get_artdaq_log_filenames()
-
-        except Exception:
-            self.print_log("e", traceback.format_exc())
-            self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
-            return -1;
+# 2026-05-15 PM        try:
+# 2026-05-15 PM            # self.process_manager_log_filenames = self.get_process_manager_log_filenames(run_number)
+        self.get_artdaq_log_filenames(run_number)
+# 2026-05-15 PM
+# 2026-05-15 PM        except Exception:
+# 2026-05-15 PM            self.print_log("e", traceback.format_exc())
+# 2026-05-15 PM            self.alert_and_recover("Unable to find logfiles for at least some of the artdaq processes")
+# 2026-05-15 PM            return -1;
 
         endtime = time.time()
         TRACE.INFO(f'-- END , done in {(endtime - starttime):.1f} seconds',TRACE_NAME)
@@ -3050,17 +3124,18 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once
+# mkdir moved to 'generate_job_submission_script'
 #-----------v------------------------------------------------------------------
-            self.make_logfile_dirs();
+# 2026-05-17 PM             self.make_logfile_dirs();
             self.fState.set_completed(50);
 #------------------------------------------------------------------------------
 # done creating directories for logfiles,
 # deal with message facility. 
 # -- also OK to do just once
 #-----------v------------------------------------------------------------------
-            self.print_log("i", "BOOT transition 004: before init_process_requirements",2)
+            TRACE.INFO("BOOT transition 004: before init_process_requirements",TRACE_NAME)
             self.init_process_requirements()
-            self.print_log("i", "BOOT transition 005: after init_process_requirements" ,2)
+            TRACE.INFO("BOOT transition 005: after init_process_requirements" ,TRACE_NAME)
             self.fState.set_completed(60);
 #------------------------------------------------------------------------------
 # now do something with fhiclcpp - need to figure out what it is. OK to do just once
@@ -3103,8 +3178,8 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         if not run_number: self.run_number = self.run_params["run_number"]
         else             : self.run_number = run_number
 
-        self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
-                       (self.run_number," ".join(self.subconfigs_for_run)))
+#        self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
+#                       (self.run_number," ".join(self.subconfigs_for_run)))
         msg = f'CONFIG transition underway: run_number:{self.run_number} config_name:{" ".join(self.subconfigs_for_run)}'
         TRACE.INFO(msg,TRACE_NAME)             
 #------------------------------------------------------------------------------
@@ -3151,7 +3226,7 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
             )
             return
 
-        self.print_log("i", "CONFIG transition 009: bookkeeping done (%.1f seconds)." % (time.time() - starttime))
+        TRACE.INFO(f"CONFIG transition 009: bookkeeping done in {time.time() - starttime:.1f} seconds")
 #------------------------------------------------------------------------------
 # P.Murat: it doesn't make sense to submit the jobs before FCL's are reformatted, does it ?
 #          now, with the info on hand about the processes contained in procinfos, actually launch them
@@ -3173,9 +3248,9 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 
         TRACE.INFO(f"CONFIG transition 013: before self.manage_processes",TRACE_NAME)
 #------------------------------------------------------------------------------
-# define names of all logfiles
+# define names of all logfiles : they all have the run number in them
 #-------v----------------------------------------------------------------------
-        rc = self.get_lognames();
+        rc = self.get_lognames(run_number);
         if (rc != 0):                                       return;
 #------------------------------------------------------------------------------
 # dealing with the run records, probably, after the submission
@@ -3213,7 +3288,7 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
             self.revert_failed_transition("calling experiment-defined function check_config()")
             return
 
-        self.print_log("i", "CONFIG transition 016")
+        TRACE.INFO("CONFIG transition 016",TRACE_NAME)
 #------------------------------------------------------------------------------
 # sending 'Init' command to artdaq processes - at this point they should be already submitted
 # insert the last part of former do_boot right above
@@ -3251,9 +3326,9 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 
         TRACE.INFO(f"CONFIG transition 017")
 
-        if self.manage_processes:
-            self.print_log("i", ("Process manager logfiles:\n%s" 
-                                 % (", ".join(self.process_manager_log_filenames))),2)
+# 2026-05-15 PM        if self.manage_processes:
+# 2026-05-15 PM            self.print_log("i", ("Process manager logfiles:\n%s" 
+# 2026-05-15 PM                                 % (", ".join(self.process_manager_log_filenames))),2)
 #------------------------------------------------------------------------------
 # -- it loooks, that at this point all book-keeping and checks are done and one can submit 
 #    the jobs and name the log files
@@ -3463,9 +3538,9 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 
         self.complete_state_change("terminating")
 
-        if self.manage_processes:
-            self.print_log("i","Process manager logfiles (if applicable): %s"
-                           % (",".join(self.process_manager_log_filenames)))
+# 2026-05-15 PM        if self.manage_processes:
+# 2026-05-15 PM            self.print_log("i","Process manager logfiles (if applicable): %s"
+# 2026-05-15 PM                           % (",".join(self.process_manager_log_filenames)))
 #------------------------------------------------------------------------------
 # to preserve formal logic: transition completes, then the state changes
 #-------v----------------------------------------------------------------------

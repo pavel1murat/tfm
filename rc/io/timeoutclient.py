@@ -17,26 +17,6 @@ try:
 except AttributeError:  # no-coverage
     DEFAULT_TIMEOUT = 60
 
-
-# if sys.version_info < (2, 7):  # no-coverage
-#     class TimeoutHTTP(httplib.HTTP):
-#         def __init__(self, host='', port=None, strict=None,
-#                      timeout=DEFAULT_TIMEOUT):
-#             if port == 0:
-#                 port = None
-#             self._setup(self._connection_class(host, port, strict, timeout))
-# 
-#     class TimeoutTransport(xmlrpclib.Transport):
-#         def __init__(self, timeout=DEFAULT_TIMEOUT, *args, **kwargs):
-#             xmlrpclib.Transport.__init__(self, *args, **kwargs)
-#             self.timeout = timeout
-# 
-#         def make_connection(self, host):
-#             host, extra_headers, x509 = self.get_host_info(host)
-#             conn = TimeoutHTTP(host, timeout=self.timeout)
-#             return conn
-# else:  # no-coverage
-
 #------------------------------------------------------------------------------
 class TimeoutTransport(xmlrpclib.Transport):
 

@@ -40,7 +40,7 @@ class Procinfo(object):
                  rank,
                  host,
                  port,                            # assumed to be a string
-                 timeout,         # PM: pick some reasonable default
+                 timeout,                         # PM: pick some reasonable default
                  label,
                  subsystem_id,
                  allowed_processors = None,
@@ -69,12 +69,7 @@ class Procinfo(object):
         self.init_fragment_count     = None;         ## for DLs, DSs
         self.odb_path                = None;
         self.execname                = None;
-
-# 2026-02-19-PM #        if   (name == "BoardReader"   ) : self._type = BOARD_READER   ;
-# 2026-02-19-PM #        elif (name == "EventBuilder"  ) : self._type = EVENT_BUILDER  ;
-# 2026-02-19-PM #        elif (name == "DataLogger"    ) : self._type = DATA_LOGGER    ;
-# 2026-02-19-PM #        elif (name == "Dispatcher"    ) : self._type = DISPATCHER     ;
-# 2026-02-19-PM #        elif (name == "RoutingManager") : self._type = ROUTING_MANAGER;
+        self.log_directory           = None;
 
         self.server = None
         xmlrpc_url  = "http://" + self.rpc_server() + "/RPC2"
@@ -123,6 +118,9 @@ class Procinfo(object):
     def is_routingmanager(self):
         return self._type == ROUTING_MANAGER;
 
+    def logfile(self,run_number):
+        fn = f'{self.log_directory}/{self.label}_{self.node}_{self.port}/{self.label}_{self.node}_{self.port}_{run_number}.log'
+
 #------------------------------------------------------------------------------
 # P.Murat: in the Edwards Center, the daq servers communicate using the private
 #          data network, where mu2edaq09 has the name of mu2edaq09-ctrl
@@ -131,10 +129,11 @@ class Procinfo(object):
         return self.host+':'+self.port;
 
     def print(self,text = None):
-        if (text):
-            print(f'{text}');
-            
-        print(f'procinfo: ss_id:{self.subsystem_id:5} type:{self._type} label:{self.label:4} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}');
+        if (text): print(f'{text}');
+
+        s = f'procinfo: ss_id:{self.subsystem_id:5} type:{self._type} label:{self.label:4} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}'
+        
+        TRACE.DEBUG(1,s,TRACE_NAME);
 
     def __lt__(self, other):
         if self.name != other.name:
