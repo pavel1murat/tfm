@@ -1,0 +1,8 @@
+#------------------------------------------------------------------------------
+# definitions of all trigger tables 
+#------------------------------------------------------------------------------
+#include "common/tt_demo_mc2_v001.fcl"
+
+#include "common/tt_tracker_mc2_v001.fcl"
+#include "common/tt_tracker_mc2_v002.fcl"
+#include "common/tt_tracker_mc2_v003.fcl"

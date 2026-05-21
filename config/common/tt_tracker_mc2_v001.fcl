@@ -1,0 +1,25 @@
+#------------------------------------------------------------------------------
+# no selection trigger all passes through
+#------------------------------------------------------------------------------
+BEGIN_PROLOG
+tt_tracker_mc2_v001 : {
+    physics: {
+        producers : { }
+        analyzers : {
+            TrackerDQM : { @table::otsdaq_mu2e_tracker.analyzers.TrackerDQM
+                interactiveMode  : 0
+                fillWfHistograms : 0
+                diagLevel        : 0
+                debugBits        : [ "bit0:0", "bit1:0" ]
+            }
+        }
+        
+        p1            : [ ]
+        e1            : [ rootNetOutput ] ## [ TrackerDQM, rootNetOutput ]
+        trigger_paths : [ p1 ]
+        end_paths     : [ e1 ]
+    }
+    
+    outputs  : { @table::eb.outputs }
+}
+END_PROLOG

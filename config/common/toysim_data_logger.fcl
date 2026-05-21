@@ -1,0 +1,33 @@
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+#include "common/prolog.fcl"
+
+daq: {
+    aggregator : { @table::daq.dl_aggregator }
+    metrics    : { }
+}
+
+art: {
+    @table::art.data_logger
+}
+
+#------------------------------------------------------------------------------
+# non-default parameter values
+#------------------------------------------------------------------------------
+art.services.ArtdaqSharedMemoryServiceInterface.waiting_time     : 300
+art.services.ArtdaqFragmentNamingServiceInterface.helper_plugin : "ArtdaqDemo"
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening
+#------------------------------------------------------------------------------
+daq.aggregator.max_event_size_bytes    : -1
+daq.aggregator.init_fragment_count     : -1
+daq.aggregator.sources                 : {}
+art.outputs.rootNetOutput.destinations : {}
+art.outputs.rootNetOutput.host_map     : []
+# art.outputs.rootOutput.fileName : "/tmp/raw.mu2e.trk.vst.%06r_%06s.art"
+#------------------------------------------------------------------------------
+# to be added by gen_art_fcl.py
+#------------------------------------------------------------------------------
+# art.process_name : "dl01"
+

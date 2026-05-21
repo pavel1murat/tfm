@@ -1,0 +1,39 @@
+# -*- mode:tcl -*-
+# Produced from 'fhicl-dump' using:
+#   Policy : cet::filepath_maker
+#   Path   : "FHICL_FILE_PATH"
+# don't put in integer numbers in hex - artdac conversion makes them reals
+#------------------------------------------------------------------------------
+#include "common/prolog.fcl"
+
+daq: {
+    fragment_receiver: { @table::daq.mu2e_subevent_receiver
+      board_id       : 0                        ## what should it be ?
+      dtc_id         : 0                        ## the right number ?
+      fragment_id    : 0                        ## the right one ?
+      fragment_type  : "MU2EEVENT"
+      generator      : "Mu2eSubEventReceiver"
+      throttle_usecs : 400                      ## do we need to throttle ?
+    }
+    metrics: {
+        graphite: {
+            host: "mu2e-dcs-01"
+            level_string: "1-10"
+            metricPluginType: "graphite"
+            namespace: "crv.kpp."
+            port: 2003
+            reporting_interval: 10
+        }
+    }
+}
+#------------------------------------------------------------------------------
+# redefinitions
+#------------------------------------------------------------------------------
+daq.fragment_receiver.artdaqLabel  : "br13"
+daq.fragment_receiver.sendSubruns  : false
+daq.fragment_receiver.fragment_ids : [ 13 ]  
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening
+#------------------------------------------------------------------------------
+daq.fragment_receiver.max_fragment_size_bytes : 200000
+daq.fragment_receiver.destinations : {}

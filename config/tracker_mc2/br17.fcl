@@ -1,0 +1,23 @@
+# -*- mode:tcl -*-
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+#include "common/prolog.fcl"
+
+daq: {
+    fragment_receiver: { @table::daq.trk_fragment_receiver }
+    metrics          : {}
+}
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening
+# done by TFM
+#------------------------------------------------------------------------------
+daq.fragment_receiver.max_fragment_size_bytes : 200000
+daq.fragment_receiver.destinations            : {}
+#------------------------------------------------------------------------------
+# appended by gen_artdaq_fcl
+#------------------------------------------------------------------------------
+# daq.fragment_receiver.artdaqLabel  : xxx
+# daq.fragment_receiver.fragment_ids : [ xxxx ]  
+daq.fragment_receiver.artdaqLabel  : br17
+daq.fragment_receiver.fragment_ids : [ 17 ]

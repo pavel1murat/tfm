@@ -571,6 +571,7 @@ class FarmManager(Component):
                 
                 p.odb_path      = process_odb_path;
                 p.log_directory = self.log_directory;
+                self.set_process_status(p,0);
                 
                 if (p.server == None):
                     self.alert_and_recover(f'ERROR: failed to create an XMLRPC server for process:{key_name} and socket:{host}:{port}')
@@ -745,7 +746,7 @@ class FarmManager(Component):
             f.write(f'\npmt_log_fn={pmt_log_fn}\n')
 #------------------------------------------------------------------------------
 # 
-            f.write(f'{os.environ["MU2E_DAQ_DIR"]}/config/scripts/cleanup_partition {self.partition()} >| $pmt_log_fn 2>&1\n')
+            f.write(f'{os.environ["MU2E_DAQ_DIR"]}/config/scripts/cleanup_partition {self.partition()} doit >| $pmt_log_fn 2>&1\n')
             f.write(f'{os.environ["SPACK_VIEW"]}/bin/mopup_shmem.sh {self.partition()} --force >> $pmt_log_fn 2>&1\n')
 #------------------------------------------------------------------------------
 # loop over enabled nodes - only enabled nodes made it into the list

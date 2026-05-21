@@ -1,0 +1,15 @@
+
+
+# This file was automatically generated as /home/mu2etrk/daquser_002/config/artdaq/MessageFacility.fcl at 2026-05-16 14:41:31.8 on host mu2e-dl-01.fnal.gov, and is
+# the default file DAQInterface uses to determine how to modify the
+# standard MessageFacility configuration found in artdaq-core
+# v3_02_01's configureMessageFacility.cc file. You can edit the
+# contents below to change the behavior of how/where MessageFacility
+# messages are sent, though keep in mind that this FHiCL will be
+# nested inside a table. Or you can use a different file by setting
+# the environment variable TFM_MESSAGEFACILITY_FHICL to the
+# name of the other file.
+
+
+# udp table for MsgViewer not used since artdaq_mfextensions not available
+

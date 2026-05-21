@@ -1,6 +1,8 @@
 #+startup:fold
 * ------------------------------------------------------------------------------
 * TFM configurations                                                         
+** [[file:../config/demo_mc2     *validated <2026-05-17 Sun>]]
+** [[file:../config/tracker_mc2]]
 ** [[file:../config/crvvst_v00]]
 ** [[file:../config/demo]]              *validated*                             
 - ARTDAQ demo with 6 processess: two boardreaders, two event builders, 
@@ -21,10 +23,6 @@ mrb b
 mu2e -c ./config/demo/dqm_client01.fcl
 #+end_src
 - after the client starts receiving events, point the browser to https://localhost:8877/win1/
-** file:../config/demo_001                                                   
-- the same as demo, but all processes are running on 'mu2edaq09', not 'localhost'
-** file:../config/demo_002                                                   
-- two boardreaders running on different nodes, 'mu2edaq09' and 'mu2edaq22'
 ** file:../config/stm_swtest_001                                             
 - reformat STM file into ART format
 - configuration: [[file:../config/stm_swtest_001/settings]]

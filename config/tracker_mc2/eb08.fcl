@@ -1,0 +1,42 @@
+# -*- mode:tcl -*- 
+###########################################################
+#
+# artdaq builder fcl configuration file produced by otsdaq.
+# Creation time:                  	Thu Nov 16 17:10:27 2023 CST
+#	otsdaq-ARTDAQ builder UID:	builder0
+###########################################################
+#include "common/prolog.fcl"
+
+daq: {
+    event_builder : { @table::daq.event_builder }
+    metrics       : {}
+}
+
+art: {
+    process_name : eb08
+    
+    services: {
+        @table::artdaq_services
+        @table::art_services
+    }
+
+    source   : { module_type: ArtdaqInput }
+
+    physics      : { @table::tt_tracker_mc2_v002.physics }
+    
+    outputs      : { @table::tt_tracker_mc2_v002.outputs }
+}
+
+art.services.SeedService.baseSeed : 8
+#------------------------------------------------------------------------------
+# non-automated redefinitions
+#------------------------------------------------------------------------------
+daq.event_builder.buffer_count         : 250
+daq.event_builder.art_analyzer_count   : 4   ## 4 ## 1 ## the number of art processes ?
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening (by the TFM)
+#------------------------------------------------------------------------------
+daq.event_builder.max_event_size_bytes : 0
+daq.event_builder.sources              : {}
+art.outputs.rootNetOutput.destinations : {}
+art.outputs.rootNetOutput.host_map     : []

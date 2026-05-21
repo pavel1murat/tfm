@@ -1,0 +1,84 @@
+#------------------------------------------------------------------------------
+#  STRAW HIT FILTER 
+#------------------------------------------------------------------------------
+BEGIN_PROLOG
+tt_tracker_mc2_v003 : {
+
+    physics: {
+        producers : {
+            
+            EWMProducer: { module_type: "EventWindowMarkerProducer"
+                InitialPhaseShift: 0
+                RecoFromMCTruth: false
+                RecoFromMCTruthErr: 0
+                SpillType: 0
+                module_label: "EWMProducer"
+            }
+
+            makeSD      : { @table::DAQ.producers.makeSD
+                keyOnMnid     : true ## true    ## default:false
+                saveWaveforms : true
+            }
+            
+            makeSH : { module_type: "StrawHitReco"
+                MinimumTime                       : 0          ## 400.0 # ns configuration for OnSpill
+                MaximumTime                       : 200000.    ## 1710.0 # ns
+                MinimumEnergy                     : 0.0001 # MeV
+                MaximumEnergy                     : 0.005 # MeV
+                MinimumRadius                     : 350.0 # mm
+                MaximumRadius                     : 750.0 # mm
+                FitType                           : 1
+                FilterHits                        : false
+                WriteStrawHitCollection           : true
+                ProtonBunchTimeTag                : "EWMProducer"
+                StrawDigiCollectionTag            : "makeSD" ## "makeSD"
+                StrawDigiADCWaveformCollectionTag : "makeSD" ## "makeSD"
+                EventWindowMarker                 : "EWMProducer"
+                UseCalorimeter                    : false
+                clusterDt                         : 100.0 # ns
+                CaloClusterCollectionTag          : "notUsed"
+                FlagCrossTalk                     : false
+                crossTalkEnergy                   : 0.007 # MeV
+                crossTalkMinimumTime              : -1 # ns
+                crossTalkMaximumTime              : 100 # ns
+            }
+        }
+        
+        filters   : {
+            RandomPrescaleFilter : { module_type : RandomPrescaleFilter
+                nPrescale :  0 ## 100 ## 10  ## 1 means skip one event before passing 
+            }
+
+            TrkHitDispatch: { module_type: TrkHitDispatch
+                host               : "localhost"
+                port               : 14000
+                StrawDigiCollection: "makeSD"
+            }
+
+            StrawHitFilter : { module_type : StrawHitFilter
+                shCollTag           : "makeSH"
+                minNGoodHits        : 1
+                maxDt               : 40.
+                #                minEDep             : 0.0002 ## for testing noise w/o the HV
+                minEDep             : 0.0005 ## HV 15 mV ## 0.0008 ## HV on 10 mV 
+                debugMode           : false
+                debugBits           : [ "bit0:0" ]
+                channelsToSkip      : [ 207, 25] ## [ 80, 278 ]      ## MN080 and MN278 have awkward eDep distributions 
+                fillHistograms      : false
+            }
+        }
+        
+        analyzers : { }
+
+        #        p1            : [ EWMProducer, makeSD, makeSH, TrkHitDispatch, StrawHitFilter ] ##  ]   ## RandomPrescaleFilter ] 
+        #        p1            : [ RandomPrescaleFilter ] 
+        p1            : [ EWMProducer, makeSD, makeSH, StrawHitFilter ] ##  ]   ## RandomPrescaleFilter ] 
+        e1            : [ rootNetOutput ]                               ## [ TrackerDQM, rootNetOutput ]
+        trigger_paths : [ p1 ]
+        end_paths     : [ e1 ]
+    }
+
+    outputs  : { @table::eb.outputs }
+
+}
+END_PROLOG

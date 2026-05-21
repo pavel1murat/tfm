@@ -1,0 +1,446 @@
+#------------------------------------------------------------------------------
+# constants which may need to change from run to run
+#------------------------------------------------------------------------------
+#include "Offline/fcl/standardServices.fcl"
+#include "Offline/DAQ/fcl/prolog.fcl"
+#include "otsdaq-mu2e-tracker/fcl/prolog.fcl"
+
+BEGIN_PROLOG
+
+MAX_EVENTS_PER_SUBRUN : 100000
+READOUT_MODE          : 0
+N_EVENT_BUILDERS      : 2
+MULTICAST_PORT        : 3001
+MULTICAST_IP          : "227.128.12.26"
+
+routing_table_config : {
+    use_routing_manager: false
+}
+
+daq : { 
+    cfo_fragment_receiver: {
+        cfo                      : 1
+        debug_print              : false
+        destinations             : {}
+        diagLevel                : 0
+        # fragment_id              : 0  ## defined in the boardreader config file: br00.fcl
+        fragment_type            : "MU2EEVENT"
+        generator                : "CFODataReceiver"
+        max_fragment_size_bytes  : 100000
+        rollover_subrun_interval : 50000
+        routing_table_config: {
+            use_routing_manager: false
+        }
+        sim_mode                 : "Disabled"
+        skip_cfo_init            : false
+        throttle_usecs           : 0
+        uid                      : ""
+    }
+
+    mu2e_subevent_receiver: {
+        board_id: 2
+        debug_print: false
+        destinations: {}
+        dtc_id: 1
+        fragment_id: 2
+        fragment_type: "MU2EEVENT"
+        generator: "Mu2eSubEventReceiver"
+        load_sim_file: false
+        max_fragment_size_bytes: 1.048576e6
+        request_rate: 20
+        ring_0_roc_count: 1
+        ring_0_timing_enabled: false
+        routing_table_config: { use_routing_manager: false }
+        sim_mode: 0
+        skip_dtc_init: true
+        throttle_usecs: 0
+        use_detector_emulator: false
+    }
+
+    toysim_fragment_receiver: {
+        # artdaqLabel : "XX"           ## don't need here
+        
+        routing_table_config  : { @table::routing_table_config }
+        max_events_per_subrun : 100000
+        generator             : "ToySim"
+        verbose               : true
+        fragment_type         : "TOY1"
+        fragment_ids          : [ 0 ]
+        board_id              : 0
+        starting_fragment_id  : 0
+        random_seed           : 8250
+        nADCcounts            : 100
+        destinations          : {}  ## for now, both brackets on the same line....
+	mpi_sync_interval     : 50
+#------------------------------------------------------------------------------
+# max_fragment_size_bytes has to be defined for each boardreader if advanced_memory_usage
+#------------------------------------------------------------------------------
+        max_fragment_size_bytes    : 100000
+        throttle_usecs             : 200000          ## 5 Hz
+        distribution_type          : 2
+        timestamp_scale_factor     : 1
+        readData                   : 1
+        readoutMode                : @local::READOUT_MODE
+        maxEventsPerSubrun         : @local::MAX_EVENTS_PER_SUBRUN
+        nEventsDbg                 : 10
+        debugLevel                 : 0
+        printFreq                  : 10000
+        sleep_on_stop_us           : 500000
+        data_buffer_depth_fragments: 1000
+        data_buffer_depth_mb       : 1000
+
+        receive_requests           : false
+        request_mode               : "Ignored"       ## default
+        request_port               : @local::MULTICAST_PORT
+        request_address            : @local::MULTICAST_IP
+        request_window_offset      : 0               ## Request message contains tzero. Window will be from tzero - offset to tz-o + width
+        request_window_width       : 0               ## These settings correspond to "two before, two after"
+        stale_request_timeout      : "0xFFFFFFFF"    ## How long to wait before discarding request messages that are outside the available data
+        request_windows_are_unique : true            ## if request windows are unique, avoids a copy operation, but the same data point cannot be used for two requests.
+                                                     ## If this is not anticipated, leave set to "true"
+        separate_data_thread: false
+        separate_monitoring_thread: false
+        hardware_poll_interval_us: 0
+    }
+
+
+    trk_fragment_receiver: {
+        generator              : "TrackerBRDR"    ## defines the shared lib to load
+        artdaqLabel            : "label"           ## 
+        fragment_type          : "Mu2e"           ## generator data fragment type - what does "Mu2e" mean?
+        loadSimFile            : false
+        simFileName            : "none"
+    
+        tfmHost                : "mu2e-dl-01-data"
+
+        readData               : 1                ## 1:read data, 0:fake data fragment with one 4-byte word
+        readoutMode            : 0                ## 0:read digis
+        max_fragment_size_bytes: 1048576          ## = 0x100000 ## each BR defines that
+        maxEventsPerSubrun     : @local::MAX_EVENTS_PER_SUBRUN  ## 1000000          ## 50K events/subrun
+        sendSubruns            : false                          ## don't need any mode - the CFO decides
+
+        #  generated_fragments_per_event: 2          ## shouldn't need that any longer  
+        fragment_ids           : [ 0 ]      ## , 11 ]  ## fake data + registers   
+        
+        nEventsDbg             : 10         ## don't need to dump more
+        debugLevel             : 0
+        printFreq              : 10000
+        request_rate           : 500
+        validate_fragments     : false     ## default : true
+#------------------------------------------------------------------------------
+# DAQ part 
+#------------------------------------------------------------------------------
+        routing_table_config   : { @table::routing_table_config }
+        destinations           : {}
+        transfer_parameters    : {
+            max_hold_time_us   : 1000          ## and lets see what happens
+            # max_hold_size_bytes: 10000000      ## and lets see what happens
+        }
+    }
+
+    event_builder: {
+        buffer_count                          : 100        ## 50
+        art_analyzer_count                    : 1          ## N(artdaq filter processes)
+        verbose                               : true
+
+        expected_fragments_per_event          : 5
+        use_art                               : true
+        expected_art_event_processing_time_us : 30000000
+        broadcast_buffer_size                 : 2000000     ## 0x6400000
+        # is this really needed ? .... sounds like that
+        art_index_offset                      : 4
+
+        routing_table_config: { @table::routing_table_config }
+        sources             : {}
+#------------------------------------------------------------------------------
+# obsolete, according to Eric
+#------------------------------------------------------------------------------
+    }
+#------------------------------------------------------------------------------
+# two types of aggregators: DL and DS
+#------------------------------------------------------------------------------
+    dl_aggregator: {
+        is_datalogger                 : true
+        buffer_count                  : 200
+        init_fragment_count           : -1           ## to be redefined
+        subrun_transition_hold_time_s : 0.050000001
+        broadcast_buffer_size         : 5000000
+        expected_fragments_per_event  : 1
+        
+        routing_table_config: { @table::routing_table_config }
+        sources             : { }
+    }
+
+    ds_aggregator: {                         # may need updating
+        is_dispatcher             :  true
+        buffer_count              :   250
+        init_fragment_count       :   -1           ## to be redefined
+        
+        expected_events_per_bunch :    1
+        print_event_store_stats   : true
+        event_queue_depth         :    2
+        event_queue_wait_time     :    1
+        onmon_event_prescale      :    1
+        overwrite_mode            : true
+        ## max_fragment_size_bytes   : 100000 ## 0x100000
+        auto_suppression_enabled  : false
+
+        routing_table_config      : { @table::routing_table_config }
+        sources                   : {}
+    }
+}
+
+artdaq_services : {
+    ArtdaqSharedMemoryServiceInterface: { 
+        service_provider    : ArtdaqSharedMemoryService 
+        waiting_time        : 1
+        resume_after_timeout: true                ## Eric recommends against false
+    }
+
+    ArtdaqFragmentNamingServiceInterface: { 
+        service_provider: ArtdaqFragmentNamingService
+        helper_plugin   : "Mu2e"
+    }
+}
+
+art_services : {
+    @table::Services.SimAndReco
+
+    TFileService: {
+        service_type: "TFileService"
+        fileName    : "tracker_dqm.%06r.hist"
+    }
+    
+    scheduler: {
+        #            debug: {
+        #                fileName: "a.fcl"
+        #                option: "debug-config"
+        #                printMode: "raw"
+        #            }
+        errorOnMissingConsumes : false
+        errorOnSIGINT          : true
+        num_schedules          : 1
+        num_threads            : 1
+        pruneConfig            : true
+        reportUnused           : false
+        wantSummary            : true
+    }
+
+    DbService : {
+        purpose  : EMPTY
+        version  : v0                          ## ignored
+        dbName   : "mu2e_conditions_prd"       ## ignored
+        
+        textFile : [ "daqana/calibrations/TrkPreampStraw_v2.txt",
+                     "daqana/calibrations/TrkDelayRStraw.txt"   ,
+                     "Offline/TrackerConditions/data/TrkPanelMap.txt", ## use txt
+                     "daqana/calibrations/TrkDelayPanel.txt"    ] ## everything needed
+        
+        verbose  : 100
+    }    
+}
+
+#------------------------------------------------------------------------------
+# for now, assume that p1 selects events
+#------------------------------------------------------------------------------
+eb  : {
+    outputs: {
+        rootNetOutput: {
+            module_type    : RootNetOutput
+            SelectEvents   : [ p1 ]
+            outputCommands : [
+                              "drop *_*_*_*", 
+                              "keep artdaq::Fragments_*_*_*",
+                              "keep *::Mu2eFragment_*_*_*",
+                              "keep mu2e::TriggerInfo_*_*_*", 
+                              "keep art::TriggerResults_*_*_*", 
+                              "keep artdaq::detail::RawEventHeader_*_*_*", 
+                              "keep mu2e::CaloClusters_*_*_*", 
+                              "keep mu2e::TimeClusters_*_*_*", 
+                              "keep mu2e::HelixSeeds_*_*_*",
+                              "keep mu2e::KalSeeds_*_*_*", 
+                              "keep mu2e::Mu2eEventHeader_*_*_*", 
+                              "keep mu2e::IntensityInfo*_*_*_*",
+                              "keep mu2e::CaloHits_CaloHitMakerFast_caphri_*"
+                             ]
+            host_map       : [ ]
+            destinations   : { }
+
+            routing_table_config: { @table::routing_table_config }
+        }
+    }
+}
+
+art : {
+    event_builder : {
+        process_name : "XX"
+       
+        services: {
+            @table::artdaq_services
+            
+            TFileService: {
+                service_type: "TFileService"
+                fileName    : "tracker_dqm.%06r.hist"
+            }
+            
+            scheduler: {
+                wantSummary : true
+            }
+        }
+
+        source   : { module_type: ArtdaqInput }
+
+        physics  : {
+#            producers : { }
+#            analyzers : {
+#                TrackerDQM : { @table::otsdaq_mu2e_tracker.analyzers.TrackerDQM
+#                    interactiveMode  : 0
+#                    fillWfHistograms : 0
+#                    diagLevel        : 0
+#                    debugBits        : [ "bit0:0", "bit1:0" ]
+#                }
+#            }
+#
+#            p1            : [ ]
+#            e1            : [ rootNetOutput ] ## [ TrackerDQM, rootNetOutput ]
+#            trigger_paths : [ p1 ]
+#            end_paths     : [ e1 ]
+        }
+
+#        outputs  : { @table::eb.outputs }
+    }
+#------------------------------------------------------------------------------
+# EB with the offline filtering
+#------------------------------------------------------------------------------
+    event_builder_2: {
+        
+        process_name: event_builder_2
+
+        services: {
+            @table::artdaq_services
+            @table::art_services
+        }
+        
+        source   : { module_type: ArtdaqInput }
+
+        outputs  : { @table::eb.outputs }
+
+        physics: {
+#            producers : {
+#                
+#                EWMProducer: { module_type: "EventWindowMarkerProducer"
+#                    InitialPhaseShift: 0
+#                    RecoFromMCTruth: false
+#                    RecoFromMCTruthErr: 0
+#                    SpillType: 0
+#                    module_label: "EWMProducer"
+#                }
+#
+#                makeSD      : { @table::DAQ.producers.makeSD
+#                    keyOnMnid     : true ## true    ## default:false
+#                    saveWaveforms : true
+#                }
+#                
+#                makeSH : { module_type: "StrawHitReco"
+#                    MinimumTime                       : 0          ## 400.0 # ns configuration for OnSpill
+#                    MaximumTime                       : 200000.    ## 1710.0 # ns
+#                    MinimumEnergy                     : 0.0001 # MeV
+#                    MaximumEnergy                     : 0.005 # MeV
+#                    MinimumRadius                     : 350.0 # mm
+#                    MaximumRadius                     : 750.0 # mm
+#                    FitType                           : 1
+#                    FilterHits                        : false
+#                    WriteStrawHitCollection           : true
+#                    ProtonBunchTimeTag                : "EWMProducer"
+#                    StrawDigiCollectionTag            : "makeSD" ## "makeSD"
+#                    StrawDigiADCWaveformCollectionTag : "makeSD" ## "makeSD"
+#                    EventWindowMarker                 : "EWMProducer"
+#                    UseCalorimeter                    : false
+#                    clusterDt                         : 100.0 # ns
+#                    CaloClusterCollectionTag          : "notUsed"
+#                    FlagCrossTalk                     : false
+#                    crossTalkEnergy                   : 0.007 # MeV
+#                    crossTalkMinimumTime              : -1 # ns
+#                    crossTalkMaximumTime              : 100 # ns
+#                }
+#            }
+#            
+#            filters   : {
+#                RandomPrescaleFilter : { module_type : RandomPrescaleFilter
+#                    nPrescale :  0 ## 100 ## 10  ## 1 means skip one event before passing 
+#                }
+#
+#                TrkHitDispatch: { module_type: TrkHitDispatch
+#                    host               : "localhost"
+#                    port               : 14000
+#                    StrawDigiCollection: "makeSD"
+#                }
+#
+#                StrawHitFilter : { module_type : StrawHitFilter
+#                    shCollTag           : "makeSH"
+#                    minNGoodHits        : 1
+#                    maxDt               : 40.
+#                    #                minEDep             : 0.0002 ## for testing noise w/o the HV
+#                    minEDep             : 0.0005 ## HV 15 mV ## 0.0008 ## HV on 10 mV 
+#                    debugMode           : false
+#                    debugBits           : [ "bit0:0" ]
+#                    channelsToSkip      : [ 207, 25] ## [ 80, 278 ]      ## MN080 and MN278 have awkward eDep distributions 
+#                    fillHistograms      : false
+#                }
+#            }
+#            
+#            analyzers : { }
+#
+#            #        p1            : [ EWMProducer, makeSD, makeSH, TrkHitDispatch, StrawHitFilter ] ##  ]   ## RandomPrescaleFilter ] 
+#            #        p1            : [ RandomPrescaleFilter ] 
+#            p1            : [ EWMProducer, makeSD, makeSH, StrawHitFilter ] ##  ]   ## RandomPrescaleFilter ] 
+#            e1            : [ rootNetOutput ]            ## [ TrackerDQM, rootNetOutput ]
+#            trigger_paths : [ p1 ]
+#            end_paths     : [ e1 ]
+        }
+
+    }
+#------------------------------------------------------------------------------
+# data logger FHICL template
+#------------------------------------------------------------------------------
+    data_logger : {
+        process_name: "XX"              ## to be substituted
+        
+        services: { @table::artdaq_services }
+        
+        source: { module_type: ArtdaqInput }
+        
+        outputs: {
+            
+            rootOutput: { module_type: RootDAQOut
+                fileName         : "/tmp/raw.mu2e.trk.vst.%06r_%06s.art"
+                compressionLevel : 0
+                fileProperties   : {
+                    maxSize      : 1500000
+                    granularity  :  SubRun
+                }
+                checkFileName    : false
+            }
+            
+            rootNetOutput: {
+                module_type           : "RootNetOutput"
+                host_map              : [ ]
+                destinations          : { }
+                routing_table_config: { @table::routing_table_config }
+            }
+        }
+        
+        physics: {
+            analyzers: { }
+            e1       : [ "rootOutput" ]
+            end_paths: [ e1 ]
+        }
+    }
+}
+
+END_PROLOG
+
+#------------------------------------------------------------------------------
+# trigger table definitions
+#------------------------------------------------------------------------------
+#include "common/trigger_tables.fcl"

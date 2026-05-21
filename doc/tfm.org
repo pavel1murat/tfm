@@ -14,7 +14,22 @@
 - NOTE: at this point, significant part of the documentation below
   is in a "work in progress" state, feel free to improve and commit back
 
+- some (older) documentation may be obsolete
 * ------------------------------------------------------------------------------
+* <2026-05-17 Sun> how to generate config/scripts/quick_setup.sh for TFM job submission 
+#+begin_src
+  fn=config/scripts/quick_setup.sh
+  declare -p >| $fn
+  declare -f >> $fn
+#+end_src
+* <2026-05-17 Sun> how to generate fcls:                                                
+#+begin_src
+  config/scripts/gen_artdaq_fcl.sh demo_mc2 
+#+end_src
+- the script writes into the configuraiton directory - i.e. config/artdaq/demo_mc2  - FCL files
+  for enabled processes on enabled nodes
+  - artdaq should also be enabled on those nodes
+  - if a boardreader DTC is declared but not enabled, the FCL file is not written
 * [[file:./communication_with_artdaq.org][communication with artdaq]]
 * artdaq subsystems and logic of their communication                         
 - a subsystem is a group of processes. There are 5 types of processes:
@@ -41,7 +56,6 @@ layer of the source subsystem(s), and the output of the last layer
 of this subsystem is directed to the lowest layer of the destination subsystem
 - multiple sources
 - single destination
-
 
 * configuration                                                              
 ** the TFM configuration is defined in ODB subtree /Mu2e/ActiveRunConfiguration/DAQ/Tfm

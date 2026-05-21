@@ -1,0 +1,62 @@
+# -*- mode:tcl -*- 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+#include "common/prolog.fcl"
+
+daq: {
+    event_builder : { @table::daq.event_builder }
+    metrics       : {}
+}
+
+art: {
+    process_name : eb57
+    services     : { @table::art.event_builder_2.services }
+    source       : { @table::art.event_builder_2.source   }
+    outputs      : { @table::art.event_builder_2.outputs  }
+    physics      : { @table::art.event_builder_2.physics  }
+}
+#------------------------------------------------------------------------------
+# redefining
+#------------------------------------------------------------------------------
+art.services.ProditionsService.alignedTracker.useDb         : false
+art.services.ProditionsService.alignedTrackerSim.useDb      : false
+art.services.ProditionsService.strawElectronics.useDb       : true        ## default false
+art.services.ProditionsService.strawElectronics.verbose     : 10
+art.services.ProditionsService.fullReadoutStraw.useDb       : false
+art.services.ProditionsService.strawDrift.useDb             : false
+art.services.ProditionsService.strawPhysics.useDb           : false
+art.services.ProditionsService.strawResponse.useDb          : false
+art.services.ProditionsService.trackerStatus.Settings.useDb : false
+art.services.ProditionsService.trackerPanelMap.useDb        : true
+
+art.services.SeedService.baseSeed : 8
+
+# art.services.DbService : {
+#     purpose  : EMPTY
+#     version  : v0                          ## ignored
+#     dbName   : "mu2e_conditions_prd"       ## ignored
+#     
+#     textFile : [ "daqana/calibrations/TrkPreampStraw_v2.txt",
+#                  "daqana/calibrations/TrkDelayRStraw.txt"   ,
+#                  "Offline/TrackerConditions/data/TrkPanelMap.txt", ## use txt
+#                  "daqana/calibrations/TrkDelayPanel.txt"    ] ## everything needed
+#     
+#     verbose  : 100
+# }
+
+# art.physics.filters.StrawHitFilter.minEDep : 0.0002
+#------------------------------------------------------------------------------
+# redefinitions
+#------------------------------------------------------------------------------
+daq.event_builder.buffer_count         : 200 ## 250
+daq.event_builder.art_analyzer_count   : 1   ## 4 ## 1 ## the number of art processes ?
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening
+#------------------------------------------------------------------------------
+daq.event_builder.max_event_size_bytes : 0
+daq.event_builder.sources              : {}
+art.outputs.rootNetOutput.destinations : {}
+art.outputs.rootNetOutput.host_map     : []
+art.outputs.rootNetOutput.SelectEvents : [ p1 ]
+#------------------------------------------------------------------------------

@@ -1,0 +1,4 @@
+. /home/mu2etrk/daquser_002/spack/share/spack/setup-env.sh
+spack unload > /dev/null 2>&1
+
+spack load --first fhicl-cpp

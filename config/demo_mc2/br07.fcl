@@ -1,0 +1,23 @@
+# -*- mode:tcl -*-
+# Produced from 'fhicl-dump' using:
+#   Policy : cet::filepath_maker
+#   Path   : "FHICL_FILE_PATH"
+# don't put in integer numbers in hex - artdac conversion makes them reals
+#------------------------------------------------------------------------------
+#include "common/prolog.fcl"
+
+daq: {
+    fragment_receiver: { @table::daq.toysim_fragment_receiver }
+    metrics          : {}
+}
+
+#------------------------------------------------------------------------------
+# patterns to be substituted : make DTC_ID and FRAGMENT_ID the same,
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# lines to be replaced with the auto-generated code before flattening
+#------------------------------------------------------------------------------
+daq.fragment_receiver.max_fragment_size_bytes : 200000
+daq.fragment_receiver.destinations : {}
+daq.fragment_receiver.fragment_type : "TOY1"
+daq.fragment_receiver.fragment_ids  : [ 7 ]

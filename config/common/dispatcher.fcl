@@ -1,0 +1,28 @@
+# -*- mode:tcl -*-
+###########################################################
+#
+###########################################################
+#include "tracker_mc/prolog.fcl"
+
+daq: {
+    aggregator: { @table::daq.ds_aggregator }
+    metrics   : { }
+}
+
+art: {
+    # process_name: DS01
+
+    services: { @table::artdaq_services }
+
+    outputs: {}
+
+    source: {
+        module_type: ArtdaqInput
+    }
+}
+#------------------------------------------------------------------------------
+daq.aggregator.sources: {}
+#------------------------------------------------------------------------------
+# to be added by gen_artdaq_fcl.py
+#------------------------------------------------------------------------------
+# art.process_name : "DS01"

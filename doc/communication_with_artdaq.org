@@ -3,7 +3,8 @@
 * communication with ARTDAQ
 * ------------------------------------------------------------------------------
 * communication with artdaq processes  : CommanderInterface                  
-  file:../../artdaq/artdaq/ExternalComms/CommanderInterface.hh
+file:../../artdaq/artdaq/ExternalComms/CommanderInterface.hh
+- the include file has a list of commands spelled in there
 * commands (as specified in CommanderInterface.hh)                          
 *** add_config_archive_entry *BAD EXAMPLE*   from above                      
 - example:
