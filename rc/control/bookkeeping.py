@@ -445,7 +445,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             #                      "expected_fragments_per_event: 1",p.fhicl_used)
             x = 0
         else:
-            # EB or BR ?
+            # EB or BR
             p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
                                   "expected_fragments_per_event: %d"
                                   % (expected_fragments_per_event[p.subsystem_id]),p.fhicl_used)

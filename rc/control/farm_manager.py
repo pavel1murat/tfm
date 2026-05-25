@@ -994,7 +994,7 @@ class FarmManager(Component):
 
 #-------^----------------------------------------------------------------------
 # at this point, each process knows about its sources and destinations
-# so we can update the FCL file
+# so their FCL files can be updated
 # replaced should be lines with
 # -- BR:
 #         daq.fragment_receiver.destinations
@@ -1029,9 +1029,9 @@ class FarmManager(Component):
                 for p1 in p.list_of_destinations:
                     p1.print();
 
-        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
-        s = artdaq.host_map_string(self.procinfos,'')
-        print(f'{s}')
+#        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
+#        s = artdaq.host_map_string(self.procinfos,'')
+#        print(f'{s}')
 #------------------------------------------------------------------------------
 # now update fcls and write updated ones to /tmp/partition_{..}/{config_name}
 #------------------------------------------------------------------------------
