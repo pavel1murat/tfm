@@ -668,7 +668,7 @@ class FarmManager(Component):
 # update FCLs - substitute the parameter defaults with values calculated for active configuration
 #---v--------------------------------------------------------------------------
     def write_updated_fcls(self):
-        TRACE.DEBUG(0,f'-- START',TRACE_NAME)
+        TRACE.INFO(f'-- START',TRACE_NAME)
 
         tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
         for p in self.procinfos:
@@ -682,7 +682,7 @@ class FarmManager(Component):
 #  TODO: make sure that the directory exists
 #-----------v------------------------------------------------------------------
             new_fn = f'{tmp_dir}/{p.label}.fcl'
-            TRACE.INFO(f'p.name:{p.name} new_fn:{new_fn}',TRACE_NAME)
+            TRACE.DEBUG(0,f'p.name:{p.name} new_fn:{new_fn}',TRACE_NAME)
             with open(new_fn,'w') as f:
                 f.writelines(line for line in updated_fcl)
 #------------------------------------------------------------------------------
@@ -701,7 +701,8 @@ class FarmManager(Component):
                 p.fhicl      = new_fn;
                 p.fhicl_used = res.stdout;
 
-        TRACE.DEBUG(0,f'-- END',TRACE_NAME)
+        TRACE.INFO(f'-- END',TRACE_NAME)
+        return
             
 #-------^----------------------------------------------------------------------
 # the script is to be sourced by the processes spawned by the node_frontends
@@ -711,6 +712,7 @@ class FarmManager(Component):
 # running on the same node as well, it would copy the  MF file to /tmp
 #---v--------------------------------------------------------------------------
     def generate_job_submission_script(self):
+        TRACE.INFO(f'-- START',TRACE_NAME)
 
         fn = f'{self.config_dir}/start_artdaq_processes.sh'
         
@@ -775,6 +777,9 @@ class FarmManager(Component):
 
             f.write('fi\n')
             f.write('sleep 1\n')
+            
+        TRACE.INFO(f'-- START',TRACE_NAME)
+        return
 
             
 #-------^----------------------------------------------------------------------
@@ -2326,7 +2331,7 @@ class FarmManager(Component):
                 self.set_process_status(p,0);
 
         except Exception:
-            TRACE.ERROR(f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",TRACE_NAME)
+            TRACE.ERROR(f"command:{command} timeout:{timeout} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",TRACE_NAME)
             self.set_process_status(p,-1);
             self.exception = True
 

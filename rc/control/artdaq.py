@@ -94,6 +94,40 @@ def write_fcl(client,args,artdaqLabel,proc,fcl_template):
 
                 fout.write(line);
 
+            # then navigate the trigger table description in ODB and append the updates for things line
+            # prescale factor
+            # ------------------------------------------------------------------------------
+            tt = client.odb_get(f'/Mu2e/ActiveRunConfiguration/Trigger/{trigger_table}');
+        
+            # print(tt);
+            header_written = False
+            for k0 in tt.keys():
+                TRACE.INFO(f'key: {k0} is_dict:{isinstance(tt[k0],dict)}',TRACE_NAME)
+                if (k0 == 'physics'):
+                    line = f'art.physics'
+                    # loop over 
+                    for k1 in tt[k0].keys():
+                        if (k1 == 'filters'):
+                            line += '.filters'
+                            # loop over modules
+                            filters = tt[k0][k1]
+                            for k2 in filters.keys():
+                                print(f'k2:{k2}')
+                                line += f'.{k2}'
+                                module = filters[k2]
+                                # next go module parameters, to begin with, consider the simplest case
+                                for k3 in module.keys():
+                                    line += f'.{k3} : {module[k3]}\n'
+                                    TRACE.INFO(f'line:{line}',TRACE_NAME)
+                                    if (not header_written):
+                                        fout.write('#---------------------------------------------------\n')
+                                        fout.write('# trigger overrides\n');
+                                        fout.write('#---------------------------------------------------\n')
+                                        header_written = True
+                                        
+                                    fout.write(line)
+            
+
     elif ('data_logger' in fcl_template):
         with open(fn,'w') as fout:
             for line in lines:
@@ -417,9 +451,9 @@ class EventBuilder(Procinfo):
         self.init_fragment_count = 0;
 
         if (len(s.sources) > 0):
-            TRACE.INFO(f's.id:{s.id} s.sources:{s.sources}',TRACE_NAME);
+            TRACE.DEBUG(0,f's.id:{s.id} s.sources:{s.sources}',TRACE_NAME);
             for ss in s.list_of_sS:
-                TRACE.INFO(f'ss {ss}',TRACE_NAME)
+                TRACE.DEBUG(0,f'ss {ss}',TRACE_NAME)
                 # there should be no DLs in the source subsystem, it should end in EB
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
@@ -442,16 +476,16 @@ class EventBuilder(Procinfo):
                         if (not br in self.list_of_sources):
                             self.list_of_sources.append(eb);
                             eb.list_of_destinations.append(self);
-            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
+            TRACE.DEBUG(0,f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
         else:
 #-------^----------------------------------------------------------------------
 # subsystem doesn't have inputs, look at local BRs - those already are in the list of inputs
 #-----------v------------------------------------------------------------------
             for br in self.list_of_sources:
-                TRACE.DEBUG(1,f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}',TRACE_NAME)
+                TRACE.DEBUG(0,f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}',TRACE_NAME)
                 sum_fragment_size_bytes += br.max_fragment_size_bytes
 
-                TRACE.DEBUG(1,f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}',TRACE_NAME)
+                TRACE.DEBUG(0,f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}',TRACE_NAME)
 
 
         self.max_fragment_size_bytes = sum_fragment_size_bytes;
@@ -499,6 +533,8 @@ class EventBuilder(Procinfo):
                             else:
                                 # a problem , throw
                                 raise Exception('EB: no EBs/DLs in the DEST');
+
+        TRACE.INFO(f'-- END',TRACE_NAME)
         return;
 
 #------------------------------------------------------------------------------
