@@ -1087,8 +1087,8 @@ class FarmManager(Component):
             sys.exit(1)
 
 #------------------------------------------------------------------------------
-# create quick setup file to be sourced at the worker nodes.
-# 
+# if setup_daq.sh has been modified, regenerate quick_setup.sh to match it
+# however, all MIDAS linux frontends also rely on quick_setup.sh being up-to-date
 #------------------------------------------------------------------------------
         self.daq_quick_setup_script = f'{self.mu2e_config_dir}/scripts/quick_setup.sh'
         
