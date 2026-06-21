@@ -12,18 +12,6 @@ import TRACE ; TRACE_NAME="manage_proc"
 def pmt_log_filename_format(self):
     return "%s/pmt/pmt_%06i_%s_%s_partition_%02i_%s"
 
-# 2026-02-19-PM #def bootfile_name_to_execname(bootfile_name):
-# 2026-02-19-PM #
-# 2026-02-19-PM #    if   "BoardReader"    in bootfile_name: execname = "boardreader"
-# 2026-02-19-PM #    elif "EventBuilder"   in bootfile_name: execname = "eventbuilder"
-# 2026-02-19-PM #    elif "DataLogger"     in bootfile_name: execname = "datalogger"
-# 2026-02-19-PM #    elif "Dispatcher"     in bootfile_name: execname = "dispatcher"
-# 2026-02-19-PM #    elif "RoutingManager" in bootfile_name: execname = "routing_manager"
-# 2026-02-19-PM #    else: assert False
-# 2026-02-19-PM #
-# 2026-02-19-PM #    return execname
-
-
 #------------------------------------------------------------------------------
 # P.Murat: in order to structure the code, make check_launch_results a separate function
 #---v--------------------------------------------------------------------------
@@ -97,350 +85,327 @@ def check_launch_results_base(self,launch_procs_actions):
                 return -1
     return 0
 
-#---^--------------------------------------------------------------------------
-# assumes type(self)=FarmManager
+# 2026-06-21 PM#---^--------------------------------------------------------------------------
+# 2026-06-21 PM# assumes type(self)=FarmManager
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PMdef launch_procs_on_host(self,host,
+# 2026-06-21 PM                         launch_commands_to_run_on_host,
+# 2026-06-21 PM                         launch_commands_to_run_on_host_background,
+# 2026-06-21 PM                         launch_commands_on_host_to_show_user):
+# 2026-06-21 PM    oname = '"[manage_processes_direct::launch_procs_on_host]'
+# 2026-06-21 PM    
+# 2026-06-21 PM    self.print_log("d", oname+f': executing commands to launch processes on {host}',2)
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# if stale processes exist, start from cleaning them up
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM    grepped_lines    = []
+# 2026-06-21 PM    preexisting_pids = rcu.get_pids("\|".join(
+# 2026-06-21 PM        ["%s.*id:\s\+%s" % (p.execname, p.port) for p in self.procinfos if p.host == host]),
+# 2026-06-21 PM                                    host,grepped_lines)
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f':001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}\n',TRACE_NAME)
+# 2026-06-21 PM    
+# 2026-06-21 PM    if self.attempt_existing_pid_kill and len(preexisting_pids) > 0:
+# 2026-06-21 PM        self.print_log("i", "Found existing processes on %s:%s" % (host,preexisting_pids))
+# 2026-06-21 PM        TRACE.INFO(f'Found existing processes on {host} pids:{preexisting_pids}')
+# 2026-06-21 PM
+# 2026-06-21 PM        kill_procs_on_host(self, host, kill_art=True, use_force=True)
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# check if cleanup was successful, if not, raise an exception (for now)
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM        TRACE.INFO(f'Before re-check for existing processes on {host}')
+# 2026-06-21 PM        
+# 2026-06-21 PM        grepped_lines    = []
+# 2026-06-21 PM        preexisting_pids = rcu.get_pids(
+# 2026-06-21 PM            "\|".join( ["%s.*id:\s\+%s" % (p.execname,p.port) for p in self.procinfos if p.host == host]),
+# 2026-06-21 PM            host, grepped_lines)
+# 2026-06-21 PM
+# 2026-06-21 PM        TRACE.INFO(f'host:{host} preexisting_pids:{preexisting_pids}',TRACE_NAME)
+# 2026-06-21 PM        
+# 2026-06-21 PM    if (len(preexisting_pids) > 0):
+# 2026-06-21 PM        self.print_log("e",rcu.make_paragraph(
+# 2026-06-21 PM            ("On host %s, found artdaq process(es) already existing which use the ports"
+# 2026-06-21 PM             " TFM was going to use; this may be the result of an improper cleanup from"
+# 2026-06-21 PM             " a prior run: " % host))
+# 2026-06-21 PM        )
+# 2026-06-21 PM        self.print_log("e","\n" + "\n".join(grepped_lines))
+# 2026-06-21 PM
+# 2026-06-21 PM        raise Exception(rcu.make_paragraph(
+# 2026-06-21 PM                ("TFM found previously-existing artdaq processes using desired ports;"
+# 2026-06-21 PM                 " see error message above for details"))
+# 2026-06-21 PM        )
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f'host:{host} : starting launch')
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# each command already terminated by ampersand
+# 2026-06-21 PM#---v--------------------------------------------------------------------------
+# 2026-06-21 PM    launchcmd = rcu.construct_checked_command(launch_commands_to_run_on_host)
+# 2026-06-21 PM    launchcmd += "; "
+# 2026-06-21 PM    launchcmd += " ".join(launch_commands_to_run_on_host_background)
+# 2026-06-21 PM
+# 2026-06-21 PM    if not rcu.host_is_local(host):
+# 2026-06-21 PM        launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host]}',TRACE_NAME)
+# 2026-06-21 PM    self.print_log("d",'\n'+launchcmd,2)
+# 2026-06-21 PM
+# 2026-06-21 PM    proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
+# 2026-06-21 PM                            stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
+# 2026-06-21 PM
+# 2026-06-21 PM    out, _ = proc.communicate()
+# 2026-06-21 PM    status = proc.returncode
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f'after execution on host:{host}: status:{status}',TRACE_NAME)
+# 2026-06-21 PM
+# 2026-06-21 PM    if status != 0:
+# 2026-06-21 PM        self.print_log("e",
+# 2026-06-21 PM                       "Status error raised in attempting to launch processes on %s, to investigate, see %s:%s for output"
+# 2026-06-21 PM                       % (host, host, self.launch_attempt_files[host]))
+# 2026-06-21 PM
+# 2026-06-21 PM        self.print_log("i",rcu.make_paragraph(
+# 2026-06-21 PM            ('You can also try running again with the "debug level" in the boot file set to 4.'
+# 2026-06-21 PM             ' Otherwise, you can recreate what DAQInterface did by performing a clean login'
+# 2026-06-21 PM             ' to %s, source-ing the DAQInterface environment and executing the following:') % host)
+# 2026-06-21 PM        )
+# 2026-06-21 PM        self.print_log("i","\n" + "\n".join(launch_commands_on_host_to_show_user)+"\n")
+# 2026-06-21 PM        self.print_log("d","Output from failed command:\n" + out,2)
+# 2026-06-21 PM        raise Exception("ERROR to launch processes on %s; status=%s" % (host,status))
+# 2026-06-21 PM    else:
+# 2026-06-21 PM        self.print_log("d", "...host %s done." % host,2)
+# 2026-06-21 PM#    breakpoint();
+# 2026-06-21 PM    return status  # end of launch_procs_on_host
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# JCF, Dec-18-18
+# 2026-06-21 PM
+# 2026-06-21 PM# For the purposes of more helpful error reporting if DAQInterface determines that 
+# 2026-06-21 PM# launch_procs_base ultimately failed, have launch_procs_base return a dictionary 
+# 2026-06-21 PM# whose keys are the hosts on which it ran commands, and whose values are the list 
+# 2026-06-21 PM# of commands run on those hosts
+# 2026-06-21 PM# at this point assume that we know the run number
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PMdef launch_procs_base(self):
+# 2026-06-21 PM    TRACE.INFO('--START:',TRACE_NAME)
+# 2026-06-21 PM    
+# 2026-06-21 PM# 2025-05-11 PM    mf_fcl = rcu.generate_messagefacility_fhicl(self)    # writes the file and returns its name...
+# 2026-06-21 PM# 2025-05-11 PM    self.create_setup_fhiclcpp_if_needed()            
+# 2026-06-21 PM# 2025-05-11 PM
+# 2026-06-21 PM
+# 2026-06-21 PM    cmds = []
+# 2026-06-21 PM    
+# 2026-06-21 PM    cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
+# 2026-06-21 PM                % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
+# 2026-06-21 PM    
+# 2026-06-21 PM    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
+# 2026-06-21 PM    cmds.append(f'fhicl-dump -l $dump_arg -c {self.mf_template_fn}')
+# 2026-06-21 PM
+# 2026-06-21 PM    cmd = "; ".join(cmds)
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f'executing cmd:{cmd}',TRACE_NAME)
+# 2026-06-21 PM    start_time = time.time()
+# 2026-06-21 PM    
+# 2026-06-21 PM    proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+# 2026-06-21 PM                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
+# 2026-06-21 PM    proc.wait();
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f'command executed in {time.time()-start_time} sec, rc={proc.returncode}',TRACE_NAME)
+# 2026-06-21 PM
+# 2026-06-21 PM    if proc.returncode != 0:
+# 2026-06-21 PM        TRACE.ERROR('\nstatus:{status} when trying to run the following:\n%s\n' % ("\n".join(cmds)),TRACE_NAME)
+# 2026-06-21 PM        
+# 2026-06-21 PM# 2026-05-15 PM        self.print_log("e","STDOUT output: \n%s" % proc.stdout)
+# 2026-06-21 PM# 2026-05-15 PM        self.print_log("e","STDERR output: \n%s" % proc.stderr)
+# 2026-06-21 PM# 2026-05-15 PM
+# 2026-06-21 PM# 2026-05-15 PM        self.print_log("e",rcu.make_paragraph(
+# 2026-06-21 PM# 2026-05-15 PM            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
+# 2026-06-21 PM# 2026-05-15 PM             "one or more syntax errors, or there was a problem running fhicl-dump")
+# 2026-06-21 PM# 2026-05-15 PM            % (rcu.get_mf_template_fn))
+# 2026-06-21 PM# 2026-05-15 PM        )
+# 2026-06-21 PM# 2026-05-15 PM
+# 2026-06-21 PM        raise Exception(f'ERROR expanding {self.mf_template_fn}')
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# if the MessageFacility FCL is stored in config dir, then each frontend can copy it
+# 2026-06-21 PM# I think it is a good idea to also store the MF fcl in run_records directory
+# 2026-06-21 PM# however, for now just copy message facility FCL to each remote host - its assumed location is in /tmp/
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM    TRACE.INFO(f'start copying MF FCL everywhere',TRACE_NAME)
+# 2026-06-21 PM    for host in set([procinfo.host for procinfo in self.procinfos]):
+# 2026-06-21 PM        if not rcu.host_is_local(host):
+# 2026-06-21 PM            # ssh to remote node:/tmp
+# 2026-06-21 PM            cmd    = f"scp -p {self.config_dir}/{self.mf_fcl_fn}  {host}:/tmp/{self.mf_fcl_fn}"
+# 2026-06-21 PM            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
+# 2026-06-21 PM                                      stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
+# 2026-06-21 PM
+# 2026-06-21 PM            if status != 0:
+# 2026-06-21 PM                raise Exception('ERROR in %s executing "%s"' % (launch_procs_base.__name__, cmd))
+# 2026-06-21 PM        else:
+# 2026-06-21 PM            # just copy to /tmp
+# 2026-06-21 PM            shutil.copy2(f'{self.config_dir}/{self.mf_fcl_fn}', f'/tmp/{self.mf_fcl_fn}')
+# 2026-06-21 PM
+# 2026-06-21 PM    TRACE.INFO(f'done copying MF FCL everywhere',TRACE_NAME)
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
+# 2026-06-21 PM# Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
+# 2026-06-21 PM#---v--------------------------------------------------------------------------
+# 2026-06-21 PM    launch_commands_to_run_on_host            = {} # a dict of pairs {host:list_of_commands}
+# 2026-06-21 PM    launch_commands_to_run_on_host_background = {}
+# 2026-06-21 PM    launch_commands_on_host_to_show_user      = {}
+# 2026-06-21 PM
+# 2026-06-21 PM    self.launch_attempt_files                 = {} # pmt logfiles
+# 2026-06-21 PM
+# 2026-06-21 PM    for p in self.procinfos:
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# mark all processes as busy
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM        self.set_process_status(p,1)
+# 2026-06-21 PM        
+# 2026-06-21 PM        if p.host == "localhost":
+# 2026-06-21 PM            p.host = socket.gethostname(); ## rcu.get_short_hostname()
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# this is a "smart" way to define env vars only once
+# 2026-06-21 PM# a normal one would do it exactly the opposite way :
+# 2026-06-21 PM# - loop over hosts enabled in the configuration,
+# 2026-06-21 PM# - define the env vars,
+# 2026-06-21 PM# - and then loop over the processes enabled on that node...
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM        if not p.host in launch_commands_to_run_on_host:
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# form the name of the PMT log file, assume know the run number
+# 2026-06-21 PM# 'self.launch_attempt_files[p.host]' is the filename then ... oh, well
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM            fn_format = self.pmt_log_filename_format()
+# 2026-06-21 PM            self.launch_attempt_files[p.host] =  fn_format % (
+# 2026-06-21 PM                self.log_directory,self.run_number, p.host,self.fUser,self.partition(),rcu.date_and_time_filename())
+# 2026-06-21 PM
+# 2026-06-21 PM            launch_commands_to_run_on_host           [p.host] = []
+# 2026-06-21 PM            launch_commands_to_run_on_host_background[p.host] = []
+# 2026-06-21 PM            launch_commands_on_host_to_show_user     [p.host] = []
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# form commands to be executed to launch ARTDAQ processes
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("set +C")
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# make sure that MU2E_DAQ_DIR is defined when commands are executed on remote host
+# 2026-06-21 PM# $MIDAS_SERVER_HOST is needed for ARTDAQ processes to connect to ODB
+# 2026-06-21 PM# it is set by the $MU2E_DAQ_DIR/setup_daq.sh
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export MIDAS_SERVER_HOST=%s"  % self.midas_server_host);
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % self.mu2e_daq_dir)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# make sure the jobs are setting up the same spack environment as the one they are started from
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM            s = subprocess.run(['spack','env', 'status'],stdout=subprocess.PIPE,encoding='utf-8');
+# 2026-06-21 PM            spack_env = s.stdout.strip().split()[-1];
+# 2026-06-21 PM            TRACE.INFO(f'spack_env:{spack_env}',TRACE_NAME)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append(f'source {self.daq_setup_script} {spack_env} >> {self.launch_attempt_files[p.host]} 2>&1 ')
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# ##TODO: minimize the use of external env vars .. a process gets flattened FHICL file,
+# 2026-06-21 PM# why would it need a path?
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
+# 2026-06-21 PM
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % self.mf_fcl_fn)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PARTITION_NUMBER=%s"%self.partition())
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PORTS_PER_PARTITION=%s"%self.ports_per_partition)
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_BASE_PORT_NUMBER=%s"%self.base_port_number)
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# done with the env vars... why would one need to check availability of the BR?
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# 2025-05-09 PM            launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# Assume if this works, eventbuilder, etc. are also there
+# 2026-06-21 PM# with spack, all executable commands should be available from the $PATH (mostly, $PACK_VIEW/bin)
+# 2026-06-21 PM# cleanup of the shared memory is a good thing
+# 2026-06-21 PM#-----------v------------------------------------------------------------------
+# 2026-06-21 PM            launch_commands_to_run_on_host[p.host].append(
+# 2026-06-21 PM                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["SPACK_VIEW"],self.partition(),self.launch_attempt_files[p.host])
+# 2026-06-21 PM            )
+# 2026-06-21 PM
+# 2026-06-21 PM            for command in launch_commands_to_run_on_host[p.host]:
+# 2026-06-21 PM                res = re.search(r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),command)
+# 2026-06-21 PM                if not res:
+# 2026-06-21 PM                    launch_commands_on_host_to_show_user[p.host].append(command)
+# 2026-06-21 PM                else:
+# 2026-06-21 PM                    launch_commands_on_host_to_show_user[p.host].append(res.group(1))
+# 2026-06-21 PM
+# 2026-06-21 PM        prepend         = p.prepend.strip('"')
+# 2026-06-21 PM        base_launch_cmd = (
+# 2026-06-21 PM                        '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %d"'
+# 2026-06-21 PM                        % ( prepend,
+# 2026-06-21 PM                            p.execname,
+# 2026-06-21 PM                            p.port,
+# 2026-06-21 PM                            p.rank,
+# 2026-06-21 PM                            p.label,
+# 2026-06-21 PM                            self.partition())
+# 2026-06-21 PM                    )
+# 2026-06-21 PM        if p.allowed_processors is not None:
+# 2026-06-21 PM            base_launch_cmd = f'taskset --cpu-list {p.allowed_processors} {base_launch_cmd}'
+# 2026-06-21 PM        elif self.allowed_processors is not None:
+# 2026-06-21 PM            base_launch_cmd = f"taskset --cpu-list {self.allowed_processors} {base_launch_cmd}"
+# 2026-06-21 PM
+# 2026-06-21 PM        # base_launch_cmd = "valgrind --tool=callgrind %s" % (base_launch_cmd)
+# 2026-06-21 PM        launch_cmd = f'{base_launch_cmd} >> {self.launch_attempt_files[p.host]} 2>&1 & '
+# 2026-06-21 PM
+# 2026-06-21 PM        launch_commands_to_run_on_host_background[p.host].append(launch_cmd)
+# 2026-06-21 PM        launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# ok, a list of commands is formed 
+# 2026-06-21 PM# execute commands - submit jobs, one [long] ssh command  string per host
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM    TRACE.INFO('start python-threaded ssh submission of the jobs... beware of GIL',TRACE_NAME)
+# 2026-06-21 PM    threads = []
+# 2026-06-21 PM    for host in launch_commands_to_run_on_host:
+# 2026-06-21 PM        t = rcu.RaisingThread(
+# 2026-06-21 PM            target=launch_procs_on_host,
+# 2026-06-21 PM            args=(
+# 2026-06-21 PM                self,
+# 2026-06-21 PM                host,
+# 2026-06-21 PM                launch_commands_to_run_on_host[host],
+# 2026-06-21 PM                launch_commands_to_run_on_host_background[host],
+# 2026-06-21 PM                launch_commands_on_host_to_show_user[host],
+# 2026-06-21 PM            ),
+# 2026-06-21 PM        )
+# 2026-06-21 PM        t.start()
+# 2026-06-21 PM        threads.append(t)
+# 2026-06-21 PM
+# 2026-06-21 PM    for t in threads:
+# 2026-06-21 PM        t.join()
+# 2026-06-21 PM
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM# provision for the next step: 
+# 2026-06-21 PM# generate job submission script for given configuration and save it to the config directory
+# 2026-06-21 PM# also want to copy it to the records directory
+# 2026-06-21 PM# so far, not used
+# 2026-06-21 PM#------------------------------------------------------------------------------
+# 2026-06-21 PM    self.generate_job_submission_script();
+# 2026-06-21 PM
+# 2026-06-21 PM    rc = self.check_launch_results(launch_commands_on_host_to_show_user);
+# 2026-06-21 PM    
+# 2026-06-21 PM    TRACE.INFO(f'--END: submission and check finished, rc:{rc}',TRACE_NAME)
+# 2026-06-21 PM    
+# 2026-06-21 PM    return rc 
+# 2026-06-21 PM
 #------------------------------------------------------------------------------
-def launch_procs_on_host(self,host,
-                         launch_commands_to_run_on_host,
-                         launch_commands_to_run_on_host_background,
-                         launch_commands_on_host_to_show_user):
-    oname = '"[manage_processes_direct::launch_procs_on_host]'
-    
-    self.print_log("d", oname+f': executing commands to launch processes on {host}',2)
-
-#------------------------------------------------------------------------------
-# if stale processes exist, start from cleaning them up
-#------------------------------------------------------------------------------
-    grepped_lines    = []
-    preexisting_pids = rcu.get_pids("\|".join(
-        ["%s.*id:\s\+%s" % (p.execname, p.port) for p in self.procinfos if p.host == host]),
-                                    host,grepped_lines)
-
-    TRACE.INFO(f':001:START len(preexisting_pids) on {host}:{len(preexisting_pids)}\n',TRACE_NAME)
-    
-    if self.attempt_existing_pid_kill and len(preexisting_pids) > 0:
-        self.print_log("i", "Found existing processes on %s:%s" % (host,preexisting_pids))
-        TRACE.INFO(f'Found existing processes on {host} pids:{preexisting_pids}')
-
-        kill_procs_on_host(self, host, kill_art=True, use_force=True)
-
-#------------------------------------------------------------------------------
-# check if cleanup was successful, if not, raise an exception (for now)
-#------------------------------------------------------------------------------
-        TRACE.INFO(f'Before re-check for existing processes on {host}')
-        
-        grepped_lines    = []
-        preexisting_pids = rcu.get_pids(
-            "\|".join( ["%s.*id:\s\+%s" % (p.execname,p.port) for p in self.procinfos if p.host == host]),
-            host, grepped_lines)
-
-        TRACE.INFO(f'host:{host} preexisting_pids:{preexisting_pids}',TRACE_NAME)
-        
-    if (len(preexisting_pids) > 0):
-        self.print_log("e",rcu.make_paragraph(
-            ("On host %s, found artdaq process(es) already existing which use the ports"
-             " TFM was going to use; this may be the result of an improper cleanup from"
-             " a prior run: " % host))
-        )
-        self.print_log("e","\n" + "\n".join(grepped_lines))
-
-        raise Exception(rcu.make_paragraph(
-                ("TFM found previously-existing artdaq processes using desired ports;"
-                 " see error message above for details"))
-        )
-
-    TRACE.INFO(f'host:{host} : starting launch')
-#------------------------------------------------------------------------------
-# each command already terminated by ampersand
+# wait for the command completion 
 #---v--------------------------------------------------------------------------
-    launchcmd = rcu.construct_checked_command(launch_commands_to_run_on_host)
-    launchcmd += "; "
-    launchcmd += " ".join(launch_commands_to_run_on_host_background)
-
-    if not rcu.host_is_local(host):
-        launchcmd = "ssh -f " + host + " '" + launchcmd + "'"
-
-    TRACE.INFO(f': executing on {host} (output will be in {host}:{self.launch_attempt_files[host]}',TRACE_NAME)
-    self.print_log("d",'\n'+launchcmd,2)
-
-    proc = subprocess.Popen(launchcmd,executable="/bin/bash",shell=True,
-                            stdout=subprocess.PIPE,stderr=subprocess.STDOUT,encoding="utf-8")
-
-    out, _ = proc.communicate()
-    status = proc.returncode
-
-    TRACE.INFO(f'after execution on host:{host}: status:{status}',TRACE_NAME)
-
-    if status != 0:
-        self.print_log("e",
-                       "Status error raised in attempting to launch processes on %s, to investigate, see %s:%s for output"
-                       % (host, host, self.launch_attempt_files[host]))
-
-        self.print_log("i",rcu.make_paragraph(
-            ('You can also try running again with the "debug level" in the boot file set to 4.'
-             ' Otherwise, you can recreate what DAQInterface did by performing a clean login'
-             ' to %s, source-ing the DAQInterface environment and executing the following:') % host)
-        )
-        self.print_log("i","\n" + "\n".join(launch_commands_on_host_to_show_user)+"\n")
-        self.print_log("d","Output from failed command:\n" + out,2)
-        raise Exception("ERROR to launch processes on %s; status=%s" % (host,status))
-    else:
-        self.print_log("d", "...host %s done." % host,2)
-#    breakpoint();
-    return status  # end of launch_procs_on_host
-
-#------------------------------------------------------------------------------
-# JCF, Dec-18-18
-
-# For the purposes of more helpful error reporting if DAQInterface determines that 
-# launch_procs_base ultimately failed, have launch_procs_base return a dictionary 
-# whose keys are the hosts on which it ran commands, and whose values are the list 
-# of commands run on those hosts
-# at this point assume that we know the run number
-#------------------------------------------------------------------------------
-def launch_procs_base(self):
+def wait_for_completion_base(self,timeout_ms):
     TRACE.INFO('--START:',TRACE_NAME)
-    
-# 2025-05-11 PM    mf_fcl = rcu.generate_messagefacility_fhicl(self)    # writes the file and returns its name...
-# 2025-05-11 PM    self.create_setup_fhiclcpp_if_needed()            
-# 2025-05-11 PM
-
-    cmds = []
-    
-    cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then %s; source %s; fi"
-                % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),os.environ["TFM_SETUP_FHICLCPP"]))
-    
-    cmds.append("if [[ $FHICLCPP_VERSION =~ v4_1[01]|v4_0|v[0123] ]]; then dump_arg=0;else dump_arg=none; fi")
-    cmds.append(f'fhicl-dump -l $dump_arg -c {self.mf_template_fn}')
-
-    cmd = "; ".join(cmds)
-
-    TRACE.INFO(f'executing cmd:{cmd}',TRACE_NAME)
-    start_time = time.time()
-    
-    proc = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
-                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
-    proc.wait();
-
-    TRACE.INFO(f'command executed in {time.time()-start_time} sec, rc={proc.returncode}',TRACE_NAME)
-
-    if proc.returncode != 0:
-        TRACE.ERROR('\nstatus:{status} when trying to run the following:\n%s\n' % ("\n".join(cmds)),TRACE_NAME)
-        
-# 2026-05-15 PM        self.print_log("e","STDOUT output: \n%s" % proc.stdout)
-# 2026-05-15 PM        self.print_log("e","STDERR output: \n%s" % proc.stderr)
-# 2026-05-15 PM
-# 2026-05-15 PM        self.print_log("e",rcu.make_paragraph(
-# 2026-05-15 PM            ("The FHiCL code designed to control MessageViewer, found in %s, appears to contain "
-# 2026-05-15 PM             "one or more syntax errors, or there was a problem running fhicl-dump")
-# 2026-05-15 PM            % (rcu.get_mf_template_fn))
-# 2026-05-15 PM        )
-# 2026-05-15 PM
-        raise Exception(f'ERROR expanding {self.mf_template_fn}')
-#------------------------------------------------------------------------------
-# if the MessageFacility FCL is stored in config dir, then each frontend can copy it
-# I think it is a good idea to also store the MF fcl in run_records directory
-# however, for now just copy message facility FCL to each remote host - its assumed location is in /tmp/
-#------------------------------------------------------------------------------
-    TRACE.INFO(f'start copying MF FCL everywhere',TRACE_NAME)
-    for host in set([procinfo.host for procinfo in self.procinfos]):
-        if not rcu.host_is_local(host):
-            # ssh to remote node:/tmp
-            cmd    = f"scp -p {self.config_dir}/{self.mf_fcl_fn}  {host}:/tmp/{self.mf_fcl_fn}"
-            status = subprocess.Popen(cmd,executable="/bin/bash",shell=True,
-                                      stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).wait()
-
-            if status != 0:
-                raise Exception('ERROR in %s executing "%s"' % (launch_procs_base.__name__, cmd))
-        else:
-            # just copy to /tmp
-            shutil.copy2(f'{self.config_dir}/{self.mf_fcl_fn}', f'/tmp/{self.mf_fcl_fn}')
-
-    TRACE.INFO(f'done copying MF FCL everywhere',TRACE_NAME)
-#------------------------------------------------------------------------------
-# Need to run artdaq processes in the background so they're persistent outside of this function's Popen calls
-# Don't want to clobber a pre-existing logfile or clutter the commands via "$?" checks
-#---v--------------------------------------------------------------------------
-    launch_commands_to_run_on_host            = {} # a dict of pairs {host:list_of_commands}
-    launch_commands_to_run_on_host_background = {}
-    launch_commands_on_host_to_show_user      = {}
-
-    self.launch_attempt_files                 = {} # pmt logfiles
-
-    for p in self.procinfos:
-#------------------------------------------------------------------------------
-# mark all processes as busy
-#------------------------------------------------------------------------------
-        self.set_process_status(p,1)
-        
-        if p.host == "localhost":
-            p.host = socket.gethostname(); ## rcu.get_short_hostname()
-#------------------------------------------------------------------------------
-# this is a "smart" way to define env vars only once
-# a normal one would do it exactly the opposite way :
-# - loop over hosts enabled in the configuration,
-# - define the env vars,
-# - and then loop over the processes enabled on that node...
-#------------------------------------------------------------------------------
-        if not p.host in launch_commands_to_run_on_host:
-#------------------------------------------------------------------------------
-# form the name of the PMT log file, assume know the run number
-# 'self.launch_attempt_files[p.host]' is the filename then ... oh, well
-#------------------------------------------------------------------------------
-            fn_format = self.pmt_log_filename_format()
-            self.launch_attempt_files[p.host] =  fn_format % (
-                self.log_directory,self.run_number, p.host,self.fUser,self.partition(),rcu.date_and_time_filename())
-
-            launch_commands_to_run_on_host           [p.host] = []
-            launch_commands_to_run_on_host_background[p.host] = []
-            launch_commands_on_host_to_show_user     [p.host] = []
-
-#------------------------------------------------------------------------------
-# form commands to be executed to launch ARTDAQ processes
-#------------------------------------------------------------------------------
-
-            launch_commands_to_run_on_host[p.host].append("set +C")
-            launch_commands_to_run_on_host[p.host].append("echo > %s" % (self.launch_attempt_files[p.host]))
-#------------------------------------------------------------------------------
-# make sure that MU2E_DAQ_DIR is defined when commands are executed on remote host
-# $MIDAS_SERVER_HOST is needed for ARTDAQ processes to connect to ODB
-# it is set by the $MU2E_DAQ_DIR/setup_daq.sh
-#------------------------------------------------------------------------------
-            launch_commands_to_run_on_host[p.host].append("export MIDAS_SERVER_HOST=%s"  % self.midas_server_host);
-            launch_commands_to_run_on_host[p.host].append("export MU2E_DAQ_DIR=%s"       % self.mu2e_daq_dir)
-            launch_commands_to_run_on_host[p.host] += rcu.get_setup_commands(self.productsdir, self.spackdir,self.launch_attempt_files[p.host])
-#------------------------------------------------------------------------------
-# make sure the jobs are setting up the same spack environment as the one they are started from
-#------------------------------------------------------------------------------
-            s = subprocess.run(['spack','env', 'status'],stdout=subprocess.PIPE,encoding='utf-8');
-            spack_env = s.stdout.strip().split()[-1];
-            TRACE.INFO(f'spack_env:{spack_env}',TRACE_NAME)
-            launch_commands_to_run_on_host[p.host].append(f'source {self.daq_setup_script} {spack_env} >> {self.launch_attempt_files[p.host]} 2>&1 ')
-#------------------------------------------------------------------------------
-# ##TODO: minimize the use of external env vars .. a process gets flattened FHICL file,
-# why would it need a path?
-#------------------------------------------------------------------------------
-            launch_commands_to_run_on_host[p.host].append("export FHICL_FILE_PATH=%s"    % os.environ.get("FHICL_FILE_PATH"))
-
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_RUN_NUMBER=%s"  % self.run_number)
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_ROOT=%s"    % self.log_directory)
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_LOG_FHICL=%s"   % self.mf_fcl_fn)
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PARTITION_NUMBER=%s"%self.partition())
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_PORTS_PER_PARTITION=%s"%self.ports_per_partition)
-            launch_commands_to_run_on_host[p.host].append("export ARTDAQ_BASE_PORT_NUMBER=%s"%self.base_port_number)
-
-#------------------------------------------------------------------------------
-# done with the env vars... why would one need to check availability of the BR?
-#------------------------------------------------------------------------------
-# 2025-05-09 PM            launch_commands_to_run_on_host[p.host].append("which boardreader >> %s 2>&1 "% self.launch_attempt_files[p.host])  
-#------------------------------------------------------------------------------
-# Assume if this works, eventbuilder, etc. are also there
-# with spack, all executable commands should be available from the $PATH (mostly, $PACK_VIEW/bin)
-# cleanup of the shared memory is a good thing
-#-----------v------------------------------------------------------------------
-            launch_commands_to_run_on_host[p.host].append(
-                "%s/bin/mopup_shmem.sh %d --force >> %s 2>&1" % (os.environ["SPACK_VIEW"],self.partition(),self.launch_attempt_files[p.host])
-            )
-
-            for command in launch_commands_to_run_on_host[p.host]:
-                res = re.search(r"^([^>]*).*%s.*$" % (self.launch_attempt_files[p.host]),command)
-                if not res:
-                    launch_commands_on_host_to_show_user[p.host].append(command)
-                else:
-                    launch_commands_on_host_to_show_user[p.host].append(res.group(1))
-
-        prepend         = p.prepend.strip('"')
-        base_launch_cmd = (
-                        '%s %s -c "id: %s commanderPluginType: xmlrpc rank: %s application_name: %s partition_number: %d"'
-                        % ( prepend,
-                            p.execname,
-                            p.port,
-                            p.rank,
-                            p.label,
-                            self.partition())
-                    )
-        if p.allowed_processors is not None:
-            base_launch_cmd = f'taskset --cpu-list {p.allowed_processors} {base_launch_cmd}'
-        elif self.allowed_processors is not None:
-            base_launch_cmd = f"taskset --cpu-list {self.allowed_processors} {base_launch_cmd}"
-
-        # base_launch_cmd = "valgrind --tool=callgrind %s" % (base_launch_cmd)
-        launch_cmd = f'{base_launch_cmd} >> {self.launch_attempt_files[p.host]} 2>&1 & '
-
-        launch_commands_to_run_on_host_background[p.host].append(launch_cmd)
-        launch_commands_on_host_to_show_user     [p.host].append("%s &" % (base_launch_cmd))
-
-#------------------------------------------------------------------------------
-# ok, a list of commands is formed 
-# execute commands - submit jobs, one [long] ssh command  string per host
-#------------------------------------------------------------------------------
-    TRACE.INFO('start python-threaded ssh submission of the jobs... beware of GIL',TRACE_NAME)
-    threads = []
-    for host in launch_commands_to_run_on_host:
-        t = rcu.RaisingThread(
-            target=launch_procs_on_host,
-            args=(
-                self,
-                host,
-                launch_commands_to_run_on_host[host],
-                launch_commands_to_run_on_host_background[host],
-                launch_commands_on_host_to_show_user[host],
-            ),
-        )
-        t.start()
-        threads.append(t)
-
-    for t in threads:
-        t.join()
-
-#------------------------------------------------------------------------------
-# provision for the next step: 
-# generate job submission script for given configuration and save it to the config directory
-# also want to copy it to the records directory
-# so far, not used
-#------------------------------------------------------------------------------
-    self.generate_job_submission_script();
-
-    rc = self.check_launch_results(launch_commands_on_host_to_show_user);
-    
-    TRACE.INFO(f'--END: submission and check finished, rc:{rc}',TRACE_NAME)
-    
-    return rc 
-
-#------------------------------------------------------------------------------
-# generate job submission script and send a command to each node
-def launch_procs_base_new(self):
-    TRACE.INFO('--START:',TRACE_NAME)
-
-    self.generate_job_submission_script();
-#------------------------------------------------------------------------------
-# trigger job submission
-#------------------------------------------------------------------------------
-    cmd_name = 'start_processes'
-    for node in self.artdaq.list_of_nodes:
-        cmd_odb_path     = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
-        cmd_odb_par_path = cmd_odb_path+'/'+cmd_name
-        self.client.odb_set(cmd_odb_path+'/Name',cmd_name);
-        self.client.odb_set(cmd_odb_path+'/ParameterPath',cmd_odb_par_path)
-        self.client.odb_set(cmd_odb_path+'/logfile',f'{node.name}_artdaq');
-
-        node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
-        self.client.odb_set(node_conf_odb_path+'/Status',1);
-
-        timeout_ms = 80000;
-        self.client.odb_set(cmd_odb_path+'/timeout_ms',20000);
-
-        self.client.odb_set(cmd_odb_path+'/Finished',0);
-        self.client.odb_set(cmd_odb_path+'/Run',1);
-
-#------------------------------------------------------------------------------
-# wait for completion reports
-#---v--------------------------------------------------------------------------
     n_nodes        = len(self.artdaq.list_of_nodes)
     n_not_finished = n_nodes;
     finished       = [0] * n_nodes;
     
     wait_time_ms   = 0;
+    
     while ((n_not_finished > 0) and (wait_time_ms < timeout_ms)):
         sleep_time_ms = 200.0;               # 
         time.sleep(sleep_time_ms/1000.0);
@@ -458,6 +423,38 @@ def launch_procs_base_new(self):
                 self.client.odb_set(node_conf_odb_path+'/Status',0);
                 n_not_finished -= 1;
 
+    TRACE.INFO(f'--END: n_not_finished:{n_not_finished} wait_time_ms:{wait_time_ms}',TRACE_NAME)
+    return (n_not_finished, wait_time_ms)
+
+#------------------------------------------------------------------------------
+# generate job submission script and send a command to each node
+def launch_procs_base_new(self):
+    TRACE.INFO('--START:',TRACE_NAME)
+
+    self.generate_job_submission_script();
+#------------------------------------------------------------------------------
+# trigger job submission
+#------------------------------------------------------------------------------
+    cmd_name   = 'start_processes'
+    timeout_ms = 80000;               # 80 sec
+    
+    for node in self.artdaq.list_of_nodes:
+        cmd_odb_path     = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
+        cmd_odb_par_path = cmd_odb_path+'/'+cmd_name
+        self.client.odb_set(cmd_odb_path+'/Name',cmd_name);
+        self.client.odb_set(cmd_odb_path+'/ParameterPath',cmd_odb_par_path)
+        self.client.odb_set(cmd_odb_path+'/logfile',f'{node.name}_artdaq');
+
+        node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
+        self.client.odb_set(node_conf_odb_path+'/Status',1);
+
+        self.client.odb_set(cmd_odb_path+'/timeout_ms',20000);
+
+        self.client.odb_set(cmd_odb_path+'/Finished',0);
+        self.client.odb_set(cmd_odb_path+'/Run',1);
+
+    (n_not_finished, wait_time_ms) = self.wait_for_completion(timeout_ms)
+
     rc = 0;
     if (n_not_finished > 0):
         rc = -1
@@ -469,8 +466,6 @@ def launch_procs_base_new(self):
     TRACE.INFO(f'--END: n_not_finished:{n_not_finished} rc:{rc} wait_time_ms:{wait_time_ms}',TRACE_NAME)
     
     return rc;
-
-
 
 #------------------------------------------------------------------------------
 def process_launch_diagnostics_base(self, procinfos_of_failed_processes):

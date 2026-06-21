@@ -65,8 +65,9 @@ except:
     from tfm.rc.control.all_functions_noop     import do_disable_base
     from tfm.rc.control.all_functions_noop     import check_config_base
 
-from tfm.rc.control.manage_processes_direct import launch_procs_base
+# from tfm.rc.control.manage_processes_direct import launch_procs_base
 from tfm.rc.control.manage_processes_direct import launch_procs_base_new
+from tfm.rc.control.manage_processes_direct import wait_for_completion_base
 from tfm.rc.control.manage_processes_direct import check_launch_results_base
 from tfm.rc.control.manage_processes_direct import kill_procs_base
 from tfm.rc.control.manage_processes_direct import check_proc_heartbeats_base
@@ -1133,9 +1134,9 @@ class FarmManager(Component):
     bookkeeping_for_fhicl_documents       = bookkeeping_for_fhicl_documents_artdaq_v3_base
     do_enable                             = do_enable_base
     do_disable                            = do_disable_base
-    launch_procs                          = launch_procs_base
 #    launch_procs                          = launch_procs_base
     launch_procs                          = launch_procs_base_new
+    wait_for_completion                   = wait_for_completion_base
     check_launch_results                  = check_launch_results_base
     kill_procs                            = kill_procs_base
     check_proc_heartbeats                 = check_proc_heartbeats_base
@@ -2288,11 +2289,9 @@ class FarmManager(Component):
         
         timeout = timeout_dict[p.name]
 
-        TRACE.INFO(f"-- START: sending transition command:{command} to p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
+        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
         self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
-
-        # TRACE.INFO(f'Sending transition {command} to {p.label}')
 
         try:
             if command == "Init":
@@ -2331,7 +2330,7 @@ class FarmManager(Component):
                 self.set_process_status(p,0);
 
         except Exception:
-            TRACE.ERROR(f"command:{command} timeout:{timeout} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",TRACE_NAME)
+            TRACE.ERROR(f"command:{command} timeout:{timeout} p.label:{p.label} p.odb_path:{p.odb_path}/Status to -1",TRACE_NAME)
             self.set_process_status(p,-1);
             self.exception = True
 
@@ -2392,7 +2391,7 @@ class FarmManager(Component):
     def do_command(self, command):
         func_name = 'do_command'
 
-        TRACE.INFO('-- START: command:{command}',TRACE_NAME);
+        TRACE.INFO(f'-- START: command:{command}',TRACE_NAME);
 
         if command != "Start" and command != "Init" and command != "Stop":
             self.print_log("i", "%s transition underway" % (command.upper()))
@@ -3403,7 +3402,7 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         return
 
 #------------------------------------------------------------------------------
-# STOP the run
+# STOP the run: 'stop', then 'shutdown'
 #---v--------------------------------------------------------------------------
     def do_stop_running(self):
         TRACE.INFO(f'-- START: STOP transition run:{self.run_number}',TRACE_NAME)
@@ -3432,14 +3431,41 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         self.execute_trace_script ("stop"    )
         self.complete_state_change("stopping")
         self.fState.set_completed(50);
+
 #------------------------------------------------------------------------------
 # ARTDAQ processes stopped, query the number of events in the run, start from the data logger(s)
+# this is a provision, uncomment later
 #------------------------------------------------------------------------------
+        cmd_name = 'get_stats'               # get statistics after teh process stopped running
+        for node in self.artdaq.list_of_nodes:
+            for p in node.list_of_processes:
+                # collect final statistics
+                cmd_odb_path     = f'/Mu2e/Commands/DAQ/Nodes/{node.name}/Artdaq'
+                cmd_odb_par_path = cmd_odb_path+'/'+cmd_name
+                self.client.odb_set(cmd_odb_path+'/Name',cmd_name);
+                self.client.odb_set(cmd_odb_path+'/ParameterPath',cmd_odb_par_path)
+                self.client.odb_set(cmd_odb_path+'/logfile',f'{node.name}_artdaq');
         
+                node_conf_odb_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/{node.name}'
+                self.client.odb_set(node_conf_odb_path+'/Status',1);
+        
+                timeout_ms = 80000;
+                self.client.odb_set(cmd_odb_path+'/timeout_ms',20000);
+        
+                self.client.odb_set(cmd_odb_path+'/Finished',0);
+                self.client.odb_set(cmd_odb_path+'/Run',1);
 #------------------------------------------------------------------------------
+# and wait till completion
+#------------------------------------------------------------------------------
+        timeout_ms = 60000
+        (n_not_finished,wait_time_ms) = self.wait_for_completion(timeout_ms)
+        
+
+#------------------------------------------------------------------------------
+# now can proceed with shutting the processes down
 # P.M. moved from the runner loop
 #-------v----------------------------------------------------------------------
-        TRACE.INFO(f'before do_command("Shutdown")',TRACE_NAME)
+        TRACE.INFO(f'before do_command("Shutdown") n_not_finished:{n_not_finished} wait_time_ms:{wait_time_ms}',TRACE_NAME)
         self.do_command("Shutdown")
         TRACE.INFO(f'after do_command("Shutdown")',TRACE_NAME)
         self.print_log('i','after do_command("Shutdown")')

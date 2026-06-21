@@ -95,7 +95,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             )
         )
     
-    TRACE.INFO(f'step 1: took {time.time() - starttime} sec',TRACE_NAME);
+    TRACE.DEBUG(0,f'step  1: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 #------------------------------------------------------------------------------
 # Start calculating values (fragment counts, memory sizes, etc.)
@@ -150,7 +150,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                              "this parameter is not allowed for non-BoardReader artdaq processes"))
                     )
     
-    TRACE.INFO(f'step 2: took {time.time() - starttime} sec',TRACE_NAME);
+    TRACE.DEBUG(0,f'step  2: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # Now loop over the boardreaders again to determine
@@ -224,7 +224,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                         subsystem_fragment_space[procinfo.subsystem_id] += fragment_space
                         subsystem_fragment_ids[procinfo.subsystem_id].append(tid)
 
-    self.print_log("i", f'step 3: took {time.time() - starttime} sec');
+    TRACE.DEBUG(0,'step  3: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # Now using the per-subsystem info we've gathered, use recursion
@@ -289,7 +289,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     for ss in self.subsystems:
         fragment_ids[ss] = calculate_subsystem_fragment_ids(ss)
 
-    TRACE.INFO(f'step 4: took {time.time() - starttime} sec');
+    TRACE.DEBUG(0,f'step 4: took {time.time() - starttime} sec');
     starttime = time.time();
 
     # If we have advanced memory usage switched on, then make sure the
@@ -303,7 +303,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # PM 2026-02-03 #    print('------------------- 00002 DL01 test FCL');
 # PM 2026-02-03 #    print(dl.fhicl_used);
 
-    TRACE.INFO(f'step 5: took {time.time() - starttime} sec',TRACE_NAME);
+    TRACE.DEBUG(0,f'step 5: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 #------------------------------------------------------------------------------
 # Check for places where Fragment IDs need to be filled in
@@ -319,7 +319,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     p.fhicl_used,
                 )
 
-    TRACE.INFO(f'step 6: took {time.time() - starttime} sec',TRACE_NAME);
+    TRACE.DEBUG(0,f'step 6: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # debugging
@@ -363,7 +363,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
     subsystems_without_dataloggers        = (    []   )  
 
-    TRACE.INFO(f'step 7: took {time.time() - starttime} sec',TRACE_NAME);
+    TRACE.DEBUG(0,f'step 7: took {time.time() - starttime} sec',TRACE_NAME);
     starttime = time.time();
 
     # Couple of sanity checks
@@ -416,8 +416,12 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     )
                 )
 
-    TRACE.INFO(f'step 8: took {time.time() - starttime} sec');
+    TRACE.DEBUG(0,f'step 8: took {time.time() - starttime} sec');
     starttime = time.time();
+
+    # compile once (module scope preferred)
+    RE_NO_FRAGS   = re.compile(r"\n\s*sends_no_fragments\s*:\s*[Tt]rue")
+    RE_GEN0       = re.compile(r"\n\s*generated_fragments_per_event\s*:\s*0")
 
     for i_proc in range(len(self.procinfos)):
 
@@ -437,24 +441,34 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     TRACE.INFO(f'step 9: took {time.time() - starttime} sec');
     starttime = time.time();
 
+    RE_EXP_FRAGS  = re.compile(r"expected_fragments_per_event\s*:\s*[0-9]+")
+    RE_HOSTMAP    = re.compile(r"host_map\s*:\s*\[.*?\]")
+    RE_REQADDR    = re.compile(r'request_address\s*:\s*["0-9\.]+')
+    RE_PARTNUM    = re.compile(r"partition_number\s*:\s*[0-9]+")
+
+    part_repl     = f"partition_number: {self.partition()}"
+    
     for p in self.procinfos:
-        if (p.is_datalogger() or p.is_dispatcher()) :
+        txt = p.fhicl_used;
+        if (not (p.is_datalogger() or p.is_dispatcher())):
             # P.M. comment out one more smartness! - DS and DS expect 1 event,
             # put that into default FCL and check, instead of correcting
             # p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
             #                      "expected_fragments_per_event: 1",p.fhicl_used)
-            x = 0
-        else:
             # EB or BR
-            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
-                                  "expected_fragments_per_event: %d"
-                                  % (expected_fragments_per_event[p.subsystem_id]),p.fhicl_used)
+            
+# 2026-06-21 PM            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
+# 2026-06-21 PM                                  "expected_fragments_per_event: %d" % (expected_fragments_per_event[p.subsystem_id]),p.fhicl_used)
+
+            exp_frag_repl = f"expected_fragments_per_event: {expected_fragments_per_event[p.subsystem_id]}"
+            txt = RE_EXP_FRAGS.sub(exp_frag_repl,txt) ## , count=1)
 
 #------------------------------------------------------------------------------
 # P.M. this was very dangerous: store process subsystem ID as a string, but assume,
 # that, in fact that is an integer, and rely on that assumption
 # also, that seems to be somehow convoluted with the assumptions about the subnet addresses....
 #------------------------------------------------------------------------------
+
         if self.request_address is None:
             TRACE.DEBUG(1,f'procinfo:{p}',TRACE_NAME);
             ss = p.subsystem; ## self.subsystems[p.subsystem_id]    # PM: 'p.subsystem_id' is a string
@@ -463,16 +477,22 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         else:
             request_address = self.request_address
 
-        p.fhicl_used = re.sub("host_map\s*:\s*\[.*?\]", host_map_string,p.fhicl_used)
+#        p.fhicl_used = re.sub("host_map\s*:\s*\[.*?\]", host_map_string,p.fhicl_used)
+        txt = RE_HOSTMAP.sub(host_map_string,txt) ## , count=1)
 
-        p.fhicl_used = re.sub('request_address\s*:\s*["0-9\.]+',
-                              'request_address: "%s"' % (request_address.strip('"')),
-                              p.fhicl_used)
+        req_repl = 'request_address: "%s"' % (request_address.strip('"'))
+        # p.fhicl_used = re.sub('request_address\s*:\s*["0-9\.]+',req_repl,p.fhicl_used)
+        txt = RE_REQADDR.sub(req_repl,txt) ## , count=1)
+       
 #------------------------------------------------------------------------------
 # PM if partition is defined, redefine it... don't really need partition in FCL at all
 #------------------------------------------------------------------------------
-        p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+",
-                              "partition_number: %d" % self.partition(),p.fhicl_used)
+
+        # p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+","partition_number: %d" % self.partition(),p.fhicl_used)
+        txt = RE_PARTNUM.sub(part_repl,txt) ## , count=1)
+
+        p.fhicl_used = txt
+        
 #-------^----------------------------------------------------------------------
 # end of the loop
 #---v--------------------------------------------------------------------------
@@ -674,7 +694,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                                     % (str(subsystem_id),", ".join(processes_involved_in_requests)))
                     )
 
-    TRACE.INFO(f'step 11: took {time.time() - starttime} sec');
+    TRACE.DEBUG(0,f'step 11: took {time.time() - starttime} sec');
     starttime = time.time();
 
     # JCF, Apr-18-2019
