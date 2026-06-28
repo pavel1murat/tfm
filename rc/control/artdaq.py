@@ -234,806 +234,784 @@ def pmt_log_fn_node(nodename,log_directory,partition,run_number):
     TRACE.INFO(f'-- END: fn:{fn}')
     return fn
 
-#------------------------------------------------------------------------------
-# list_of_processes is either a p.list_of_destinations or a p.list_of_sources
-#------------------------------------------------------------------------------
-def host_map_string(plist,offset = ''):
-    s = ''
-    for p in plist:
-        s += f' {{ rank:{p.rank:3} host: "{p.host}"}}';
-        if (p != plist[-1]):
-            s += ','
-
-    return s;
-
-#------------------------------------------------------------------------------
-# 'p' is a Processinfo
-#------------------------------------------------------------------------------
-def destination_string(p,transfer_plugin):
-    s = ''
-    for d in p.list_of_destinations:
-        s += f' d{d.rank}: {{'
-        s += f' transferPluginType: {transfer_plugin}'
-        s += f' destination_rank:  {d.rank}'
-        # for BR, event=fragment
-        s += f' max_fragment_size_words: {p.max_event_size_words()}'
-        
-        # first destination includes the host_map
-        if (d == p.list_of_destinations[0]):
-            offset = '        '
-            s += ' host_map: ['
-            s += host_map_string(p.list_of_destinations,offset);
-            s += ' ]'
-            
-        s +=  '}\n'
-
-    return s;
-
-#------------------------------------------------------------------------------
-# 'p' is a Processinfo
-#------------------------------------------------------------------------------
-def source_string(p,transfer_plugin):
-    s  = ''
-
-    for x in p.list_of_sources:
-        s += f' s{x.rank}: {{'
-        s += f' transferPluginType: {transfer_plugin}'
-        s += f' source_rank:  {x.rank}'
-        s += f' max_fragment_size_words: {x.max_event_size_words()}'
-        
-        # first destination includes the host_map
-        if (x == p.list_of_sources[0]):
-            s += ' host_map: ['
-            offset = ''
-            s += host_map_string(p.list_of_sources,offset);
-            s += ' ]'
-            
-        s +=  '}\n'
-
-    return s;
-
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# 'p' is a Processinfo
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PMdef destination_string(p,transfer_plugin):
+# 2026-06-27 PM    s = ''
+# 2026-06-27 PM    for d in p.list_of_destinations:
+# 2026-06-27 PM        s += f' d{d.rank}: {{'
+# 2026-06-27 PM        s += f' transferPluginType: {transfer_plugin}'
+# 2026-06-27 PM        s += f' destination_rank:  {d.rank}'
+# 2026-06-27 PM        # for BR, event=fragment
+# 2026-06-27 PM        s += f' max_fragment_size_words: {p.max_event_size_words()}'
+# 2026-06-27 PM        
+# 2026-06-27 PM        # first destination includes the host_map
+# 2026-06-27 PM        if (d == p.list_of_destinations[0]):
+# 2026-06-27 PM            offset = '        '
+# 2026-06-27 PM            s += ' host_map: ['
+# 2026-06-27 PM            s += host_map_string(p.list_of_destinations,offset);
+# 2026-06-27 PM            s += ' ]'
+# 2026-06-27 PM            
+# 2026-06-27 PM        s +=  '}\n'
+# 2026-06-27 PM
+# 2026-06-27 PM    return s;
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# 'p' is a Processinfo
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PMdef source_string(p,transfer_plugin):
+# 2026-06-27 PM    s  = ''
+# 2026-06-27 PM
+# 2026-06-27 PM    for x in p.list_of_sources:
+# 2026-06-27 PM        s += f' s{x.rank}: {{'
+# 2026-06-27 PM        s += f' transferPluginType: {transfer_plugin}'
+# 2026-06-27 PM        s += f' source_rank:  {x.rank}'
+# 2026-06-27 PM        s += f' max_fragment_size_words: {x.max_event_size_words()}'
+# 2026-06-27 PM        
+# 2026-06-27 PM        # first destination includes the host_map
+# 2026-06-27 PM        if (x == p.list_of_sources[0]):
+# 2026-06-27 PM            s += ' host_map: ['
+# 2026-06-27 PM            offset = ''
+# 2026-06-27 PM            s += host_map_string(p.list_of_sources,offset);
+# 2026-06-27 PM            s += ' ]'
+# 2026-06-27 PM            
+# 2026-06-27 PM        s +=  '}\n'
+# 2026-06-27 PM
+# 2026-06-27 PM    return s;
+# 2026-06-27 PM
 #---^--------------------------------------------------------------------------
 # marking the end
 #------------------------------------------------------------------------------
-
-class Node:
-    
-    def __init__(self, name, node_artdaq_odb_path):
-        self.name                 = name;
-        self.node_artdaq_odb_path = node_artdaq_odb_path;
-        self.list_of_processes    = []
-
-    def add_process(self,p):
-        self.list_of_processes.append(p);        
-
-#------------------------------------------------------------------------------
-class Artdaq:
-    def __init__(self):
-        self.list_of_nodes = []
-
-    def add_node(self, node):
-        self.list_of_nodes.append(node);
-        
-#------------------------------------------------------------------------------
-# define processes this p.type = BOARD_READER, BR is talking to destinations only
-#------------------------------------------------------------------------------
-class BoardReader(Procinfo):
-
-    def __init__(self,
-                 name, ##                = None, ## pname,
-                 rank, ##               = rank ,
-                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                 port, ##               = str(xmlrpc_port),
-                 timeout, ##            = timeout,
-                 label,   ##              = key_name  ,
-                 subsystem , ##         = subsystem,
-                 allowed_processors = None,
-                 target             = "none",
-                 fhicl              = "no_fcl_fn",
-                 prepend            = ""
-                 ):
-        
-        super().__init__(name,rank,host,port,timeout,label,subsystem,
-                         allowed_processors,target,fhicl,prepend)
-
-        self._type    = BOARD_READER;
-        self.execname = 'boardreader'
-
-#------------------------------------------------------------------------------
-# boardreades only have destinations
-#------------------------------------------------------------------------------
-    def init_connections(self):
-        
-        # s = self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
-        s = self.subsystem;                       # this is an object, not a string (subsystem_id)
-        if (s.max_type >= EVENT_BUILDER):
-            # local EBs: send fragments to them
-
-            list_of_ebs = s.list_of_procinfos[EVENT_BUILDER]
-            for eb in list_of_ebs:
-                self.list_of_destinations.append(eb);
-                eb.list_of_sources.append(self);
-        else:
-            # subsystem has only BRs, check subsystem destination
-            TRACE.INFO(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}',TRACE_NAME)
-            if (s.destination != None):
-                # subsystem has a destination, that has to have event builders
-                TRACE.INFO(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"',TRACE_NAME)
-                sd = s.dS;                  # destination subsystem, ## self.subsystems[s.destination];
-                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
-                TRACE.DEBUG(1,f'-- [BoardReader::init_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}',TRACE_NAME)
-                
-                for eb in list_of_ebs:
-                    TRACE.INFO(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}',TRACE_NAME)
-                    self.list_of_destinations.append(eb);
-                    eb.list_of_sources.append(self);
-            else:
-                # the subsystem has only BRs', that is a problem
-                raise Exception(f'ERROR: subsystem:{s.id} has only BRs and no destination. FIX IT.')
-        return;
-
-#------------------------------------------------------------------------------
-# BoardReader: return updated , nut not yet expanded FCL
-#------------------------------------------------------------------------------
-    def update_fhicl(self,transfer_plugin):
-        # step 1 : read and replace - start from BRs
-        TRACE.DEBUG(1,f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
-    
-        with open(self.fhicl,'r') as f:
-            lines = f.readlines()
-
-        new_text = []
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(self,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-                
-            pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.max_fragment_size_bytes}\n';
-                new_text.append(s);
-                continue;
-
-            new_text.append(line)
-        
-        TRACE.DEBUG(1,f'--END: self.label:{self.label}',TRACE_NAME)
-        return new_text;
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# define processes this p.type = BOARD_READER, BR is talking to destinations only
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PMclass BoardReader(Procinfo):
+# 2026-06-27 PM
+# 2026-06-27 PM    def __init__(self,
+# 2026-06-27 PM                 name, ##                = None, ## pname,
+# 2026-06-27 PM                 rank, ##               = rank ,
+# 2026-06-27 PM                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+# 2026-06-27 PM                 port, ##               = str(xmlrpc_port),
+# 2026-06-27 PM                 timeout, ##            = timeout,
+# 2026-06-27 PM                 label,   ##              = key_name  ,
+# 2026-06-27 PM                 subsystem , ##         = subsystem,
+# 2026-06-27 PM                 allowed_processors = None,
+# 2026-06-27 PM                 target             = "none",
+# 2026-06-27 PM                 fhicl              = "no_fcl_fn",
+# 2026-06-27 PM                 prepend            = ""
+# 2026-06-27 PM                 ):
+# 2026-06-27 PM        
+# 2026-06-27 PM        super().__init__(name,rank,host,port,timeout,label,subsystem,
+# 2026-06-27 PM                         allowed_processors,target,fhicl,prepend)
+# 2026-06-27 PM
+# 2026-06-27 PM        self._type    = BOARD_READER;
+# 2026-06-27 PM        self.execname = 'boardreader'
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# boardreades only have destinations
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def init_connections(self):
+# 2026-06-27 PM        
+# 2026-06-27 PM        # s = self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+# 2026-06-27 PM        s = self.subsystem;                       # this is an object, not a string (subsystem_id)
+# 2026-06-27 PM        if (s.max_type >= EVENT_BUILDER):
+# 2026-06-27 PM            # local EBs: send fragments to them
+# 2026-06-27 PM
+# 2026-06-27 PM            list_of_ebs = s.list_of_procinfos[EVENT_BUILDER]
+# 2026-06-27 PM            for eb in list_of_ebs:
+# 2026-06-27 PM                self.list_of_destinations.append(eb);
+# 2026-06-27 PM                eb.list_of_sources.append(self);
+# 2026-06-27 PM        else:
+# 2026-06-27 PM            # subsystem has only BRs, check subsystem destination
+# 2026-06-27 PM            TRACE.INFO(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}',TRACE_NAME)
+# 2026-06-27 PM            if (s.destination != None):
+# 2026-06-27 PM                # subsystem has a destination, that has to have event builders
+# 2026-06-27 PM                TRACE.INFO(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"',TRACE_NAME)
+# 2026-06-27 PM                sd = s.dS;                  # destination subsystem, ## self.subsystems[s.destination];
+# 2026-06-27 PM                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+# 2026-06-27 PM                TRACE.DEBUG(1,f'-- [BoardReader::init_connections] sd.id:{sd.id} len(list_of_ebs):{len(list_of_ebs)}',TRACE_NAME)
+# 2026-06-27 PM                
+# 2026-06-27 PM                for eb in list_of_ebs:
+# 2026-06-27 PM                    TRACE.INFO(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}',TRACE_NAME)
+# 2026-06-27 PM                    self.list_of_destinations.append(eb);
+# 2026-06-27 PM                    eb.list_of_sources.append(self);
+# 2026-06-27 PM            else:
+# 2026-06-27 PM                # the subsystem has only BRs', that is a problem
+# 2026-06-27 PM                raise Exception(f'ERROR: subsystem:{s.id} has only BRs and no destination. FIX IT.')
+# 2026-06-27 PM        return;
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# BoardReader: return updated , not not yet expanded FCL
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def update_fhicl(self,transfer_plugin):
+# 2026-06-27 PM        # step 1 : read and replace - start from BRs
+# 2026-06-27 PM        TRACE.DEBUG(1,f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+# 2026-06-27 PM
+# 2026-06-27 PM        new_text = []
+# 2026-06-27 PM
+# 2026-06-27 PM        try:
+# 2026-06-27 PM            with open(self.fhicl,'r') as f:
+# 2026-06-27 PM                lines = f.readlines()
+# 2026-06-27 PM        except OSError as e:
+# 2026-06-27 PM            TRACE.ERROR(f"Failed to open {self.fhicl}: {e}", TRACE_NAME)
+# 2026-06-27 PM            return new_text
+# 2026-06-27 PM
+# 2026-06-27 PM        for line in lines:
+# 2026-06-27 PM            # print(line);
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*destinations'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = destination_string(self,transfer_plugin)
+# 2026-06-27 PM                new_text.append(s)
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue
+# 2026-06-27 PM                
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*max_fragment_size_bytes'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.max_fragment_size_bytes}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM
+# 2026-06-27 PM            new_text.append(line)
+# 2026-06-27 PM        
+# 2026-06-27 PM        TRACE.DEBUG(1,f'--END: self.label:{self.label}',TRACE_NAME)
+# 2026-06-27 PM        return new_text;
+# 2026-06-27 PM
 
 
-
-#------------------------------------------------------------------------------
-class EventBuilder(Procinfo):
-
-    def __init__(self,
-                 name  , ##             = pname,
-                 rank  , ##             = rank ,
-                 host  , ##             = host ,          # at this point, store long (with '-ctrl' names)
-                 port  , ##             = str(xmlrpc_port),
-                 timeout, ##            = timeout,
-                 label  , ##            = key_name  ,
-                 subsystem , ##         = subsystem,
-                 allowed_processors = None,
-                 target             = "none",
-                 fhicl              = "no_fcl_fn",
-                 prepend            = ""
-                 ):
-        
-        super().__init__(name,rank,host,port,timeout,label,subsystem,
-                         allowed_processors,target,fhicl,prepend)
-        self._type              = EVENT_BUILDER;
-        self.execname           = 'eventbuilder'
-        self.art_analyzer_count = 1;                         # make 1 the default
-        
-    def init_connections(self):      # p = self
-        TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
-        # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
-        # start from checking inputs
-
-        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
-
-        # BRs should already be covered, check for input from other EBs
-
-        # print(f's.sources:{s.sources}');
-        # print(f'process.list_of_sources:{self.list_of_sources}');
-
-        sum_fragment_size_bytes  = 0;               # sum of the BR's input
-        max_event_size_bytes     = 0;               # max event from input EB's
-        self.init_fragment_count = 0;
-
-        if (len(s.sources) > 0):
-            TRACE.DEBUG(0,f's.id:{s.id} s.sources:{s.sources}',TRACE_NAME);
-            for ss in s.list_of_sS:
-                TRACE.DEBUG(0,f'ss {ss}',TRACE_NAME)
-                # there should be no DLs in the source subsystem, it should end in EB
-                if (ss.max_type == EVENT_BUILDER):
-                    list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
-                    for eb in list_of_ebs:
-                        self.init_fragment_count += 1
-                        if (eb.max_event_size_bytes > max_event_size_bytes):
-                            max_event_size_bytes = eb.max_event_size_bytes;
-                        # avoid double counting
-                        if (not eb in self.list_of_sources):
-                            self.list_of_sources.append(eb);
-                            eb.list_of_destinations.append(self);
-
-                elif (ss.max_type == BOARD_READER):
-                    list_of_brs = ss.list_of_procinfos[BOARD_READER]
-                    for br in list_of_brs:
-                        # it looks that the BRs send fragments, not 'serialized art events'....
-                        # self.init_fragment_count += 1
-                        sum_fragment_size_bytes  += br.max_fragment_size_bytes;
-                        # avoid double counting
-                        if (not br in self.list_of_sources):
-                            self.list_of_sources.append(eb);
-                            eb.list_of_destinations.append(self);
-            TRACE.DEBUG(0,f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
-        else:
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PMclass EventBuilder(Procinfo):
+# 2026-06-27 PM
+# 2026-06-27 PM    def __init__(self,
+# 2026-06-27 PM                 name  , ##             = pname,
+# 2026-06-27 PM                 rank  , ##             = rank ,
+# 2026-06-27 PM                 host  , ##             = host ,          # at this point, store long (with '-ctrl' names)
+# 2026-06-27 PM                 port  , ##             = str(xmlrpc_port),
+# 2026-06-27 PM                 timeout, ##            = timeout,
+# 2026-06-27 PM                 label  , ##            = key_name  ,
+# 2026-06-27 PM                 subsystem , ##         = subsystem,
+# 2026-06-27 PM                 allowed_processors = None,
+# 2026-06-27 PM                 target             = "none",
+# 2026-06-27 PM                 fhicl              = "no_fcl_fn",
+# 2026-06-27 PM                 prepend            = ""
+# 2026-06-27 PM                 ):
+# 2026-06-27 PM        
+# 2026-06-27 PM        super().__init__(name,rank,host,port,timeout,label,subsystem,
+# 2026-06-27 PM                         allowed_processors,target,fhicl,prepend)
+# 2026-06-27 PM        self._type              = EVENT_BUILDER;
+# 2026-06-27 PM        self.execname           = 'eventbuilder'
+# 2026-06-27 PM        self.art_analyzer_count = 1;                         # make 1 the default
+# 2026-06-27 PM        
+# 2026-06-27 PM    def init_connections(self):      # p = self
+# 2026-06-27 PM        TRACE.INFO(f'-- START: EventBuilder::init_connections:{self.label}',TRACE_NAME)
+# 2026-06-27 PM        # EB has to have inputs - either from own BRs or from other subsystems or EBs from other subcyctems
+# 2026-06-27 PM        # start from checking inputs
+# 2026-06-27 PM
+# 2026-06-27 PM        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+# 2026-06-27 PM
+# 2026-06-27 PM        # BRs should already be covered, check for input from other EBs
+# 2026-06-27 PM
+# 2026-06-27 PM        # print(f's.sources:{s.sources}');
+# 2026-06-27 PM        # print(f'process.list_of_sources:{self.list_of_sources}');
+# 2026-06-27 PM
+# 2026-06-27 PM        sum_fragment_size_bytes  = 0;               # sum of the BR's input
+# 2026-06-27 PM        max_event_size_bytes     = 0;               # max event from input EB's
+# 2026-06-27 PM        self.init_fragment_count = 0;
+# 2026-06-27 PM
+# 2026-06-27 PM        if (len(s.sources) > 0):
+# 2026-06-27 PM            TRACE.DEBUG(0,f's.id:{s.id} s.sources:{s.sources}',TRACE_NAME);
+# 2026-06-27 PM            for ss in s.list_of_sS:
+# 2026-06-27 PM                TRACE.DEBUG(0,f'ss {ss}',TRACE_NAME)
+# 2026-06-27 PM                # there should be no DLs in the source subsystem, it should end in EB
+# 2026-06-27 PM                if (ss.max_type == EVENT_BUILDER):
+# 2026-06-27 PM                    list_of_ebs = ss.list_of_procinfos[EVENT_BUILDER]
+# 2026-06-27 PM                    for eb in list_of_ebs:
+# 2026-06-27 PM                        self.init_fragment_count += 1
+# 2026-06-27 PM                        if (eb.max_event_size_bytes > max_event_size_bytes):
+# 2026-06-27 PM                            max_event_size_bytes = eb.max_event_size_bytes;
+# 2026-06-27 PM                        # avoid double counting
+# 2026-06-27 PM                        if (not eb in self.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(eb);
+# 2026-06-27 PM                            eb.list_of_destinations.append(self);
+# 2026-06-27 PM
+# 2026-06-27 PM                elif (ss.max_type == BOARD_READER):
+# 2026-06-27 PM                    list_of_brs = ss.list_of_procinfos[BOARD_READER]
+# 2026-06-27 PM                    for br in list_of_brs:
+# 2026-06-27 PM                        # it looks that the BRs send fragments, not 'serialized art events'....
+# 2026-06-27 PM                        # self.init_fragment_count += 1
+# 2026-06-27 PM                        sum_fragment_size_bytes  += br.max_fragment_size_bytes;
+# 2026-06-27 PM                        # avoid double counting
+# 2026-06-27 PM                        if (not br in self.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(eb);
+# 2026-06-27 PM                            eb.list_of_destinations.append(self);
+# 2026-06-27 PM            TRACE.DEBUG(0,f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
+# 2026-06-27 PM        else:
+# 2026-06-27 PM#-------^----------------------------------------------------------------------
+# 2026-06-27 PM# subsystem doesn't have inputs, look at local BRs - those already are in the list of inputs
+# 2026-06-27 PM#-----------v------------------------------------------------------------------
+# 2026-06-27 PM            for br in self.list_of_sources:
+# 2026-06-27 PM                TRACE.DEBUG(0,f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}',TRACE_NAME)
+# 2026-06-27 PM                sum_fragment_size_bytes += br.max_fragment_size_bytes
+# 2026-06-27 PM
+# 2026-06-27 PM                TRACE.DEBUG(0,f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}',TRACE_NAME)
+# 2026-06-27 PM
+# 2026-06-27 PM
+# 2026-06-27 PM        self.max_fragment_size_bytes = sum_fragment_size_bytes;
+# 2026-06-27 PM        self.max_event_size_bytes    = sum_fragment_size_bytes+max_event_size_bytes;
+# 2026-06-27 PM
+# 2026-06-27 PM#---------------------------^--------------------------------------------------
+# 2026-06-27 PM# done with the sources
+# 2026-06-27 PM# destinations: each EB should also have 'destination' processes tow hich it sends events - either DL's or other EB's (or DSs ?)
+# 2026-06-27 PM# first check if the subsystem ahs data loggers
+# 2026-06-27 PM#-------v----------------------------------------------------------------------
+# 2026-06-27 PM
+# 2026-06-27 PM        list_of_dls = s.list_of_procinfos[DATA_LOGGER]
+# 2026-06-27 PM        if (len(list_of_dls) > 0):
+# 2026-06-27 PM            # subsystem has its own DL(s)
+# 2026-06-27 PM            for dl in list_of_dls:
+# 2026-06-27 PM                dl.list_of_sources.append(self);
+# 2026-06-27 PM                self.list_of_destinations.append(dl);
+# 2026-06-27 PM                    
+# 2026-06-27 PM        else:
+# 2026-06-27 PM            # subsystem has no its own data loggers, so it should have a destination subsystem
+# 2026-06-27 PM            sd = s.dS;
+# 2026-06-27 PM            if (sd != None):
+# 2026-06-27 PM                # subsystem has a destination, that may start with BR, but they will be skipped
+# 2026-06-27 PM                # first check EBs in the destination subsystem
+# 2026-06-27 PM                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
+# 2026-06-27 PM                if (len(list_of_ebs) > 0):
+# 2026-06-27 PM                    for eb in list_of_ebs:
+# 2026-06-27 PM                        self.list_of_destinations.append(eb);
+# 2026-06-27 PM                        eb.list_of_sources.append(self);
+# 2026-06-27 PM                else:
+# 2026-06-27 PM                    # no EBs, check for DLs
+# 2026-06-27 PM                    list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
+# 2026-06-27 PM                    if (len(list_of_dls) > 0):
+# 2026-06-27 PM                        for dl in list_of_dls:
+# 2026-06-27 PM                            self.list_of_destinations.append(dl);
+# 2026-06-27 PM                            dl.list_of_sources.append(self);
+# 2026-06-27 PM                    else:
+# 2026-06-27 PM                        # no EBs/DLss, check for DSs
+# 2026-06-27 PM                        list_of_dss = sd.list_of_procinfos[DISPATCHER]
+# 2026-06-27 PM                        if (len(list_of_dss) > 0):
+# 2026-06-27 PM                            for ds in list_of_dss:
+# 2026-06-27 PM                                self.list_of_destinations.append(ds);
+# 2026-06-27 PM                                ds.list_of_sources.append(self);
+# 2026-06-27 PM                                
+# 2026-06-27 PM                            else:
+# 2026-06-27 PM                                # a problem , throw
+# 2026-06-27 PM                                raise Exception('EB: no EBs/DLs in the DEST');
+# 2026-06-27 PM
+# 2026-06-27 PM        TRACE.INFO(f'-- END',TRACE_NAME)
+# 2026-06-27 PM        return;
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# EventBuilder: update FCL
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def update_fhicl(self, transfer_plugin):
+# 2026-06-27 PM        # step 1 : read and replace - start from BRs
+# 2026-06-27 PM        TRACE.DEBUG(1,f'EB : self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+# 2026-06-27 PM        
+# 2026-06-27 PM        new_text = []
+# 2026-06-27 PM
+# 2026-06-27 PM        try:
+# 2026-06-27 PM            with open(self.fhicl,'r') as f:
+# 2026-06-27 PM                lines = f.readlines()
+# 2026-06-27 PM        except OSError as e:
+# 2026-06-27 PM            TRACE.ERROR(f"Failed to open {self.fhicl}: {e}", TRACE_NAME)
+# 2026-06-27 PM            return new_text
+# 2026-06-27 PM    
+# 2026-06-27 PM        for line in lines:
+# 2026-06-27 PM            # print(line);
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*sources'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                # always replace the line with the real string
+# 2026-06-27 PM                # max_fragment_size_words is calculated
+# 2026-06-27 PM                s = source_string(self,transfer_plugin)
+# 2026-06-27 PM                new_text.append(s)
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*destinations'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = destination_string(self,transfer_plugin);
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM                
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*host_map'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: [');
+# 2026-06-27 PM                offset = '    ' # 4 spaces (TCL indent)
+# 2026-06-27 PM                s      = host_map_string(self.list_of_destinations,offset);
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append(' ]\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.max_event_size_bytes}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.init_fragment_count}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*art_analyzer_count'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.art_analyzer_count}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            new_text.append(line);
+# 2026-06-27 PM
+# 2026-06-27 PM        TRACE.DEBUG(1,f'END',TRACE_NAME)
+# 2026-06-27 PM        return new_text;
+# 2026-06-27 PM            
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PMclass DataLogger(Procinfo):
+# 2026-06-27 PM
+# 2026-06-27 PM    def __init__(self,
+# 2026-06-27 PM                 name, ##                = pname,
+# 2026-06-27 PM                 rank , ##              = rank ,
+# 2026-06-27 PM                 host , ##              = host ,          # at this point, store long (with '-ctrl' names)
+# 2026-06-27 PM                 port , ##              = str(xmlrpc_port),
+# 2026-06-27 PM                 timeout, ##            = timeout,
+# 2026-06-27 PM                 label, ##              = key_name  ,
+# 2026-06-27 PM                 subsystem, ##          = subsystem,
+# 2026-06-27 PM                 allowed_processors = None,
+# 2026-06-27 PM                 target             = "none",
+# 2026-06-27 PM                 fhicl              = "no_fcl_fn",
+# 2026-06-27 PM                 prepend            = ""
+# 2026-06-27 PM                 ):
+# 2026-06-27 PM        
+# 2026-06-27 PM        super().__init__(name,rank,host,port,timeout,label,subsystem,
+# 2026-06-27 PM                         allowed_processors,target,fhicl,prepend)
+# 2026-06-27 PM        self._type                 = DATA_LOGGER;
+# 2026-06-27 PM        self.execname              = 'datalogger'
+# 2026-06-27 PM        self.output_data_directory = None
+# 2026-06-27 PM
+# 2026-06-27 PM#-------^----------------------------------------------------------------------
+# 2026-06-27 PM# define processes for p.type = DATA_LOGGER
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def init_connections(self):
+# 2026-06-27 PM
+# 2026-06-27 PM        TRACE.INFO(f'-- START: p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
+# 2026-06-27 PM        # DL has to have inputs from either own EBs or from EBs other subsystems
+# 2026-06-27 PM        # start from checking inputs
+# 2026-06-27 PM        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+# 2026-06-27 PM        s.print();
+# 2026-06-27 PM        # EBs should already be covered
+# 2026-06-27 PM
+# 2026-06-27 PM        self.max_event_size_bytes = 0;
+# 2026-06-27 PM        self.init_fragment_count  = 0;
+# 2026-06-27 PM
+# 2026-06-27 PM        if ((len(s.list_of_sS) > 0) and (s.min_type == DATA_LOGGER)):
+# 2026-06-27 PM            # subsystem has sources, and there is no local  EBs
+# 2026-06-27 PM            # can take input from the upstream EBs
+# 2026-06-27 PM            for ss in s.list_of_sS:
+# 2026-06-27 PM                # there should be no DLs in the source subsystem, it should end with  the EBs
+# 2026-06-27 PM                if (ss.max_type == EVENT_BUILDER):
+# 2026-06-27 PM                    list_of_ebs = ss.list_of_event_builders()
+# 2026-06-27 PM                    for eb in list_of_ebs:
+# 2026-06-27 PM                        self.init_fragment_count += eb.art_analyzer_count;
+# 2026-06-27 PM                        
+# 2026-06-27 PM                        if (eb.max_event_size_bytes > self.max_event_size_bytes):
+# 2026-06-27 PM                            self.max_event_size_bytes =  eb.max_event_size_bytes
+# 2026-06-27 PM    
+# 2026-06-27 PM                        # avoid double counting
+# 2026-06-27 PM                        if (not eb in self.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(eb);
+# 2026-06-27 PM                            eb.list_of_destinations.append(self);
+# 2026-06-27 PM                            
+# 2026-06-27 PM            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
+# 2026-06-27 PM#-------------------------------^----------------------------------------------
+# 2026-06-27 PM# no source subsystems or those start from DLs - look for local inputs
+# 2026-06-27 PM# counting logic: an init fragment per each art process
+# 2026-06-27 PM#-------v----------------------------------------------------------------------
+# 2026-06-27 PM        else:
+# 2026-06-27 PM            # subsystem has no official sources, there should be local EB's
+# 2026-06-27 PM            list_of_ebs = s.list_of_event_builders()
+# 2026-06-27 PM            if (len(list_of_ebs) > 0):
+# 2026-06-27 PM                for eb in list_of_ebs:
+# 2026-06-27 PM                    self.init_fragment_count += eb.art_analyzer_count;
+# 2026-06-27 PM                    if (eb.max_event_size_bytes > self.max_event_size_bytes):
+# 2026-06-27 PM                        self.max_event_size_bytes =  eb.max_event_size_bytes
+# 2026-06-27 PM                        
+# 2026-06-27 PM                    if (not eb in self.list_of_sources):
+# 2026-06-27 PM                        self.list_of_sources.append(eb);
+# 2026-06-27 PM                        eb.list_of_destinations.append(self);
+# 2026-06-27 PM                    
+# 2026-06-27 PM            else:
+# 2026-06-27 PM                # subsystem has no own EB's : trouble
+# 2026-06-27 PM                raise Exception('DL: no EBs in the subsystem');
+# 2026-06-27 PM
+# 2026-06-27 PM            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# now - destinations ... not done yet
+# 2026-06-27 PM#-------v----------------------------------------------------------------------
+# 2026-06-27 PM        list_of_dss = s.list_of_dispatchers()
+# 2026-06-27 PM        if (len(list_of_dss) > 0):
+# 2026-06-27 PM            for ds in list_of_dss:
+# 2026-06-27 PM                self.init_fragment_count += 1;
+# 2026-06-27 PM                        
+# 2026-06-27 PM                if (not ds in self.list_of_destinations):
+# 2026-06-27 PM                    self.list_of_destinations.append(ds);
+# 2026-06-27 PM                    ds.list_of_sources.append(self);
+# 2026-06-27 PM
+# 2026-06-27 PM        TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
+# 2026-06-27 PM        return;
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM#  DataLogger
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def update_fhicl(self, transfer_plugin):
+# 2026-06-27 PM        TRACE.INFO(f'-- START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+# 2026-06-27 PM        
+# 2026-06-27 PM        with open(self.fhicl,'r') as f:
+# 2026-06-27 PM            lines = f.readlines()
+# 2026-06-27 PM    
+# 2026-06-27 PM        new_text = []
+# 2026-06-27 PM
+# 2026-06-27 PM        for line in lines:
+# 2026-06-27 PM            # print(line);
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*sources'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = source_string(self,transfer_plugin)
+# 2026-06-27 PM                new_text.append(s)
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue
+# 2026-06-27 PM
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*destinations'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                s = destination_string(self,transfer_plugin);
+# 2026-06-27 PM                if (s):
+# 2026-06-27 PM                    key = match.group(0);
+# 2026-06-27 PM                    new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                    new_text.append(s);
+# 2026-06-27 PM                    new_text.append('}\n');
+# 2026-06-27 PM                    continue;
+# 2026-06-27 PM                
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*host_map'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: [');
+# 2026-06-27 PM                offset = '    ' ## 4 spaces, TCL indent
+# 2026-06-27 PM                # host_map_string - always destinations
+# 2026-06-27 PM                s = host_map_string(self.list_of_destinations,offset);
+# 2026-06-27 PM                TRACE.INFO(f'self.label:{self.label} host_map_string:{s}',TRACE_NAME)
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append(' ]\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.max_event_size_bytes+800000}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.init_fragment_count}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM
+# 2026-06-27 PM            #------------------------------------------------------------------------------
+# 2026-06-27 PM            # any other line - just rewrite
+# 2026-06-27 PM            #------------------------------------------------------------------------------
+# 2026-06-27 PM            new_text.append(line);
+# 2026-06-27 PM
+# 2026-06-27 PM        TRACE.INFO(f'-- END: self.label:{self.label}',TRACE_NAME)
+# 2026-06-27 PM        return new_text;
+# 2026-06-27 PM
+# 2026-06-27 PM#-------^----------------------------------------------------------------------
+# 2026-06-27 PMclass Dispatcher(Procinfo):
+# 2026-06-27 PM
+# 2026-06-27 PM    def __init__(self,
+# 2026-06-27 PM                 name, ##              = pname,
+# 2026-06-27 PM                 rank, ##               = rank ,
+# 2026-06-27 PM                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+# 2026-06-27 PM                 port, ##               = str(xmlrpc_port),
+# 2026-06-27 PM                 timeout, ##            = timeout,
+# 2026-06-27 PM                 label, ##              = key_name  ,
+# 2026-06-27 PM                 subsystem, ##          = subsystem,
+# 2026-06-27 PM                 allowed_processors = None,
+# 2026-06-27 PM                 target             = "none",
+# 2026-06-27 PM                 fhicl              = "no_fcl_fn",
+# 2026-06-27 PM                 prepend            = ""
+# 2026-06-27 PM                 ):
+# 2026-06-27 PM        
+# 2026-06-27 PM        super().__init__(name,rank,host,port,timeout,label,subsystem,
+# 2026-06-27 PM                         allowed_processors,target,fhicl,prepend)
+# 2026-06-27 PM        self._type    = DISPATCHER;
+# 2026-06-27 PM        self.execname = 'dispatcher'
+# 2026-06-27 PM        
+# 2026-06-27 PM
+# 2026-06-27 PM
+# 2026-06-27 PM    def init_connections(self):
+# 2026-06-27 PM        # DS only has inputs ..DLs ? start from checking inputs
+# 2026-06-27 PM        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
+# 2026-06-27 PM
+# 2026-06-27 PM        if (len(s.list_of_sS) > 0):
+# 2026-06-27 PM            # THERE ARE INPUT SUBSYSTEMS, thus there should be no local inputs
+# 2026-06-27 PM            # for now, assume correct inputs, handle errors later
+# 2026-06-27 PM            for ss in s.list_of_sS:               ## source in s.sources:
+# 2026-06-27 PM                # there should be DLs in the source subsystem
+# 2026-06-27 PM                if (ss.max_type >= DATA_LOGGER):
+# 2026-06-27 PM                    # it might make sense to allow a DL to send events to DSs anywhere,
+# 2026-06-27 PM                    # although need to check the logic
+# 2026-06-27 PM                    plist = ss.list_of_data_loggers()
+# 2026-06-27 PM                    for x in plist:
+# 2026-06-27 PM                        # avoid double counting - just in case
+# 2026-06-27 PM                        if (not x in self.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(x);
+# 2026-06-27 PM                            x.list_of_destinations.append(self);
+# 2026-06-27 PM                else:
+# 2026-06-27 PM                    # ss has no DLs, check EBs 
+# 2026-06-27 PM                    plist = ss.list_of_event_builders();
+# 2026-06-27 PM                    for x in plist:
+# 2026-06-27 PM                        # avoid double counting - just in case
+# 2026-06-27 PM                        if (not x in self.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(x);
+# 2026-06-27 PM                            x.list_of_destinations.append(self);
+# 2026-06-27 PM#---------------------------^--------------------------------------------------
+# 2026-06-27 PM# no input sources , check local inputs
+# 2026-06-27 PM#-------v----------------------------------------------------------------------
+# 2026-06-27 PM        else:
+# 2026-06-27 PM            plist = s.list_of_data_loggers()
+# 2026-06-27 PM            if (len(plist) > 0):
+# 2026-06-27 PM                # DLs available, local EBs should be talking to them
+# 2026-06-27 PM                for x in plist:
+# 2026-06-27 PM                    self.list_of_sources.append(x);
+# 2026-06-27 PM                    x.list_of_destinations.append(self);
+# 2026-06-27 PM                    
+# 2026-06-27 PM            else:
+# 2026-06-27 PM                # subsystem has no own data loggers, look for event builders
+# 2026-06-27 PM                plist = s.list_of_event_builders()
+# 2026-06-27 PM                if (len(plist) > 0):
+# 2026-06-27 PM                    # DLs available, local EBs should be talking to them
+# 2026-06-27 PM                    for x in plist:
+# 2026-06-27 PM                        if (not x in dl.list_of_sources):
+# 2026-06-27 PM                            self.list_of_sources.append(x);
+# 2026-06-27 PM                            x.list_of_destinations.append(self);
+# 2026-06-27 PM                else:
+# 2026-06-27 PM                    # a problem , throw
+# 2026-06-27 PM                    raise Exception('Dispatcher::init_connections: DS: no local DLs or EBs');
+# 2026-06-27 PM        return;
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# DS - to be impemented
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def update_fhicl(self, transfer_plugin):
+# 2026-06-27 PM        print('------ DS::update_fhicl')
+# 2026-06-27 PM        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+# 2026-06-27 PM        
+# 2026-06-27 PM        raise Exception('DISPATCHER: IMPLEMENT ME!')
+# 2026-06-27 PM
+# 2026-06-27 PM        with open(self.fhicl,'r') as f:
+# 2026-06-27 PM            lines = f.readlines()
+# 2026-06-27 PM    
+# 2026-06-27 PM        new_text = []
+# 2026-06-27 PM    
+# 2026-06-27 PM        for line in lines:
+# 2026-06-27 PM            # print(line);
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*sources'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = source_string(self,transfer_plugin)
+# 2026-06-27 PM                new_text.append(s)
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*destinations'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = destination_string(self,transfer_plugin);
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM                
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*host_map'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: [');
+# 2026-06-27 PM                offset = '    ' ## 4 spaces, TCL indent
+# 2026-06-27 PM                # host_map_string - always destinations
+# 2026-06-27 PM                s = host_map_string(self.list_of_destinations,offset);
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append(' ]\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.max_event_size_bytes}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*init_fragment_count'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.init_fragment_count}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM            
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# any other line - just rewrite
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM            new_text.append(line);
+# 2026-06-27 PM    
+# 2026-06-27 PM        return new_text;
+# 2026-06-27 PM   
+# 2026-06-27 PM
 #-------^----------------------------------------------------------------------
-# subsystem doesn't have inputs, look at local BRs - those already are in the list of inputs
-#-----------v------------------------------------------------------------------
-            for br in self.list_of_sources:
-                TRACE.DEBUG(0,f'br.label:{br.label} br.max_fragment_size_bytes:{br.max_fragment_size_bytes}',TRACE_NAME)
-                sum_fragment_size_bytes += br.max_fragment_size_bytes
-
-                TRACE.DEBUG(0,f'p.max_event_size_bytes:{self.max_event_size_bytes} self.max_fragment_size_bytes:{self.max_fragment_size_bytes}',TRACE_NAME)
-
-
-        self.max_fragment_size_bytes = sum_fragment_size_bytes;
-        self.max_event_size_bytes    = sum_fragment_size_bytes+max_event_size_bytes;
-
-#---------------------------^--------------------------------------------------
-# done with the sources
-# destinations: each EB should also have 'destination' processes tow hich it sends events - either DL's or other EB's (or DSs ?)
-# first check if the subsystem ahs data loggers
-#-------v----------------------------------------------------------------------
-
-        list_of_dls = s.list_of_procinfos[DATA_LOGGER]
-        if (len(list_of_dls) > 0):
-            # subsystem has its own DL(s)
-            for dl in list_of_dls:
-                dl.list_of_sources.append(self);
-                self.list_of_destinations.append(dl);
-                    
-        else:
-            # subsystem has no its own data loggers, so it should have a destination subsystem
-            sd = s.dS;
-            if (sd != None):
-                # subsystem has a destination, that may start with BR, but they will be skipped
-                # first check EBs in the destination subsystem
-                list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
-                if (len(list_of_ebs) > 0):
-                    for eb in list_of_ebs:
-                        self.list_of_destinations.append(eb);
-                        eb.list_of_sources.append(self);
-                else:
-                    # no EBs, check for DLs
-                    list_of_dls = sd.list_of_procinfos[DATA_LOGGER]
-                    if (len(list_of_dls) > 0):
-                        for dl in list_of_dls:
-                            self.list_of_destinations.append(dl);
-                            dl.list_of_sources.append(self);
-                    else:
-                        # no EBs/DLss, check for DSs
-                        list_of_dss = sd.list_of_procinfos[DISPATCHER]
-                        if (len(list_of_dss) > 0):
-                            for ds in list_of_dss:
-                                self.list_of_destinations.append(ds);
-                                ds.list_of_sources.append(self);
-                                
-                            else:
-                                # a problem , throw
-                                raise Exception('EB: no EBs/DLs in the DEST');
-
-        TRACE.INFO(f'-- END',TRACE_NAME)
-        return;
-
-#------------------------------------------------------------------------------
-# EventBuilder: update FCL
-#------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
-        # step 1 : read and replace - start from BRs
-        TRACE.DEBUG(1,f'EB : self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
-        
-        with open(self.fhicl,'r') as f:
-            lines = f.readlines()
-    
-        new_text = []
-    
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                # always replace the line with the real string
-                # max_fragment_size_words is calculated
-                s = source_string(self,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-    
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(self,transfer_plugin);
-                new_text.append(s);
-                new_text.append('}\n');
-                continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' # 4 spaces (TCL indent)
-                s      = host_map_string(self.list_of_destinations,offset);
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.max_event_size_bytes}\n';
-                new_text.append(s);
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-
-            pattern = r'(?:[\w-]+\.)*art_analyzer_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.art_analyzer_count}\n';
-                new_text.append(s);
-                continue;
-    
-            new_text.append(line);
-
-        TRACE.DEBUG(1,f'END',TRACE_NAME)
-        return new_text;
-            
-#------------------------------------------------------------------------------
-class DataLogger(Procinfo):
-
-    def __init__(self,
-                 name, ##                = pname,
-                 rank , ##              = rank ,
-                 host , ##              = host ,          # at this point, store long (with '-ctrl' names)
-                 port , ##              = str(xmlrpc_port),
-                 timeout, ##            = timeout,
-                 label, ##              = key_name  ,
-                 subsystem, ##          = subsystem,
-                 allowed_processors = None,
-                 target             = "none",
-                 fhicl              = "no_fcl_fn",
-                 prepend            = ""
-                 ):
-        
-        super().__init__(name,rank,host,port,timeout,label,subsystem,
-                         allowed_processors,target,fhicl,prepend)
-        self._type                 = DATA_LOGGER;
-        self.execname              = 'datalogger'
-        self.output_data_directory = None
-
-#-------^----------------------------------------------------------------------
-# define processes for p.type = DATA_LOGGER
-#------------------------------------------------------------------------------
-    def init_connections(self):
-
-        TRACE.INFO(f'-- START: p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
-        # DL has to have inputs from either own EBs or from EBs other subsystems
-        # start from checking inputs
-        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
-        s.print();
-        # EBs should already be covered
-
-        self.max_event_size_bytes = 0;
-        self.init_fragment_count  = 0;
-
-        if ((len(s.list_of_sS) > 0) and (s.min_type == DATA_LOGGER)):
-            # subsystem has sources, and there is no local  EBs
-            # can take input from the upstream EBs
-            for ss in s.list_of_sS:
-                # there should be no DLs in the source subsystem, it should end with  the EBs
-                if (ss.max_type == EVENT_BUILDER):
-                    list_of_ebs = ss.list_of_event_builders()
-                    for eb in list_of_ebs:
-                        self.init_fragment_count += eb.art_analyzer_count;
-                        
-                        if (eb.max_event_size_bytes > self.max_event_size_bytes):
-                            self.max_event_size_bytes =  eb.max_event_size_bytes
-    
-                        # avoid double counting
-                        if (not eb in self.list_of_sources):
-                            self.list_of_sources.append(eb);
-                            eb.list_of_destinations.append(self);
-                            
-            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
-#-------------------------------^----------------------------------------------
-# no source subsystems or those start from DLs - look for local inputs
-# counting logic: an init fragment per each art process
-#-------v----------------------------------------------------------------------
-        else:
-            # subsystem has no official sources, there should be local EB's
-            list_of_ebs = s.list_of_event_builders()
-            if (len(list_of_ebs) > 0):
-                for eb in list_of_ebs:
-                    self.init_fragment_count += eb.art_analyzer_count;
-                    if (eb.max_event_size_bytes > self.max_event_size_bytes):
-                        self.max_event_size_bytes =  eb.max_event_size_bytes
-                        
-                    if (not eb in self.list_of_sources):
-                        self.list_of_sources.append(eb);
-                        eb.list_of_destinations.append(self);
-                    
-            else:
-                # subsystem has no own EB's : trouble
-                raise Exception('DL: no EBs in the subsystem');
-
-            TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
-#------------------------------------------------------------------------------
-# now - destinations ... not done yet
-#-------v----------------------------------------------------------------------
-        list_of_dss = s.list_of_dispatchers()
-        if (len(list_of_dss) > 0):
-            for ds in list_of_dss:
-                self.init_fragment_count += 1;
-                        
-                if (not ds in self.list_of_destinations):
-                    self.list_of_destinations.append(ds);
-                    ds.list_of_sources.append(self);
-
-        TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
-        return;
-
-#------------------------------------------------------------------------------
-#  DataLogger
-#------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
-        TRACE.INFO(f'-- START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
-        
-        with open(self.fhicl,'r') as f:
-            lines = f.readlines()
-    
-        new_text = []
-
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = source_string(self,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                s = destination_string(self,transfer_plugin);
-                if (s):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    new_text.append(s);
-                    new_text.append('}\n');
-                    continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' ## 4 spaces, TCL indent
-                # host_map_string - always destinations
-                s = host_map_string(self.list_of_destinations,offset);
-                TRACE.INFO(f'self.label:{self.label} host_map_string:{s}',TRACE_NAME)
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.max_event_size_bytes+800000}\n';
-                new_text.append(s);
-                continue;
-
-            pattern = r'(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-
-            #------------------------------------------------------------------------------
-            # any other line - just rewrite
-            #------------------------------------------------------------------------------
-            new_text.append(line);
-
-        TRACE.INFO(f'-- END: self.label:{self.label}',TRACE_NAME)
-        return new_text;
-
-#-------^----------------------------------------------------------------------
-class Dispatcher(Procinfo):
-
-    def __init__(self,
-                 name, ##              = pname,
-                 rank, ##               = rank ,
-                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                 port, ##               = str(xmlrpc_port),
-                 timeout, ##            = timeout,
-                 label, ##              = key_name  ,
-                 subsystem, ##          = subsystem,
-                 allowed_processors = None,
-                 target             = "none",
-                 fhicl              = "no_fcl_fn",
-                 prepend            = ""
-                 ):
-        
-        super().__init__(name,rank,host,port,timeout,label,subsystem,
-                         allowed_processors,target,fhicl,prepend)
-        self._type    = DISPATCHER;
-        self.execname = 'dispatcher'
-        
-
-
-    def init_connections(self):
-        # DS only has inputs ..DLs ? start from checking inputs
-        s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
-
-        if (len(s.list_of_sS) > 0):
-            # THERE ARE INPUT SUBSYSTEMS, thus there should be no local inputs
-            # for now, assume correct inputs, handle errors later
-            for ss in s.list_of_sS:               ## source in s.sources:
-                # there should be DLs in the source subsystem
-                if (ss.max_type >= DATA_LOGGER):
-                    # it might make sense to allow a DL to send events to DSs anywhere,
-                    # although need to check the logic
-                    plist = ss.list_of_data_loggers()
-                    for x in plist:
-                        # avoid double counting - just in case
-                        if (not x in self.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
-                else:
-                    # ss has no DLs, check EBs 
-                    plist = ss.list_of_event_builders();
-                    for x in plist:
-                        # avoid double counting - just in case
-                        if (not x in self.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
-#---------------------------^--------------------------------------------------
-# no input sources , check local inputs
-#-------v----------------------------------------------------------------------
-        else:
-            plist = s.list_of_data_loggers()
-            if (len(plist) > 0):
-                # DLs available, local EBs should be talking to them
-                for x in plist:
-                    self.list_of_sources.append(x);
-                    x.list_of_destinations.append(self);
-                    
-            else:
-                # subsystem has no own data loggers, look for event builders
-                plist = s.list_of_event_builders()
-                if (len(plist) > 0):
-                    # DLs available, local EBs should be talking to them
-                    for x in plist:
-                        if (not x in dl.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
-                else:
-                    # a problem , throw
-                    raise Exception('Dispatcher::init_connections: DS: no local DLs or EBs');
-        return;
-
-#------------------------------------------------------------------------------
-# DS - to be impemented
-#------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
-        print('------ DS::update_fhicl')
-        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
-        
-        raise Exception('DISPATCHER: IMPLEMENT ME!')
-
-        with open(self.fhicl,'r') as f:
-            lines = f.readlines()
-    
-        new_text = []
-    
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = source_string(self,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-    
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = destination_string(self,transfer_plugin);
-                new_text.append(s);
-                new_text.append('}\n');
-                continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' ## 4 spaces, TCL indent
-                # host_map_string - always destinations
-                s = host_map_string(self.list_of_destinations,offset);
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.max_event_size_bytes}\n';
-                new_text.append(s);
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-            
-#------------------------------------------------------------------------------
-# any other line - just rewrite
-#------------------------------------------------------------------------------
-            new_text.append(line);
-    
-        return new_text;
-   
-
-#-------^----------------------------------------------------------------------
-class RoutingManager(Procinfo):
-
-    def __init__(self,
-                 name, ##               = pname,
-                 rank, ##               = rank ,
-                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                 port, ##               = str(xmlrpc_port),
-                 timeout, ##            = timeout,
-                 label, ##              = key_name  ,
-                 subsystem, ##          = subsystem,
-                 allowed_processors = None,
-                 target             = "none",
-                 fhicl              = "no_fcl_fn",
-                 prepend            = ""
-                 ):
-        
-        super().__init__(name,rank,host,port,timeout,label,subsystem,
-                         allowed_processors,target,fhicl,prepend)
-        self._type    = ROUTING_MANAGER;
-        self.execname = 'routing_manager'
-
-#------------------------------------------------------------------------------
-# define processes for p.type = ROUTINE_MANAGER
-#------------------------------------------------------------------------------
-    def rm_connections(self):
-        raise Exception('RoutingManager::init_connection: not implemented yet');
-
-#------------------------------------------------------------------------------
-# RM - to be impemented
-#------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
-        print('------ RM::update_fhicl')
-        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
-        
-        raise Exception('DISPATCHER: IMPLEMENT ME!')
-
-        with open(self.fhicl,'r') as f:
-            lines = f.readlines()
-    
-        new_text = []
-    
-        for line in lines:
-            # print(line);
-            pattern = r'(?:[\w-]+\.)*sources'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: {{\n');
-                s = source_string(self,transfer_plugin)
-                new_text.append(s)
-                new_text.append('}\n');
-                continue
-    
-            pattern = r'(?:[\w-]+\.)*destinations'
-            match = re.search(pattern,line)
-            if (match):
-                s = destination_string(self,transfer_plugin);
-                if (s):
-                    key = match.group(0);
-                    new_text.append(f'{key}: {{\n');
-                    new_text.append(s);
-                    new_text.append('}\n');
-                    continue;
-                
-            pattern = r'(?:[\w-]+\.)*host_map'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                new_text.append(f'{key}: [');
-                offset = '    ' ## 4 spaces, TCL indent
-                # host_map_string - always destinations
-                s = host_map_string(self.list_of_destinations,offset);
-                new_text.append(s);
-                new_text.append(' ]\n');
-                continue;
-    
-            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.max_event_size_bytes}\n';
-                new_text.append(s);
-                continue;
-    
-            pattern = r'^(?!#)(?:[\w-]+\.)*init_fragment_count'
-            match = re.search(pattern,line)
-            if (match):
-                key = match.group(0);
-                # in this case, replaces
-                s      = f'{key}: {self.init_fragment_count}\n';
-                new_text.append(s);
-                continue;
-            
-#------------------------------------------------------------------------------
-# any other line - just rewrite
-#------------------------------------------------------------------------------
-            new_text.append(line);
-    
-        return new_text;
-
+# 2026-06-27 PMclass RoutingManager(Procinfo):
+# 2026-06-27 PM
+# 2026-06-27 PM    def __init__(self,
+# 2026-06-27 PM                 name, ##               = pname,
+# 2026-06-27 PM                 rank, ##               = rank ,
+# 2026-06-27 PM                 host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+# 2026-06-27 PM                 port, ##               = str(xmlrpc_port),
+# 2026-06-27 PM                 timeout, ##            = timeout,
+# 2026-06-27 PM                 label, ##              = key_name  ,
+# 2026-06-27 PM                 subsystem, ##          = subsystem,
+# 2026-06-27 PM                 allowed_processors = None,
+# 2026-06-27 PM                 target             = "none",
+# 2026-06-27 PM                 fhicl              = "no_fcl_fn",
+# 2026-06-27 PM                 prepend            = ""
+# 2026-06-27 PM                 ):
+# 2026-06-27 PM        
+# 2026-06-27 PM        super().__init__(name,rank,host,port,timeout,label,subsystem,
+# 2026-06-27 PM                         allowed_processors,target,fhicl,prepend)
+# 2026-06-27 PM        self._type    = ROUTING_MANAGER;
+# 2026-06-27 PM        self.execname = 'routing_manager'
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# define processes for p.type = ROUTINE_MANAGER
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def rm_connections(self):
+# 2026-06-27 PM        raise Exception('RoutingManager::init_connection: not implemented yet');
+# 2026-06-27 PM
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# RM - to be impemented
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM    def update_fhicl(self, transfer_plugin):
+# 2026-06-27 PM        print('------ RM::update_fhicl')
+# 2026-06-27 PM        TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
+# 2026-06-27 PM        
+# 2026-06-27 PM        raise Exception('DISPATCHER: IMPLEMENT ME!')
+# 2026-06-27 PM
+# 2026-06-27 PM        with open(self.fhicl,'r') as f:
+# 2026-06-27 PM            lines = f.readlines()
+# 2026-06-27 PM    
+# 2026-06-27 PM        new_text = []
+# 2026-06-27 PM    
+# 2026-06-27 PM        for line in lines:
+# 2026-06-27 PM            # print(line);
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*sources'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                s = source_string(self,transfer_plugin)
+# 2026-06-27 PM                new_text.append(s)
+# 2026-06-27 PM                new_text.append('}\n');
+# 2026-06-27 PM                continue
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*destinations'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                s = destination_string(self,transfer_plugin);
+# 2026-06-27 PM                if (s):
+# 2026-06-27 PM                    key = match.group(0);
+# 2026-06-27 PM                    new_text.append(f'{key}: {{\n');
+# 2026-06-27 PM                    new_text.append(s);
+# 2026-06-27 PM                    new_text.append('}\n');
+# 2026-06-27 PM                    continue;
+# 2026-06-27 PM                
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*host_map'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                new_text.append(f'{key}: [');
+# 2026-06-27 PM                offset = '    ' ## 4 spaces, TCL indent
+# 2026-06-27 PM                # host_map_string - always destinations
+# 2026-06-27 PM                s = host_map_string(self.list_of_destinations,offset);
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                new_text.append(' ]\n');
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'(?:[\w-]+\.)*max_event_size_bytes'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.max_event_size_bytes}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM    
+# 2026-06-27 PM            pattern = r'^(?!#)(?:[\w-]+\.)*init_fragment_count'
+# 2026-06-27 PM            match = re.search(pattern,line)
+# 2026-06-27 PM            if (match):
+# 2026-06-27 PM                key = match.group(0);
+# 2026-06-27 PM                # in this case, replaces
+# 2026-06-27 PM                s      = f'{key}: {self.init_fragment_count}\n';
+# 2026-06-27 PM                new_text.append(s);
+# 2026-06-27 PM                continue;
+# 2026-06-27 PM            
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM# any other line - just rewrite
+# 2026-06-27 PM#------------------------------------------------------------------------------
+# 2026-06-27 PM            new_text.append(line);
+# 2026-06-27 PM    
+# 2026-06-27 PM        return new_text;
+# 2026-06-27 PM
 #------------------------------------------------------------------------------
 # "Subsystem" is a structure containing all info about a given artdaq subsystem
 # a subsystem has 
@@ -1116,4 +1094,28 @@ class Subsystem(object):
     def list_of_event_processes(self, type):
         return self.list_of_procinfos[type];
     
+#------------------------------------------------------------------------------
+class Node:
+    
+    def __init__(self, name, node_artdaq_odb_path):
+        self.name                 = name;
+        self.node_artdaq_odb_path = node_artdaq_odb_path;
+        self.list_of_processes    = []
+
+    def add_process(self,p):
+        self.list_of_processes.append(p);        
+
+#------------------------------------------------------------------------------
+# Artdaq: a list of nodes, a list of subsystems,
+# ... and a list of processes [to come]
+#------------------------------------------------------------------------------
+
+class Artdaq:
+    def __init__(self):
+        self.list_of_nodes      = []
+        self.list_of_subsystems = []
+
+    def add_node(self, node):
+        self.list_of_nodes.append(node);
+
 #------------------------------------------------------------------------------

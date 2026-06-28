@@ -446,6 +446,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     RE_REQADDR    = re.compile(r'request_address\s*:\s*["0-9\.]+')
     RE_PARTNUM    = re.compile(r"partition_number\s*:\s*[0-9]+")
 
+    TRACE.INFO(f'step 9.5: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     part_repl     = f"partition_number: {self.partition()}"
     
     for p in self.procinfos:
@@ -487,9 +490,9 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 #------------------------------------------------------------------------------
 # PM if partition is defined, redefine it... don't really need partition in FCL at all
 #------------------------------------------------------------------------------
-
-        # p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+","partition_number: %d" % self.partition(),p.fhicl_used)
-        txt = RE_PARTNUM.sub(part_repl,txt) ## , count=1)
+# 2026-06-27 PM
+# 2026-06-27 PM        # p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+","partition_number: %d" % self.partition(),p.fhicl_used)
+# 2026-06-27 PM        txt = RE_PARTNUM.sub(part_repl,txt) ## , count=1)
 
         p.fhicl_used = txt
         

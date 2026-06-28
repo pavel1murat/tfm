@@ -46,8 +46,14 @@ if (disable_bookkeeping and (disable_bookkeeping != "false")):
 else:
     from tfm.rc.control.bookkeeping        import bookkeeping_for_fhicl_documents_artdaq_v3_base
 
-import tfm.rc.control.utilities as rcu
-import tfm.rc.control.artdaq    as artdaq
+import tfm.rc.control.utilities       as rcu
+
+import tfm.rc.control.artdaq          as artdaq
+from   tfm.rc.control.board_reader    import BoardReader
+from   tfm.rc.control.event_builder   import EventBuilder
+from   tfm.rc.control.data_logger     import DataLogger
+from   tfm.rc.control.dispatcher      import Dispatcher
+from   tfm.rc.control.routing_manager import RoutingManager
 
 try:
     imp.find_module("daqinterface_overrides_for_experiment")
@@ -65,8 +71,7 @@ except:
     from tfm.rc.control.all_functions_noop     import do_disable_base
     from tfm.rc.control.all_functions_noop     import check_config_base
 
-# from tfm.rc.control.manage_processes_direct import launch_procs_base
-from tfm.rc.control.manage_processes_direct import launch_procs_base_new
+from tfm.rc.control.manage_processes_direct import launch_procs_base
 from tfm.rc.control.manage_processes_direct import wait_for_completion_base
 from tfm.rc.control.manage_processes_direct import check_launch_results_base
 from tfm.rc.control.manage_processes_direct import kill_procs_base
@@ -282,22 +287,14 @@ class FarmManager(Component):
 # make sure that the setup script to be executed on each node runs successfully 
 #---v--------------------------------------------------------------------------
     def validate_setup_script(self,node):
-
+        TRACE.DEBUG(1,f"-- START: node:{node} self.daq_setup_script:{self.daq_setup_script}",TRACE_NAME);
         starttime              = time.time()
-
-        self.print_log("i",
-                       ("\n%s On randomly selected node (%s), will confirm that the DAQ setup script \n"
-                        "%s\ndoesn't return a nonzero value when sourced...")
-                       % (rcu.date_and_time(),node, self.daq_setup_script),
-                       1,
-                       False,
-                )
 
         spack_env = os.getenv('SPACK_ENV').split('/')[-1];
         cmd = "%s ; . %s %s" % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
                                 self.daq_setup_script,spack_env)
 
-        self.print_log("i",f'cmd:"{cmd}"\n',1,False);
+        TRACE.DEBUG(1,f'cmd:{cmd}');
 
         if not rcu.host_is_local(node):
             cmd = "timeout %d ssh %s '%s'" % (self.ssh_timeout_in_seconds,node,cmd)
@@ -336,8 +333,7 @@ class FarmManager(Component):
 
 
         endtime = time.time()
-#        self.print_log("i", "%s::validate_setup_script done (%.1f seconds)." % (__file__,endtime - starttime),2)
-        self.print_log("i", "validate_setup_script done (%.1f seconds)." % (endtime - starttime),2)
+        TRACE.INFO(f'-- END: time spent:{endtime - starttime} sec',TRACE_NAME)
 
 #------------------------------------------------------------------------------
 # ODB help functions
@@ -393,6 +389,31 @@ class FarmManager(Component):
         return hname;
 
 #------------------------------------------------------------------------------
+# if setup_daq.sh has been modified, regenerate quick_setup.sh to match it
+# however, all MIDAS linux frontends also rely on quick_setup.sh being up-to-date
+#------------------------------------------------------------------------------      
+
+    def update_quick_daq_setup(self):
+        self.daq_quick_setup_script = f'{self.mu2e_config_dir}/scripts/quick_setup.sh'
+
+        if ( (not os.path.exists(self.daq_quick_setup_script)) or
+             (os.path.getmtime(self.daq_setup_script) > os.path.getmtime(self.daq_quick_setup_script)) ):
+
+            # start from variables.
+            result = os.popen("bash -c 'declare -p'").read()
+    
+            # convert 'declare -x VAR[=value]' → 'export VAR[=value]'
+            # converted = re.sub(r'declare -x\s+([A-Za-z_][A-Za-z0-9_]*)(=(.*))?',r'export \1\3',result)
+    
+            # Write to file
+            with open(self.daq_quick_setup_script, "w") as f:
+                f.write(result) # converted)
+
+            # and append the function definitions
+            cmd = f'declare -f >> {self.daq_quick_setup_script}'
+            os.system(cmd)
+       
+#------------------------------------------------------------------------------
 # PM: 1. subsystems are already created and cross-linked
 #     2. create processes 
 #------------------------------------------------------------------------------
@@ -409,7 +430,12 @@ class FarmManager(Component):
 #-------v----------------------------------------------------------------------
         for short_node_name in nodes_dir.keys():
             node_path    = nodes_path+'/'+short_node_name;
-            node_enabled = self.client.odb_get(node_path+'/Enabled')
+            try:
+                node_enabled = self.client.odb_get(node_path+'/Enabled')
+            except:
+                TRACE.ERROR(f'{node_path} has no Enabled field, SKIP THE NODE',TRACE_NAME)
+                continue
+            
             TRACE.DEBUG(0,f'node_path:{node_path} node_enabled:{node_enabled}',TRACE_NAME)
             if (node_enabled == 0) : continue;
             
@@ -479,22 +505,22 @@ class FarmManager(Component):
 # a boardreader may read a DTC. if the DTC is disabled, don't start the boardreader, disable it instead
 #------------------------------------------------------------------------------
                             msg = f'boardreader:{key_name} DTC is disabled, disable the boardreader';
-                            self.print_log('w',msg);
+                            # self.print_log('w',msg);
                             TRACE.WARN(msg,TRACE_NAME)
                             self.client.odb_set(process_odb_path+'/Enabled',0)
                             continue
                         
-                    p = artdaq.BoardReader('BoardReader',
-                                           rank, ##                = rank ,
-                                           host,  ##             = host ,          # at this point, store long (with '-ctrl' names)
-                                           str(xmlrpc_port),
-                                           timeout, ##           = self.boardreader_timeout,
-                                           key_name  ,
-                                           subsystem_id, ##      = subsystem_id,
-                                           allowed_processors = None,
-                                           target             = "none",
-                                           fhicl              = fcl_fn,
-                                           prepend            = "")
+                    p = BoardReader('BoardReader',
+                                    rank,                        ## = rank ,
+                                    host,                        ## = host ,          # at this point, store long (with '-ctrl' names)
+                                    str(xmlrpc_port),
+                                    timeout,                     ## = self.boardreader_timeout,
+                                    key_name  ,
+                                    subsystem_id,                ## = subsystem_id,
+                                    allowed_processors = None,
+                                    target             = "none",
+                                    fhicl              = fcl_fn,
+                                    prepend            = "")
                     TRACE.DEBUG(1,f'created new boardreader label:{key_name}',TRACE_NAME)
                     
                     # for a BR, a 'fragment' and an 'event' is the same, for all other processes, event size is calculated
@@ -503,49 +529,49 @@ class FarmManager(Component):
                     p.max_event_size_bytes    = p.max_fragment_size_bytes;
                         
                 elif (key_name[0:2] == 'dl') :
-                    p = artdaq.DataLogger('DataLogger',
-                                          rank,   ##            = rank ,
-                                          host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                                          str(xmlrpc_port),
-                                          timeout, ##            = self.datalogger_timeout,
-                                          key_name  ,
-                                          subsystem_id, ##          = subsystem_id,
-                                          allowed_processors = None,
-                                          target             = "none",
-                                          fhicl              = fcl_fn,
-                                          prepend            = "")
+                    p = DataLogger('DataLogger',
+                                   rank,   ##            = rank ,
+                                   host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                   str(xmlrpc_port),
+                                   timeout, ##            = self.datalogger_timeout,
+                                   key_name  ,
+                                   subsystem_id, ##          = subsystem_id,
+                                   allowed_processors = None,
+                                   target             = "none",
+                                   fhicl              = fcl_fn,
+                                   prepend            = "")
                     # data logger needs to know the output data directory
                     p.output_data_directory = self.data_directory_override;
 
                     TRACE.DEBUG(1,f'created new datalogger label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'ds') :
-                    p = artdaq.Dispatcher('Dispatcher',
-                                          rank, ##               = rank ,
-                                          host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                                          str(xmlrpc_port),
-                                          timeout, ##            = self.dispatcher_timeout,
-                                          key_name  ,
-                                          subsystem_id, #          = subsystem_id,
-                                          allowed_processors = None,
-                                          target             = "none",
-                                          fhicl              = fcl_fn,
-                                          prepend            = "")
+                    p = Dispatcher('Dispatcher',
+                                   rank, ##               = rank ,
+                                   host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                   str(xmlrpc_port),
+                                   timeout, ##            = self.dispatcher_timeout,
+                                   key_name  ,
+                                   subsystem_id, #          = subsystem_id,
+                                   allowed_processors = None,
+                                   target             = "none",
+                                   fhicl              = fcl_fn,
+                                   prepend            = "")
 
                     TRACE.DEBUG(1,f'created new dispatcher label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'eb') :
-                    p = artdaq.EventBuilder('EventBuilder',
-                                            rank, ##               = rank ,
-                                            host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                                            str(xmlrpc_port),
-                                            self.eventbuilder_timeout,   ## timeout
-                                            key_name  ,
-                                            subsystem_id, ##          = subsystem_id,
-                                            allowed_processors = None,
-                                            target             = "none",
-                                            fhicl              = fcl_fn,
-                                            prepend            = "")
+                    p = EventBuilder('EventBuilder',
+                                     rank, ##               = rank ,
+                                     host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                     str(xmlrpc_port),
+                                     self.eventbuilder_timeout,   ## timeout
+                                     key_name  ,
+                                     subsystem_id, ##          = subsystem_id,
+                                     allowed_processors = None,
+                                     target             = "none",
+                                     fhicl              = fcl_fn,
+                                     prepend            = "")
                     if (art_analyzer_count):
                         p.art_analyzer_count = art_analyzer_count
 
@@ -553,17 +579,17 @@ class FarmManager(Component):
 
                     
                 elif (key_name[0:2] == 'rm') :
-                    p = artdaq.RoutingManager('RoutingManager',
-                                              rank, ##               = rank ,
-                                              host, ##               = host ,          # at this point, store long (with '-ctrl' names)
-                                              str(xmlrpc_port),
-                                              timeout, ##            = self.routingmanager_timeout,
-                                              key_name  ,
-                                              subsystem_id, ##       = subsystem_id,
-                                              allowed_processors = None,
-                                              target             = "none",
-                                              fhicl              = fcl_fn,
-                                              prepend            = "")
+                    p = RoutingManager('RoutingManager',
+                                       rank, ##               = rank ,
+                                       host, ##               = host ,          # at this point, store long (with '-ctrl' names)
+                                       str(xmlrpc_port),
+                                       timeout, ##            = self.routingmanager_timeout,
+                                       key_name  ,
+                                       subsystem_id, ##       = subsystem_id,
+                                       allowed_processors = None,
+                                       target             = "none",
+                                       fhicl              = fcl_fn,
+                                       prepend            = "")
 
                     TRACE.DEBUG(1,f'created new routing  manager label:{key_name}',TRACE_NAME)
 
@@ -782,7 +808,6 @@ class FarmManager(Component):
         TRACE.INFO(f'-- START',TRACE_NAME)
         return
 
-            
 #-------^----------------------------------------------------------------------
 # clear status of all processes in ODB to make everything look green
 #---v--------------------------------------------------------------------------
@@ -831,8 +856,6 @@ class FarmManager(Component):
         self.daq_setup_script        = os.path.expandvars(self.client.odb_get('/Mu2e/DaqSetupScript'))
         self.mu2e_config_dir         = os.path.expandvars(self.client.odb_get("/Mu2e/ConfigDir"));
             
-        self.artdaq                  = artdaq.Artdaq();
-
         self.midas_server_host       = os.path.expandvars(self.client.odb_get("/Mu2e/ActiveRunConfiguration/DAQ/MIDAS_SERVER_HOST"));
         self.top_output_dir          = os.path.expandvars(self.client.odb_get("/Mu2e/OutputDir"));
 
@@ -955,6 +978,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # initialize artfaq subsystems and processes
 #-------v----------------------------------------------------------------------
+        self.artdaq = artdaq.Artdaq();
         self.init_artdaq_subsystems()
         self.init_artdaq_processes()
 #------------------------------------------------------------------------------
@@ -979,8 +1003,8 @@ class FarmManager(Component):
             if (s.min_type > p.type()): s.min_type = p.type();
 
         TRACE.INFO('-------------------------- subsystems supposedly initialized',TRACE_NAME)
-        for s in self.subsystems.values():
-            s.print()
+#        for s in self.subsystems.values():
+#            s.print()
 
 #------------------------------------------------------------------------------
 # processes and subsystems are cross-linked, 
@@ -1019,21 +1043,21 @@ class FarmManager(Component):
 # want to print what we got
 #-------v----------------------------------------------------------------------
         TRACE.INFO(f'-- AAA processed self.procinfos: use TRACE level DEBUG+1 to print sources and destinations',TRACE_NAME)
-        for p in self.procinfos:
-            print(f'p.subsystem:{p.subsystem.id} p.rank:{p.rank} p.label:{p.label}')
-            if (p.list_of_sources == None):
-                TRACE.DEBUG(1,'  -- sources: None',TRACE_NAME);
-            else:
-                TRACE.DEBUG(1,'  -- sources:',TRACE_NAME)
-                for p1 in p.list_of_sources:
-                    p1.print();
-
-            if (p.list_of_destinations == None):
-                TRACE.DEBUG(1,'  -- destinations: None',TRACE_NAME);
-            else:
-                TRACE.DEBUG(1,'  -- destinations:',TRACE_NAME)
-                for p1 in p.list_of_destinations:
-                    p1.print();
+# DEBUG        for p in self.procinfos:
+# DEBUG            print(f'p.subsystem:{p.subsystem.id} p.rank:{p.rank} p.label:{p.label}')
+# DEBUG            if (p.list_of_sources == None):
+# DEBUG                TRACE.DEBUG(1,'  -- sources: None',TRACE_NAME);
+# DEBUG            else:
+# DEBUG                TRACE.DEBUG(1,'  -- sources:',TRACE_NAME)
+# DEBUG                for p1 in p.list_of_sources:
+# DEBUG                    p1.print();
+# DEBUG
+# DEBUG            if (p.list_of_destinations == None):
+# DEBUG                TRACE.DEBUG(1,'  -- destinations: None',TRACE_NAME);
+# DEBUG            else:
+# DEBUG                TRACE.DEBUG(1,'  -- destinations:',TRACE_NAME)
+# DEBUG                for p1 in p.list_of_destinations:
+# DEBUG                    p1.print();
 
 #        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
 #        s = artdaq.host_map_string(self.procinfos,'')
@@ -1087,28 +1111,7 @@ class FarmManager(Component):
             TRACE.ERROR(f'no write access to the run records directory{self.record_directory}, EXIT(1)')
             sys.exit(1)
 
-#------------------------------------------------------------------------------
-# if setup_daq.sh has been modified, regenerate quick_setup.sh to match it
-# however, all MIDAS linux frontends also rely on quick_setup.sh being up-to-date
-#------------------------------------------------------------------------------
-        self.daq_quick_setup_script = f'{self.mu2e_config_dir}/scripts/quick_setup.sh'
-        
-        if ( (not os.path.exists(self.daq_quick_setup_script)) or
-             (os.path.getmtime(self.daq_setup_script) > os.path.getmtime(self.daq_quick_setup_script)) ):
-
-            # start from variables.
-            result = os.popen("bash -c 'declare -p'").read()
-    
-            # convert 'declare -x VAR[=value]' → 'export VAR[=value]'
-            # converted = re.sub(r'declare -x\s+([A-Za-z_][A-Za-z0-9_]*)(=(.*))?',r'export \1\3',result)
-    
-            # Write to file
-            with open(self.daq_quick_setup_script, "w") as f:
-                f.write(result) # converted)
-
-            # and append the function definitions
-            cmd = f'declare -f >> {self.daq_quick_setup_script}'
-            os.system(cmd)
+        self.update_quick_daq_setup()
 
 #------------------------------------------------------------------------------
 # P.M. if debug_level is defined on the command line, override the config file settings
@@ -1134,8 +1137,7 @@ class FarmManager(Component):
     bookkeeping_for_fhicl_documents       = bookkeeping_for_fhicl_documents_artdaq_v3_base
     do_enable                             = do_enable_base
     do_disable                            = do_disable_base
-#    launch_procs                          = launch_procs_base
-    launch_procs                          = launch_procs_base_new
+    launch_procs                          = launch_procs_base
     wait_for_completion                   = wait_for_completion_base
     check_launch_results                  = check_launch_results_base
     kill_procs                            = kill_procs_base
@@ -1451,11 +1453,7 @@ class FarmManager(Component):
 
                 self.print_log("w","\nSee logfile %s for details" % (self.determine_logfile(p)))
 
-                if (
-                    "BoardReader" in p.name
-                    and target_state == "Ready"
-                    and "with ParameterSet" in p.lastreturned
-                ):
+                if (p.is_boardreader() and (target_state == "Ready") and ("with ParameterSet" in p.lastreturned)):
                     self.print_log("w",rcu.make_paragraph(
                         ("\nThis is likely because the fragment generator constructor in %s"
                          " threw an exception (see logfile %s for details).")
@@ -1807,22 +1805,17 @@ class FarmManager(Component):
 
         if not process_matches_requirements_regexp:
             process_description = ""
-            if "BoardReader" in procinfo.name:
+            if procinfo.is_boardreader():
                 process_description = "BoardReader"
             elif rcu.fhicl_writes_root_file(procinfo.fhicl_used):
                 process_description = "process that writes data to disk"
-            elif "EventBuilder" in procinfo.name:
+            elif procinfo.is_eventbuilder():
                 is_routingmanager_used = True
-                if (
-                    len([pi for pi in self.procinfos if "RoutingManager" in pi.name])
-                    == 0
-                ):
+                if (len([pi for pi in self.procinfos if "RoutingManager" in pi.name]) == 0):
                     is_routingmanager_used = False
 
                 if is_routingmanager_used:
-                    eventbuilder_procinfos = [
-                        pi for pi in self.procinfos if "EventBuilder" in pi.name
-                    ]
+                    eventbuilder_procinfos = [pi for pi in self.procinfos if "EventBuilder" in pi.name]
 
                     if len(eventbuilder_procinfos) == 0 or (
                         len(eventbuilder_procinfos) == 1
@@ -1920,8 +1913,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # print procinfos if debug level >= 2
 #------------------------------------------------------------------------------
-        if (self.debug_level >= 2):
-            for p in self.procinfos: p.print()
+# DEBUG        if (self.debug_level >= 2):
+# DEBUG           for p in self.procinfos: p.print()
 
         if len(set([procinfo.label for procinfo in self.procinfos])) < len(self.procinfos):
             raise Exception(rcu.make_paragraph(
@@ -1932,8 +1925,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # print subsystems if debug level >= 2
 #------------------------------------------------------------------------------
-        if (self.debug_level >= 2):
-            for key in self.subsystems.keys(): self.subsystems[key].print()
+# DEBUG       if (self.debug_level >= 2):
+# DEBUG           for key in self.subsystems.keys(): self.subsystems[key].print()
 
         for ss in self.subsystems:                       # ss is a string (key)
             dest = self.subsystems[ss].destination
@@ -1961,19 +1954,19 @@ class FarmManager(Component):
 # 2026-05-15 PM do we need this at all ? - who uses this ?
         return
 
-        for host in set([procinfo.host for procinfo in self.procinfos]):
+        for host in self.artdaq.list_of_nodes:
 
-            if host != "localhost": full_hostname = host
-            else                  : full_hostname = os.environ["HOSTNAME"]
+            if host.name != "localhost": full_hostname = host
+            else                       : full_hostname = os.environ["HOSTNAME"]
 #------------------------------------------------------------------------------
 # processes to be running on 'host'
 #-----------v------------------------------------------------------------------
-            procinfos_for_host = [ p for p in self.procinfos if p.host == host ]
+# procinfos_for_host = [ p for p in self.procinfos if p.host == host ]
             cmds      = []
             proctypes = []
 
             cmds.append('short_hostname=$(hostname -s)')
-            for i, p in enumerate(procinfos_for_host):
+            for i, p in enumerate(host.list_of_processes):
 
                 output_logdir = "%s/%s-$short_hostname-%s" % (self.log_directory,p.label,p.port)
 
@@ -2061,211 +2054,11 @@ class FarmManager(Component):
 
         self.print_log("d", "\n", 2)
 
-# 2026-05-15 PM#------------------------------------------------------------------------------
-# 2026-05-15 PM#
-# 2026-05-15 PM#---v--------------------------------------------------------------------------
-# 2026-05-15 PM    def fill_package_versions(self, packages):
-# 2026-05-15 PM
-# 2026-05-15 PM        cmd             = ""
-# 2026-05-15 PM        needed_packages = []
-# 2026-05-15 PM
-# 2026-05-15 PM        for package in packages:
-# 2026-05-15 PM            if package in self.package_versions:
-# 2026-05-15 PM                continue
-# 2026-05-15 PM            else:
-# 2026-05-15 PM                needed_packages.append(package if self.productsdir != None else package.replace("_", "-"))
-# 2026-05-15 PM
-# 2026-05-15 PM        if (len(needed_packages) == 0): return
-# 2026-05-15 PM
-# 2026-05-15 PM        if "tfm" in packages:
-# 2026-05-15 PM            assert (len(packages) == 1), ("Note to developer: you'll probably need to refactor "
-# 2026-05-15 PM                                          "save_run_records.py if you want to get the version "
-# 2026-05-15 PM                                          "of other packages alongside the version of FarmManager")
-# 2026-05-15 PM                                       
-# 2026-05-15 PM            cmd = "ups active | sed -r -n 's/^artdaq_daqinterface\\s+(\\S+).*/artdaq_daqinterface \\1/p'"
-# 2026-05-15 PM        elif self.productsdir != None:
-# 2026-05-15 PM            cmd = (
-# 2026-05-15 PM                "%s ; . %s; ups active | sed -r -n 's/^(%s)\\s+(\\S+).*/\\1 \\2/p'"
-# 2026-05-15 PM                % (
-# 2026-05-15 PM                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-# 2026-05-15 PM                    self.daq_setup_script,
-# 2026-05-15 PM                    "|".join(needed_packages),
-# 2026-05-15 PM                )
-# 2026-05-15 PM            )
-# 2026-05-15 PM        elif self.spackdir != None:
-# 2026-05-15 PM            cmd = (
-# 2026-05-15 PM                "%s ; . %s; spack find --loaded | sed -r -n 's/^(%s)@(\\S+).*/\\1 \\2/p'" % (
-# 2026-05-15 PM                    ";".join(rcu.get_setup_commands(self.productsdir, self.spackdir)),
-# 2026-05-15 PM                    self.daq_setup_script,
-# 2026-05-15 PM                    "|".join(needed_packages),                
-# 2026-05-15 PM                )
-# 2026-05-15 PM            )
-# 2026-05-15 PM
-# 2026-05-15 PM        if cmd != "":
-# 2026-05-15 PM            proc = subprocess.Popen(
-# 2026-05-15 PM                cmd,
-# 2026-05-15 PM                executable="/bin/bash",
-# 2026-05-15 PM                shell=True,
-# 2026-05-15 PM                stdout=subprocess.PIPE,
-# 2026-05-15 PM                stderr=subprocess.PIPE,
-# 2026-05-15 PM                stdin=subprocess.PIPE,
-# 2026-05-15 PM                encoding="utf-8",
-# 2026-05-15 PM            )
-# 2026-05-15 PM
-# 2026-05-15 PM            out, err = proc.communicate()
-# 2026-05-15 PM            stdoutlines = out.strip().split("\n")
-# 2026-05-15 PM            stderrlines = err.strip().split("\n")
-# 2026-05-15 PM
-# 2026-05-15 PM            for line in stderrlines:
-# 2026-05-15 PM                if not line or not line.strip():
-# 2026-05-15 PM                    stderrlines.remove(line)
-# 2026-05-15 PM                elif "type: unsetup: not found" in line:
-# 2026-05-15 PM                    self.print_log("w", line)
-# 2026-05-15 PM                    stderrlines.remove(line)
-# 2026-05-15 PM                elif re.search(
-# 2026-05-15 PM                    r"INFO: mrb v\d_\d\d_\d\d requires cetmodules >= \d\.\d\d\.\d\d to run: attempting to configure\.\.\.v\d_\d\d_\d\d OK",
-# 2026-05-15 PM                    line,
-# 2026-05-15 PM                ):
-# 2026-05-15 PM                    self.print_log("i", line)
-# 2026-05-15 PM                    stderrlines.remove(line)
-# 2026-05-15 PM
-# 2026-05-15 PM            if len(stderrlines) > 0:
-# 2026-05-15 PM                raise Exception(
-# 2026-05-15 PM                    'Error in %s: the command "%s" yields output to stderr:\n"%s"'
-# 2026-05-15 PM                    % (
-# 2026-05-15 PM                        self.fill_package_versions.__name__,
-# 2026-05-15 PM                        cmd,
-# 2026-05-15 PM                        "".join(stderrlines),
-# 2026-05-15 PM                    )
-# 2026-05-15 PM                )
-# 2026-05-15 PM
-# 2026-05-15 PM            if len(stdoutlines) == 0:
-# 2026-05-15 PM                print(traceback.format_exc())
-# 2026-05-15 PM                raise Exception(
-# 2026-05-15 PM                    'Error in %s: the command "%s" yields no output to stdout'
-# 2026-05-15 PM                    % (self.fill_package_versions.__name__, cmd)
-# 2026-05-15 PM                )
-# 2026-05-15 PM
-# 2026-05-15 PM            for line in stdoutlines:
-# 2026-05-15 PM                if re.search(r"^(%s)\s+" % ("|".join(needed_packages)), line):
-# 2026-05-15 PM                    (package, version) = line.split()
-# 2026-05-15 PM
-# 2026-05-15 PM                    if not re.search(r"v[0-9]+_[0-9]+_[0-9]+.*", version):
-# 2026-05-15 PM                        raise Exception(
-# 2026-05-15 PM                            rcu.make_paragraph(
-# 2026-05-15 PM                                ('Error in %s: the version of the package "%s" this function has determined, '
-# 2026-05-15 PM                                 '"%s", is not the expected v<int>_<int>_<int>optionalextension format')
-# 2026-05-15 PM                                % (self.fill_package_versions.__name__,package,version)
-# 2026-05-15 PM                            )
-# 2026-05-15 PM                        )
-# 2026-05-15 PM                    # print('package=%s type(package)=%s' % (package,type(package)))
-# 2026-05-15 PM                    self.package_versions[package.replace("-", "_")] = version
-# 2026-05-15 PM
-# 2026-05-15 PM        for package in packages:
-# 2026-05-15 PM            if package not in self.package_versions:
-# 2026-05-15 PM                self.print_log("w",
-# 2026-05-15 PM                               'Warning: there was a problem trying to determine the version of package "%s"'
-# 2026-05-15 PM                               % (package)
-# 2026-05-15 PM                )
 #------------------------------------------------------------------------------
-#
+# this function will need to be rewritten with the node-frontends executing the script...
 #---v--------------------------------------------------------------------------
     def execute_trace_script(self, transition):
-
-        if "TFM_TRACE_SCRIPT" not in os.environ:
-            self.print_log("d",rcu.make_paragraph(
-                ("Environment variable TFM_TRACE_SCRIPT not defined; "
-                 "will not execute the would-be trace script pointed to by the variable")),3)
-
-            return
-
-        trace_script = os.environ["TFM_TRACE_SCRIPT"]
-
-        if re.search(r"^%s" % (os.environ["TFM_DIR"]), trace_script):
-            raise Exception(
-                rcu.make_paragraph(
-                    ('The trace script referred to by the TFM_TRACE_SCRIPT environment variable, "%s", '
-                     'appears to be located inside the FarmManager package itself. '
-                     'Please copy it somewhere else before using it, and revert any edits which may have been made to %s.')
-                    % (trace_script, trace_script)
-                )
-            )
-
-        if os.path.exists(trace_script):
-
-            trace_file = ""
-            with open(self.daq_setup_script) as inf:
-                for line in inf.readlines():
-                    res = re.search(r"^\s*export\s+TRACE_FILE=(\S+)", line)
-                    if res:
-                        trace_file = res.group(1)
-
-            if trace_file == "":
-                raise Exception(
-                    rcu.make_paragraph(
-                        'Exception in %s: unable to determine TRACE_FILE setting from "%s"'
-                        % (self.execute_trace_script.__name__, self.daq_setup_script)
-                    )
-                )
-
-            assert transition == "start" or transition == "stop"
-
-            if transition == "start":
-                self.procinfos_orig = list(self.procinfos)  # Deep copy, not a reference
-
-            nodes_for_rgang = {}
-            for procinfo in self.procinfos_orig:
-                nodes_for_rgang[procinfo.host] = 1
-
-            hosts_for_rgang = set()
-            for key in nodes_for_rgang.keys():
-                if rcu.host_is_local(key):
-                    hosts_for_rgang.add("localhost")
-                else:
-                    hosts_for_rgang.add(key)
-
-            cmd = '%s %s --run %d --transition %s --node-list="%s"' % (
-                trace_script,
-                trace_file,
-                self.run_number,
-                transition,
-                " ".join(hosts_for_rgang),
-            )
-            self.print_log("d", 'Executing "%s"' % (cmd), 2)
-
-            out = subprocess.Popen(
-                cmd,
-                executable="/bin/bash",
-                shell=True,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                encoding="utf-8",
-            )
-
-            out_stdout, out_stderr = out.communicate()
-
-            status = out.returncode
-
-            if status == 0:
-                self.print_log("d", "\nSTDOUT from command: \n%s" % (out_stdout), 3)
-                self.print_log("d", "\nSTDERR from command: \n%s" % (out_stderr), 3)
-            else:
-                self.print_log(
-                    "e",
-                    'Error: execution of "%s" yielded a nonzero return value' % (cmd),
-                )
-                self.print_log("e", "\nSTDOUT from command: \n%s" % (out_stdout))
-                self.print_log("e", "\nSTDERR from command: \n%s" % (out_stderr))
-                raise Exception(
-                    '"%s" yielded a nonzero return value; scroll up for further info'
-                    % (cmd)
-                )
-
-        else:  # trace script doesn't exist
-            raise Exception(
-                'Unable to find trace script referred to by environment variable TFM_TRACE_SCRIPT ("%s")'
-                % (os.environ["TFM_TRACE_SCRIPT"])
-            )
+        pass
 
 #------------------------------------------------------------------------------
 # "process_command" is a function which sends a transition to a single artdaq process, 
@@ -2289,7 +2082,7 @@ class FarmManager(Component):
         
         timeout = timeout_dict[p.name]
 
-        TRACE.INFO(f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
+        TRACE.DEBUG(1,f"-- START: command:{command} p.label:{p.label} p.odb_path:{p.odb_path} set status to BUSY=1",TRACE_NAME)
         self.set_process_status(p,1);
         p.state = self.verbing_to_states[command]
 
@@ -2317,7 +2110,7 @@ class FarmManager(Component):
             else:
                 assert False, "Unknown command"
 
-            TRACE.INFO(f'p.label:{p.label} p.lastreturned:{p.lastreturned}',TRACE_NAME);
+            TRACE.DEBUG(1,f'p.label:{p.label} p.lastreturned:{p.lastreturned}',TRACE_NAME);
             # self.print_log("d",f"farm_manager::process_command p.pastreturned:\n{p.lastreturned}",3)
                 
             if "with ParameterSet" in p.lastreturned:
@@ -2326,7 +2119,7 @@ class FarmManager(Component):
 
             if (p.lastreturned == "Success") or (p.lastreturned == self.target_states[command]):
                 p.state = self.target_states[command]
-                TRACE.INFO(f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",TRACE_NAME)
+                TRACE.DEBUG(1,f"command:{command} setting p.label:{p.label} p.odb_path:{p.odb_path}/Status to 0",TRACE_NAME)
                 self.set_process_status(p,0);
 
         except Exception:
@@ -2370,7 +2163,7 @@ class FarmManager(Component):
 
             TRACE.ERROR(rcu.make_paragraph(output_message),TRACE_NAME)
 
-        TRACE.INFO(f"-- END: p.label:{p.label} command:{command}",TRACE_NAME)
+        TRACE.DEBUG(1,f"-- END: p.label:{p.label} command:{command}",TRACE_NAME)
         
         return  # From process_command
 #------------------------------------------------------------------------------
@@ -2491,10 +2284,9 @@ class FarmManager(Component):
         if ((self.debug_level >= 2) or (nfailed > 0)):
             
             for p in self.procinfos:
-                if (self.debug_level > 0): p.print()
+#                if (self.debug_level > 0): p.print()
                 total_time = "%.1f" % (proc_endtimes[p.label] - proc_starttimes[p.label])
-                self.print_log("i","%s at %s:%s, after %s seconds returned string was:\n%s\n"
-                               % (p.label,p.host,p.port,total_time,p.lastreturned))
+                TRACE.DEBUG(1,f'host:{p.host} label:{p.label} port:{p.port} step time:{total_time} response:{p.lastreturned}',TRACE_NAME)
         else:
             slowest_process = ""
             max_time        = 0
@@ -3070,11 +2862,11 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 
             TRACE.INFO(f'subsystem_line:{subsystem_line}',TRACE_NAME)
 
-        for ss in sorted(self.subsystems):
-            for p in self.procinfos:
-                if p.subsystem.id == ss:
-                    self.print_log("d","%-20s at %s:%s, part of subsystem %s, has rank %d" 
-                                   % (p.label,p.host,p.port,p.subsystem.id,p.rank),2)
+# DEBUG        for ss in sorted(self.subsystems):
+# DEBUG            for p in self.procinfos:
+# DEBUG                if p.subsystem.id == ss:
+# DEBUG                    self.print_log("d","%-20s at %s:%s, part of subsystem %s, has rank %d" 
+# DEBUG                                   % (p.label,p.host,p.port,p.subsystem.id,p.rank),2)
 #------------------------------------------------------------------------------
 # -- P.Murat: this also need to be done just once (in case it is needed at all :) )
 #-------v----------------------------------------------------------------------
@@ -3125,7 +2917,7 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
             if (self._validate_setup_script):
                 self.validate_setup_script(random_host)
 
-            self.print_log("i", "BOOT transition 003 : done checking setup script")
+            TRACE.INFO("BOOT transition 003 : done checking setup script",TRACE_NAME)
 #------------------------------------------------------------------------------
 # creating directories for log files - the names don't change,
 # -- enought to do just once

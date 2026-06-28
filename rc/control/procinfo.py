@@ -33,6 +33,19 @@ DATA_LOGGER     = 3;
 DISPATCHER      = 4;
 ROUTING_MANAGER = 5;
 
+#------------------------------------------------------------------------------
+# list_of_processes is either a p.list_of_destinations or a p.list_of_sources
+#------------------------------------------------------------------------------
+def host_map_string(plist,offset = ''):
+    s = ''
+    for p in plist:
+        s += f' {{ rank:{p.rank:3} host: "{p.host}"}}';
+        if (p != plist[-1]):
+            s += ','
+
+    return s;
+
+#------------------------------------------------------------------------------
 class Procinfo(object):
 
     def __init__(self,
@@ -183,4 +196,51 @@ class Procinfo(object):
 
         return set(related_pids)
 #-------^----------------------------------------------------------------------
+# 'p' is a Processinfo
+#------------------------------------------------------------------------------
+    def destination_string(self,transfer_plugin):
+        s = ''
+        for d in self.list_of_destinations:
+            s += f' d{d.rank}: {{'
+            s += f' transferPluginType: {transfer_plugin}'
+            s += f' destination_rank:  {d.rank}'
+            # for BR, event=fragment
+            s += f' max_fragment_size_words: {self.max_event_size_words()}'
+            
+            # first destination includes the host_map
+            if (d == self.list_of_destinations[0]):
+                offset = '        '
+                s += ' host_map: ['
+                s += host_map_string(self.list_of_destinations,offset);
+                s += ' ]'
+                
+            s +=  '}\n'
+    
+        return s;
 
+#-------^----------------------------------------------------------------------
+# 'p' is a Processinfo
+#------------------------------------------------------------------------------
+    def source_string(self,transfer_plugin):
+        s  = ''
+    
+        for x in self.list_of_sources:
+            s += f' s{x.rank}: {{'
+            s += f' transferPluginType: {transfer_plugin}'
+            s += f' source_rank:  {x.rank}'
+            s += f' max_fragment_size_words: {x.max_event_size_words()}'
+            
+            # first destination includes the host_map
+            if (x == self.list_of_sources[0]):
+                s += ' host_map: ['
+                offset = ''
+                s += host_map_string(self.list_of_sources,offset);
+                s += ' ]'
+                
+            s +=  '}\n'
+    
+        return s;
+    
+#---^--------------------------------------------------------------------------
+# marking the end
+#------------------------------------------------------------------------------
