@@ -470,18 +470,18 @@ class FarmManager(Component):
                 
                 TRACE.DEBUG(0,f'process:{key_name} process_odb_path:{process_odb_path}',TRACE_NAME)
                 for name,value in subdir2.items():
+                    # rank no longer exists .... TODO: get rid of it
                     if (name == "Rank"):              rank               = int(value)
                     if (name == "Subsystem" ):        subsystem_id       = str(value)
                     if (name == "AllowedProcessors"): allowed_processors = str(value)
                     if (name == "Target"):            target             = str(value)                        
                     if (name == "Prepend"):           prepend            = str(value)
-                    if (name == "ArtAnalyzerCount"):  art_analyzer_count = int(value)
 
                 TRACE.DEBUG(0,f'process:{key_name} rank:{rank} subsystem_id:{subsystem_id} target:{target} prepend:{prepend} allowed_processors:{allowed_processors}',TRACE_NAME)
                 # check the process subsystem - that could be disabled independently
                 s = self.find_subsystem(subsystem_id);
                 if (s == None):
-                    TRACE.ERROR(f'requested process:{key_name} belongs to disabled subsystem:{_dirsubsystem_id}. Process not initialized',TRACE_NAME);
+                    TRACE.ERROR(f'requested process:{key_name} belongs to disabled subsystem:{subsystem_id}. Process not initialized',TRACE_NAME);
                     continue;
 
                 timeout     = 30;                 # seconds ... better be 60
@@ -521,13 +521,15 @@ class FarmManager(Component):
                                     target             = "none",
                                     fhicl              = fcl_fn,
                                     prepend            = "")
-                    TRACE.DEBUG(1,f'created new boardreader label:{key_name}',TRACE_NAME)
-                    
+                   
                     # for a BR, a 'fragment' and an 'event' is the same, for all other processes, event size is calculated
                     
                     p.max_fragment_size_bytes = subdir2['max_fragment_size_bytes']
                     p.max_event_size_bytes    = p.max_fragment_size_bytes;
+                    p.list_of_fragment_ids    = subdir2['fragment_ids'].split(',')
                         
+                    TRACE.DEBUG(1,f'new BR: label:{key_name} fragment_ids:{p.list_of_fragment_ids} p.n_fragment_ids():{p.n_fragment_ids()}',TRACE_NAME)
+                    
                 elif (key_name[0:2] == 'dl') :
                     p = DataLogger('DataLogger',
                                    rank,   ##            = rank ,
@@ -572,8 +574,8 @@ class FarmManager(Component):
                                      target             = "none",
                                      fhicl              = fcl_fn,
                                      prepend            = "")
-                    if (art_analyzer_count):
-                        p.art_analyzer_count = art_analyzer_count
+                    if ('ArtAnalyzerCount' in subdir2.keys()):
+                        p.art_analyzer_count = int(subdir2['ArtAnalyzerCount'])
 
                     TRACE.DEBUG(1,f'created new eventbuilder label:{key_name} p.art_analyzer_count:{p.art_analyzer_count}',TRACE_NAME)
 
@@ -612,9 +614,10 @@ class FarmManager(Component):
 #-------^-----------^----------------------------------------------------------
 # an exersize: print host map, sort procinfos by rank anyway
 #-------v----------------------------------------------------------------------
-               
-        TRACE.INFO('-- END',TRACE_NAME)
-        return;
+
+        rc = 0;
+        TRACE.INFO(f'-- END rc:{rc}',TRACE_NAME)
+        return rc;
 
 #-------^----------------------------------------------------------------------
 # there should be at least one subsystem defined
@@ -625,11 +628,11 @@ class FarmManager(Component):
         self.subsystems         = {}
         self.list_of_subsystems = [];              # a list, not a dict... prepare for a transition
         
+#------------------------------------------------------------------------------
+# in '.../Subsystems', expect only subsystem definitions 
+#------------------------------------------------------------------------------
         path                    = self.daq_conf_path + "/Subsystems"
         TRACE.INFO(f'-- START: path:{path}',TRACE_NAME)
-#------------------------------------------------------------------------------
-# expect only subsystem definitions in this subdirectory
-#------------------------------------------------------------------------------
         dir      = self.client.odb_get(path)
         for (ss_id,data) in dir.items():
             TRACE.INFO(f'subsystem_id:{ss_id} data:{data}',TRACE_NAME)
@@ -679,6 +682,10 @@ class FarmManager(Component):
                 if x:
                     s.list_of_sS.append(x)
                 
+            # does a subssytem have only one destination? - for now, this is an academic question
+            # as the Mu2e DAQ so far has only one subsystem.
+            # But this could be a source of a problem in the future
+            
             if s.destination != None:
                 s.dS = self.find_subsystem(s.destination)
 
@@ -686,10 +693,101 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # done with subsystems. However, at this point a subsystem
 # doesn't know about its processes - that should come later
-#------------------------------------------------------------------------------
-        TRACE.INFO('-- END',TRACE_NAME)
+#-------v----------------------------------------------------------------------
+
+        rc = 0;
+        TRACE.INFO('-- END: rc:{rc}',TRACE_NAME)
         
-        return
+        return rc;
+
+
+#------------------------------------------------------------------------------
+    def init_artdaq(self):
+
+        self.artdaq = artdaq.Artdaq();
+        
+        rc = self.init_artdaq_subsystems()
+        if (rc < 0):
+            TLOG.ERROR(f'failed to initialize ARTDAQ subsystems, rc:{rc}. BAIL OUT',TRACE_NAME)
+            return -1;
+        
+        rc = self.init_artdaq_processes()
+        if (rc < 0):
+            TLOG.ERROR(f'failed to initialize ARTDAQ processes, rc:{rc}. BAIL OUT',TRACE_NAME)
+            return -2;
+        
+#------------------------------------------------------------------------------
+# associate processes and subsystems
+#-------v----------------------------------------------------------------------
+
+        TRACE.INFO('-------------------------- append processes to subsystems .. .II',TRACE_NAME)
+        for p in self.procinfos:
+            TRACE.DEBUG(1,f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}',TRACE_NAME)
+            s           = self.subsystems[p.subsystem_id]
+            p.subsystem = s;                        # finally, defined
+            # s.print()
+#------------------------------------------------------------------------------
+# a subsystem has 5 lists of processes, separate for each type - is that still needed ?
+#------------------------------------------------------------------------------
+            s.list_of_procinfos[p.type()].append(p);
+            
+            if (s.max_type < p.type()): s.max_type = p.type();
+            if (s.min_type > p.type()): s.min_type = p.type();
+
+        TRACE.INFO('-------------------------- subsystems supposedly initialized',TRACE_NAME)
+
+#------------------------------------------------------------------------------
+# processes and subsystems are cross-linked, 
+# for each process create its own lists of source and destination processes
+# within the subsystem, those are the same for all processes of the same type
+#
+# BR --> EB
+#               lowest in the subsystem
+# EB --> EB
+# EB --> DL
+#
+# DL --> DS
+#------------------------------------------------------------------------------
+        TRACE.INFO('-------------------------- init_process_connections',TRACE_NAME)
+        for p in self.procinfos:
+            p.init_connections();
+
+#-------^----------------------------------------------------------------------
+# at this point, each process knows about its sources and destinations
+# so their FCL files can be updated
+# replaced should be lines with
+# -- BR:
+#         daq.fragment_receiver.destinations
+# -- EB:
+#         daq.event_builder.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DL:
+#         daq.aggregator.sources
+#         art.outputs.*.destinations
+#         art.outputs.*.host_map
+# -- DS:
+#         daq.aggregator.sources
+#
+# don't forget about smth max_fragment_size_bytes....
+# want to print what we got
+#-------v----------------------------------------------------------------------
+        TRACE.INFO(f'-- AAA processed self.procinfos: use TRACE level DEBUG+1 to print sources and destinations',TRACE_NAME)
+#        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
+#        s = artdaq.host_map_string(self.procinfos,'')
+#        print(f'{s}')
+#------------------------------------------------------------------------------
+# now update fcls and write updated ones to /tmp/partition_{..}/{config_name}
+#------------------------------------------------------------------------------
+        TRACE.INFO(f'----------- write updated fcls',TRACE_NAME)
+        self.write_updated_fcls();
+
+#------------------------------------------------------------------------------
+# P.M. so far, intentionally, handle only one source and one destination - haven't 
+#      seen any configuration with a subsystem having two sources. 
+#      however, 'sources is an array, so this may need to be changed
+#------------------------------------------------------------------------------            
+        return 0;
 
 #-------^----------------------------------------------------------------------
 # update FCLs - substitute the parameter defaults with values calculated for active configuration
@@ -872,6 +970,7 @@ class FarmManager(Component):
         self.artdaq_config_dir       = artdaq_config_dir;
         self.config_dir              = artdaq_config_dir+'/'+self.config_name;
 
+        TRACE.INFO(f'active run configuration:{self.config_name} config_dir:{self.config_dir}',TRACE_NAME);
         
         self.daq_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ';
         self.tfm_conf_path           = '/Mu2e/ActiveRunConfiguration/DAQ/Tfm';
@@ -966,7 +1065,6 @@ class FarmManager(Component):
         self.advanced_memory_usage               = bool(odb_client.odb_get(self.tfm_conf_path+"/advanced_memory_usage"))
         self.strict_fragment_id_mode             = bool(odb_client.odb_get(self.tfm_conf_path+"/strict_fragment_id_mode"))
         self.attempt_existing_pid_kill           = bool(odb_client.odb_get(self.tfm_conf_path+"/kill_existing_processes"))
-# 2025-05-11 PM        self.max_configurations_to_list          = 1000000
         self.disable_unique_rootfile_labels      = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_unique_rootfile_labels"))
         self.disable_private_network_bookkeeping = bool(odb_client.odb_get(self.tfm_conf_path+"/disable_pn_bookkeeping"))
         self.allowed_processors                  = None
@@ -978,101 +1076,8 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
 # initialize artfaq subsystems and processes
 #-------v----------------------------------------------------------------------
-        self.artdaq = artdaq.Artdaq();
-        self.init_artdaq_subsystems()
-        self.init_artdaq_processes()
-#------------------------------------------------------------------------------
-# associate processes and subsystems
-#-------v----------------------------------------------------------------------
-# 2026-05-17 PM         print(f'-------------------------- append processes to subsystems len(self.procinfos):{len(self.procinfos)}')
-# 2026-05-17 PM         for p in self.procinfos:
-# 2026-05-17 PM             TRACE.INFO(f'p.label:{p.label}',TRACE_NAME)
-
-        TRACE.INFO('-------------------------- append processes to subsystems .. .II',TRACE_NAME)
-        for p in self.procinfos:
-            print (f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}')
-            s           = self.subsystems[p.subsystem_id]
-            p.subsystem = s;                        # finally, defined
-            # s.print()
-#------------------------------------------------------------------------------
-# a subsystem has 5 lists of processes, separate for each type - is that still needed ?
-#------------------------------------------------------------------------------
-            s.list_of_procinfos[p.type()].append(p);
-            
-            if (s.max_type < p.type()): s.max_type = p.type();
-            if (s.min_type > p.type()): s.min_type = p.type();
-
-        TRACE.INFO('-------------------------- subsystems supposedly initialized',TRACE_NAME)
-#        for s in self.subsystems.values():
-#            s.print()
-
-#------------------------------------------------------------------------------
-# processes and subsystems are cross-linked, 
-# for each process create its own lists of source and destination processes
-# within the subsystem, those are the same for all processes of the same type
-#
-# BR --> EB
-#               lowest in the subsystem
-# EB --> EB
-# EB --> DL
-#
-# DL --> DS
-#------------------------------------------------------------------------------
-        TRACE.INFO('-------------------------- init_process_connections',TRACE_NAME)
-        for p in self.procinfos:
-            p.init_connections();
-
-#-------^----------------------------------------------------------------------
-# at this point, each process knows about its sources and destinations
-# so their FCL files can be updated
-# replaced should be lines with
-# -- BR:
-#         daq.fragment_receiver.destinations
-# -- EB:
-#         daq.event_builder.sources
-#         art.outputs.*.destinations
-#         art.outputs.*.host_map
-# -- DL:
-#         daq.aggregator.sources
-#         art.outputs.*.destinations
-#         art.outputs.*.host_map
-# -- DS:
-#         daq.aggregator.sources
-#
-# don't forget about smth max_fragment_size_bytes....
-# want to print what we got
-#-------v----------------------------------------------------------------------
-        TRACE.INFO(f'-- AAA processed self.procinfos: use TRACE level DEBUG+1 to print sources and destinations',TRACE_NAME)
-# DEBUG        for p in self.procinfos:
-# DEBUG            print(f'p.subsystem:{p.subsystem.id} p.rank:{p.rank} p.label:{p.label}')
-# DEBUG            if (p.list_of_sources == None):
-# DEBUG                TRACE.DEBUG(1,'  -- sources: None',TRACE_NAME);
-# DEBUG            else:
-# DEBUG                TRACE.DEBUG(1,'  -- sources:',TRACE_NAME)
-# DEBUG                for p1 in p.list_of_sources:
-# DEBUG                    p1.print();
-# DEBUG
-# DEBUG            if (p.list_of_destinations == None):
-# DEBUG                TRACE.DEBUG(1,'  -- destinations: None',TRACE_NAME);
-# DEBUG            else:
-# DEBUG                TRACE.DEBUG(1,'  -- destinations:',TRACE_NAME)
-# DEBUG                for p1 in p.list_of_destinations:
-# DEBUG                    p1.print();
-
-#        TRACE.INFO(f'----------- excersize printing the host_map',TRACE_NAME)
-#        s = artdaq.host_map_string(self.procinfos,'')
-#        print(f'{s}')
-#------------------------------------------------------------------------------
-# now update fcls and write updated ones to /tmp/partition_{..}/{config_name}
-#------------------------------------------------------------------------------
-        TRACE.INFO(f'----------- write updated fcls',TRACE_NAME)
-        self.write_updated_fcls();
-
-#------------------------------------------------------------------------------
-# P.M. so far, intentionally, handle only one source and one destination - haven't 
-#      seen any configuration with a subsystem having two sources. 
-#      however, 'sources is an array, so this may need to be changed
-#------------------------------------------------------------------------------            
+        self.artdaq = None
+        self.init_artdaq();
               
         # Here, states refers to individual artdaq process states, not the FarmManager state
         self.target_states = {
@@ -2513,35 +2518,6 @@ class FarmManager(Component):
             with open(os.environ["TFM_SETUP_FHICLCPP"], "w") as outf:
                 outf.write("\n".join(rcu.get_setup_commands(self.productsdir, self.spackdir)))
                 outf.write("\n\n")
-# 2026-05-16 PM                 if self.productsdir != None:
-# 2026-05-16 PM                     lines = subprocess.Popen(
-# 2026-05-16 PM                         '%s;ups list -aK+ fhiclcpp | sort -n'
-# 2026-05-16 PM                         % (";".join(rcu.get_setup_commands(self.productsdir, self.spackdir))),
-# 2026-05-16 PM                         executable="/bin/bash",
-# 2026-05-16 PM                         shell=True,
-# 2026-05-16 PM                         stdout=subprocess.PIPE,
-# 2026-05-16 PM                         stderr=subprocess.STDOUT,
-# 2026-05-16 PM                     ).stdout.readlines()
-# 2026-05-16 PM                     if len(lines) > 0:
-# 2026-05-16 PM                         fhiclcpp_to_setup_line = lines[-1].decode("utf-8")
-# 2026-05-16 PM                     else:
-# 2026-05-16 PM                         os.unlink(os.environ["TFM_SETUP_FHICLCPP"])
-# 2026-05-16 PM                         raise Exception(
-# 2026-05-16 PM                             rcu.make_paragraph(
-# 2026-05-16 PM                                 'Unable to find fhiclcpp ups product in products directory "%s" '
-# 2026-05-16 PM                                 % (self.productsdir)
-# 2026-05-16 PM                             )
-# 2026-05-16 PM                         )
-# 2026-05-16 PM 
-# 2026-05-16 PM                     outf.write(
-# 2026-05-16 PM                         "setup %s %s -q %s\n"
-# 2026-05-16 PM                         % (
-# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[0],
-# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[1],
-# 2026-05-16 PM                             fhiclcpp_to_setup_line.split()[3],
-# 2026-05-16 PM                         )
-# 2026-05-16 PM                     )
-# 2026-05-16 PM                 elif self.spackdir != None:
                 if self.spackdir != None:
                     outf.write("spack load --first fhicl-cpp")
 
@@ -2562,17 +2538,6 @@ class FarmManager(Component):
         TRACE.INFO('-- END',TRACE_NAME)
         return
 
-# 2026-05-11 PM#------------------------------------------------------------------------------
-# 2026-05-11 PM# PM better to get rid of the env var
-# 2026-05-11 PM#------------------------------------------------------------------------------
-# 2026-05-11 PMdef get_messagefacility_template_filename():
-# 2026-05-11 PM    if "TFM_MESSAGEFACILITY_FHICL" in os.environ.keys():
-# 2026-05-11 PM        messagefacility_fhicl_filename = os.environ.get("TFM_MESSAGEFACILITY_FHICL")
-# 2026-05-11 PM    else:
-# 2026-05-11 PM        messagefacility_fhicl_filename = os.environ.get("MU2E_DAQ_DIR")+"/config/MessageFacility.fcl"
-# 2026-05-11 PM
-# 2026-05-11 PM    return messagefacility_fhicl_filename
-# 2026-05-11 PM
 #------------------------------------------------------------------------------
 # P.Murat: not only this function returns the filename, it also writes out the file 
 # itself. This is how the MessageFacility log filenames are formed
@@ -2783,45 +2748,8 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
     
         print('\nSee file "%s" for saved record of the above configurations' % (listconfigs_file))
 
-# 2025-05-11 PM        print(rcu.make_paragraph(
-# 2025-05-11 PM            "Please note that for the time being, the optional max_configurations_to_list variable "
-# 2025-05-11 PM            "is only applicable when working with the database")
-# 2025-05-11 PM        )
-    
         # print(flush=True)
         sys.stdout.flush()
-
-#-------^----------------------------------------------------------------------
-# starting from this point, perform run-dependent configuration
-# look at the FCL files - they need to be looked at before the processes are launched
-# See Issue #20803.
-# the idea is that, e.g., component01.fcl and component01_hw_cfg.fcl refer to the same thing
-# P.M. it looks that it takes all fcl files from the config directory and checks them....
-#---v--------------------------------------------------------------------------
-    def check_hw_fcls(self):
-        TRACE.INFO(f'-- START',TRACE_NAME)
-
-        starttime     = time.time()
-# 2026-05-13 PM        rootfile_cntr = 0
-# 2026-05-13 PM        
-# 2026-05-13 PM#------------------------------------------------------------------------------
-# 2026-05-13 PM# it looks that here we're checking availability of the FCL files for the processes 
-# 2026-05-13 PM# which are already running ? is the idea that one would re-upload the FCL files?
-# 2026-05-13 PM# self.config_dir contains only FCL files 
-# 2026-05-13 PM#-------v------------------------------------------------------------------------------
-# 2026-05-13 PM        for p in self.procinfos:
-# 2026-05-13 PM            if (not self.disable_unique_rootfile_labels and (p.is_eventbuilder() or p.is_datalogger())):
-# 2026-05-13 PM                fhicl_before_sub     = p.fhicl_used
-# 2026-05-13 PM                rootfile_cntr_prefix = "dl"
-# 2026-05-13 PM                p.fhicl_used         = re.sub(r"(\n\s*[^#\s].*)\.root",r"\1" + "_dl" + str(rootfile_cntr + 1) + ".root",p.fhicl_used)
-# 2026-05-13 PM
-# 2026-05-13 PM                if p.fhicl_used != fhicl_before_sub:
-# 2026-05-13 PM                    rootfile_cntr += 1
-# 2026-05-13 PM
-        endtime = time.time()
-        TRACE.INFO(f'-- END: time spent:{endtime - starttime:.1f} seconds',TRACE_NAME)
-
-        return 0  # end of function
 
 #------------------------------------------------------------------------------
 # do_boot(), do_config(), do_start_running(), etc., are the functions 
@@ -2923,7 +2851,6 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 # -- enought to do just once
 # mkdir moved to 'generate_job_submission_script'
 #-----------v------------------------------------------------------------------
-# 2026-05-17 PM             self.make_logfile_dirs();
             self.fState.set_completed(50);
 #------------------------------------------------------------------------------
 # done creating directories for logfiles,
@@ -2975,8 +2902,6 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
         if not run_number: self.run_number = self.run_params["run_number"]
         else             : self.run_number = run_number
 
-#        self.print_log("i", "CONFIG transition underway run_number:%06d config name: %s" % 
-#                       (self.run_number," ".join(self.subconfigs_for_run)))
         msg = f'CONFIG transition underway: run_number:{self.run_number} config_name:{" ".join(self.subconfigs_for_run)}'
         TRACE.INFO(msg,TRACE_NAME)             
 #------------------------------------------------------------------------------
@@ -2989,9 +2914,6 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 # See Issue #20803.  Idea is that, e.g., component01.fcl and component01_hw_cfg.fcl 
 # refer to the same thing P.Murat: checks in check_hw_fcls look like nonsense - it costs nothing to keep the fcl files unique
 #-------v------------------------------------------------------------------------------
-        rc = self.check_hw_fcls();
-        if (rc != 0): return 
-
         starttime = time.time()
         TRACE.INFO("Reformatting FHiCL documents...", TRACE_NAME)
         # breakpoint()
@@ -3008,10 +2930,8 @@ udp : { type : "UDP" threshold : "INFO"  port : TFM_WILL_OVERWRITE_THIS_WITH_AN_
 #-------v----------------------------------------------------------------------
         rcu.reformat_fhicl_documents(os.environ["TFM_SETUP_FHICLCPP"], self.procinfos)
 
-        self.print_log("i", "CONFIG transition 007: reformatting FHICL done (%.1f seconds)." % (time.time() - starttime),2)
-
+        TRACE.INFO(f"CONFIG transition 008: bookkeeping the FHiCL documents time:{time.time()-starttime}...",TRACE_NAME)
         starttime = time.time()
-        TRACE.INFO("CONFIG transition 008: bookkeeping the FHiCL documents...",TRACE_NAME)
 
         try:
             self.bookkeeping_for_fhicl_documents()

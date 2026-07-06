@@ -251,6 +251,7 @@ parameter
 * [[file:xmlrpc.org][XMLRPC]]                                                                     
 * ------------------------------------------------------------------------------
 * [[file:work_in_progress.org][work_in_progress and TODO items]]
+* get rid of Rank in the process description
 * ------------------------------------------------------------------------------
 * attic                                                                      
 ** [[file:artdaq_daqinterface.org]]

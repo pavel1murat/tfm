@@ -398,7 +398,7 @@ def construct_checked_command(cmds):
 #             second time ?
 #------------------------------------------------------------------------------
 def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
-    TRACE.DEBUG(0,f'-- START',TRACE_NAME)
+    TRACE.DEBUG(1,f'-- START',TRACE_NAME)
 
     if not os.path.exists(setup_fhiclcpp):
         raise Exception(
@@ -431,12 +431,12 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
         .stdout.readlines()[0]
         .strip()
     )
-    TRACE.DEBUG(0,f'reformat_indir :{reformat_indir} reformat_outdir:{reformat_outdir}' ,TRACE_NAME);
+    TRACE.DEBUG(1,f'reformat_indir :{reformat_indir} reformat_outdir:{reformat_outdir}' ,TRACE_NAME);
 
     for p in procinfos:
         fn = "%s/%s.fcl" % (reformat_indir, p.label)
-        with open(fn, "w") as preformat_fhicl_file:
-            preformat_fhicl_file.write(p.fhicl_used)
+        with open(fn, "w") as f:
+            f.write(p.fhicl_used)
 
     cmds = []
     cmds.append("if [[ -z $( command -v fhicl-dump ) ]]; then source %s; fi" % setup_fhiclcpp)
@@ -484,7 +484,7 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
     shutil.rmtree(reformat_indir)
     shutil.rmtree(reformat_outdir)
 
-    TRACE.DEBUG(0,f'-- END',TRACE_NAME)
+    TRACE.DEBUG(1,f'-- END',TRACE_NAME)
     return # end of reformat_fhicl_documents, P.Murat: don't need to return anything
 
 

@@ -62,21 +62,22 @@ class Procinfo(object):
                  prepend            = "",
                  fhicl_file_path    = [],
                  ):
-        self.name               = name
-        self.rank               = rank
-        self.port               = port
-        self.host               = host
-        self.label              = label
-        self.subsystem_id       = subsystem_id
-        self.subsystem          = None;               # not defined at this point
-        self.allowed_processors = allowed_processors
-        self.target             = target
-        self.prepend            = prepend
-        self.fhicl              = fhicl  # Name of the input FHiCL document
-        self.ffp                = fhicl_file_path
-        self.priority           = 999
-        self.list_of_sources      = [ ]
-        self.list_of_destinations = [ ]
+        self.name                    = name
+        self.rank                    = rank
+        self.port                    = port
+        self.host                    = host
+        self.label                   = label
+        self.subsystem_id            = subsystem_id
+        self.subsystem               = None;               # not defined at this point
+        self.allowed_processors      = allowed_processors
+        self.target                  = target
+        self.prepend                 = prepend
+        self.fhicl                   = fhicl  # Name of the input FHiCL document
+        self.ffp                     = fhicl_file_path
+        self.priority                = 999
+        self.list_of_sources         = [ ]
+        self.list_of_destinations    = [ ]
+        self.list_of_fragment_ids    = [ ]
         self.max_fragment_size_bytes = None;
         self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
         self.init_fragment_count     = None;         ## for DLs, DSs
@@ -133,6 +134,9 @@ class Procinfo(object):
 
     def logfile(self,run_number):
         fn = f'{self.log_directory}/{self.label}_{self.node}_{self.port}/{self.label}_{self.node}_{self.port}_{run_number}.log'
+
+    def n_fragment_ids(self):
+        return len(self.list_of_fragment_ids)
 
 #------------------------------------------------------------------------------
 # P.Murat: in the Edwards Center, the daq servers communicate using the private

@@ -452,8 +452,8 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     part_repl     = f"partition_number: {self.partition()}"
     
     for p in self.procinfos:
-        txt = p.fhicl_used;
-        if (not (p.is_datalogger() or p.is_dispatcher())):
+#         txt = p.fhicl_used;
+# 2026-06-28 PM        if (not (p.is_datalogger() or p.is_dispatcher())):
             # P.M. comment out one more smartness! - DS and DS expect 1 event,
             # put that into default FCL and check, instead of correcting
             # p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
@@ -463,9 +463,11 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # 2026-06-21 PM            p.fhicl_used = re.sub("expected_fragments_per_event\s*:\s*[0-9]+",
 # 2026-06-21 PM                                  "expected_fragments_per_event: %d" % (expected_fragments_per_event[p.subsystem_id]),p.fhicl_used)
 
-            exp_frag_repl = f"expected_fragments_per_event: {expected_fragments_per_event[p.subsystem_id]}"
-            txt = RE_EXP_FRAGS.sub(exp_frag_repl,txt) ## , count=1)
-
+# expected fragments per event added by event_builder::update_fhicl
+            
+# 2026-06-28 PM            exp_frag_repl = f"expected_fragments_per_event: {expected_fragments_per_event[p.subsystem_id]}"
+# 2026-06-28 PM            txt = RE_EXP_FRAGS.sub(exp_frag_repl,txt) ## , count=1)
+# 2026-06-28 PM
 #------------------------------------------------------------------------------
 # P.M. this was very dangerous: store process subsystem ID as a string, but assume,
 # that, in fact that is an integer, and rely on that assumption
@@ -474,18 +476,23 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 
         if self.request_address is None:
             TRACE.DEBUG(1,f'procinfo:{p}',TRACE_NAME);
-            ss = p.subsystem; ## self.subsystems[p.subsystem_id]    # PM: 'p.subsystem_id' is a string
+            ss = p.subsystem;                                       ## self.subsystems[p.subsystem_id]    # PM: 'p.subsystem_id' is a string
             TRACE.DEBUG(1,f'ss:{ss}',TRACE_NAME);
             request_address = "227.128.%d.%d" % (self.partition(),128 + ss.index)
         else:
             request_address = self.request_address
 
-#        p.fhicl_used = re.sub("host_map\s*:\s*\[.*?\]", host_map_string,p.fhicl_used)
-        txt = RE_HOSTMAP.sub(host_map_string,txt) ## , count=1)
+        # p.fhicl_used = re.sub("host_map\s*:\s*\[.*?\]", host_map_string,p.fhicl_used)
+        # p.fhicl_used = RE_HOSTMAP.sub(host_map_string,p.fhicl_used) ## , count=1)
+
+
+# 2026-06-28 PM        p.fhicl_used = RE_HOSTMAP.sub(host_map_string,p.fhicl_used) ## , count=1)
 
         req_repl = 'request_address: "%s"' % (request_address.strip('"'))
         # p.fhicl_used = re.sub('request_address\s*:\s*["0-9\.]+',req_repl,p.fhicl_used)
-        txt = RE_REQADDR.sub(req_repl,txt) ## , count=1)
+        # txt = RE_REQADDR.sub(req_repl,txt) ## , count=1)
+        # p.fhicl_used = txt
+        p.fhicl_used = RE_REQADDR.sub(req_repl,p.fhicl_used) ## , count=1)
        
 #------------------------------------------------------------------------------
 # PM if partition is defined, redefine it... don't really need partition in FCL at all
@@ -493,8 +500,6 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # 2026-06-27 PM
 # 2026-06-27 PM        # p.fhicl_used = re.sub("partition_number\s*:\s*[0-9]+","partition_number: %d" % self.partition(),p.fhicl_used)
 # 2026-06-27 PM        txt = RE_PARTNUM.sub(part_repl,txt) ## , count=1)
-
-        p.fhicl_used = txt
         
 #-------^----------------------------------------------------------------------
 # end of the loop
@@ -528,10 +533,13 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
     # that assumes nonempty private_networks_seen dictionary <=> the
     # user wants private network bookkeeping
 
+    TRACE.INFO(f'step 9.7: took {time.time() - starttime} sec');
+    starttime = time.time();
+
     private_networks_seen = {}
     if not self.disable_private_network_bookkeeping:
         for host in set([procinfo.host for procinfo in self.procinfos]):
-            private_networks = get_private_networks(host)
+            private_networks = [ "10.226.9.42" ] # get_private_networks(host)
             for procinfo in self.procinfos:
                 if procinfo.host == host:
                     private_networks_seen[procinfo.label] = private_networks

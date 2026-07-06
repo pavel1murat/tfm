@@ -11,14 +11,15 @@ from   zoneinfo                 import ZoneInfo
 import TRACE ; TRACE_NAME='artdaq'
 
 #------------------------------------------------------------------------------
-def write_fcl(client,args,artdaqLabel,proc,fcl_template):
+def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
 
     config_dir  = os.path.expandvars(client.odb_get('/Mu2e/ConfigDir'));
     template_fn = config_dir+f'/artdaq/common/{fcl_template}.fcl'
 
     TRACE.INFO(f'-- START: fcl_template:{fcl_template} config_dir:{config_dir} template_fn:{template_fn}',TRACE_NAME);
 
-    output_dir = config_dir+f'/artdaq/{args["run_conf"]}'
+    
+    output_dir = config_dir+f'/artdaq/{run_conf_name}'
     fn         = f'{output_dir}/{artdaqLabel}.fcl'
 
     TRACE.INFO(f'output_dir:{output_dir} fn:{fn}',TRACE_NAME);
@@ -147,7 +148,7 @@ def write_fcl(client,args,artdaqLabel,proc,fcl_template):
     TRACE.INFO(f'-- END:');
 
 #------------------------------------------------------------------------------
-# generate FCL for processes defined by par
+# generate FCL for processes defined by par, always for ACTIVE configuration !
 #------------------------------------------------------------------------------
 def gen_fcl(client,args):
     TRACE.INFO('-- START',TRACE_NAME);
@@ -155,9 +156,10 @@ def gen_fcl(client,args):
     # client  = midas.client.MidasClient("gen_artdaq_fcl", None,"tracker",None)
 #-----------------------------------------------------------------------------
 # use None for the host , otherwise bools become ints - WHY ???
-#------------------------------------------------------------------------------
-       
-    daq_nodes_path = f'/Mu2e/RunConfigurations/{args["run_conf"]}/DAQ/Nodes/'
+#-----------------------------------------------------------------------------
+
+    run_conf_name  = client.odb_get('/Mu2e/ActiveRunConfiguration/Name')
+    daq_nodes_path = f'/Mu2e/ActiveRunConfiguration/DAQ/Nodes/'
     TRACE.INFO(f'------------- daq_nodes_path:{daq_nodes_path}',TRACE_NAME)
     daq_nodes = client.odb_get(daq_nodes_path)
     TRACE.DEBUG(1,f'------------- daq_nodes_dir:\n{daq_nodes}',TRACE_NAME)
@@ -188,12 +190,12 @@ def gen_fcl(client,args):
 # found template name, templates are stored in config/artdaq/common
 # now only need to check what is requested
 #---------------v--------------------------------------------------------------
-            TRACE.INFO(f'generating fcl for run_conf:{args["run_conf"]} host:{host} process:{pname} using template:{fcl_template_name}',TRACE_NAME)
+            TRACE.INFO(f'generating fcl for host:{host} process:{pname} using template:{fcl_template_name}',TRACE_NAME)
 #---------------^--------------------------------------------------------------
 # templates are stored in /Mu2e/RunConfigurations/{run_conf}/DAQ/FclTemplates
 # step 1: save existing FCL file
 #---------------v--------------------------------------------------------------
-            config_dir = os.path.expandvars(client.odb_get('/Mu2e/ConfigDir'))+f'/artdaq/{args["run_conf"]}'
+            config_dir = os.path.expandvars(client.odb_get('/Mu2e/ConfigDir'))+f'/artdaq/{run_conf_name}'
             fcl_fn = f'{config_dir}/{pname}.fcl'
             fpath = Path(fcl_fn)
             TRACE.INFO(f'config_dir:{config_dir} fcl_fn:{fcl_fn}',TRACE_NAME);
@@ -207,7 +209,7 @@ def gen_fcl(client,args):
 #         proc is a dict coresponding to the artdaq process record in ODB
 #---------------v--------------------------------------------------------------
             TRACE.INFO(f'fcl_template_name:{fcl_template_name}',TRACE_NAME)
-            write_fcl(client,args,pname,pdata,fcl_template_name)
+            write_fcl(run_conf_name,client,args,pname,pdata,fcl_template_name)
 
     # client.disconnect();
     
@@ -1034,8 +1036,8 @@ class Subsystem(object):
         
                                             # temporarily duplicate the above, prepare for a transition
                                             
-        self.list_of_sS   = [];             # list of objects of Subsystem type
-        self.dS           = None;           # if not None, object of Subsystem tyep
+        self.list_of_sS   = [];             # list of source subsystems (objects of Subsystem type)
+        self.dS           = None;           # destination subsystem (if not None, object of Subsystem type)
         
         self.list_of_procinfos = { }
         self.list_of_procinfos[BOARD_READER   ] = []
