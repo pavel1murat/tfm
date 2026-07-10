@@ -11,6 +11,11 @@ from   zoneinfo                 import ZoneInfo
 import TRACE ; TRACE_NAME='artdaq'
 
 #------------------------------------------------------------------------------
+# takes a template FCL file from config/artdaq/common/$template,
+# adds information read from ODB (at this point stored in the process record 'proc')
+# and writes output FCL file to config/artdaq/$config_name/
+# in addition, overrides EB parameters by reading ODB
+#------------------------------------------------------------------------------
 def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
 
     config_dir  = os.path.expandvars(client.odb_get('/Mu2e/ConfigDir'));
@@ -23,20 +28,22 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
     fn         = f'{output_dir}/{artdaqLabel}.fcl'
 
     TRACE.INFO(f'output_dir:{output_dir} fn:{fn}',TRACE_NAME);
-
+#------------------------------------------------------------------------------
+# read in the template FCL
+#------------------------------------------------------------------------------
     lines = []
     with open(template_fn) as f:
         lines = f.readlines()
 
         TRACE.INFO(f'len(lines): {len(lines)}',TRACE_NAME);
 #------------------------------------------------------------------------------
-# now - additions, different for different templates
+# for different templates, add different things 
 #-------v----------------------------------------------------------------------
     if   (fcl_template == 'tracker_brdr'):
         with open(fn,'w') as fout:
             for line in lines:
                 fout.write(line);
-                
+
         # and append 
         with open(fn,'a') as fout:
             fout.write(f'daq.fragment_receiver.artdaqLabel  : {artdaqLabel}\n');
@@ -46,7 +53,7 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
         with open(fn,'w') as fout:
             for line in lines:
                 fout.write(line);
-                
+
         with open(fn,'a') as fout:
             # this one takes only one fragment, so fragment_ids should be one ID
             fout.write(f'daq.fragment_receiver.fragment_id : {proc["fragment_ids"]}\n' );
@@ -57,7 +64,7 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
         with open(fn,'w') as fout:
             for line in lines:
                 fout.write(line);
-                
+
         with open(fn,'a') as fout:
             # this one takes only one fragment, so fragment_ids should be one ID
             fout.write(f'daq.fragment_receiver.rollover_subrun_interval : {proc["rollover_subrun_interval"]}\n' );
@@ -74,11 +81,16 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
             fout.write(f'daq.fragment_receiver.fragment_ids  : [ {proc["fragment_ids"]} ]\n' );
                 
     elif ('event_builder' in fcl_template):
-        trigger_table = client.odb_get("/Mu2e/ActiveRunConfiguration/Trigger/Table");
+        # get the trigger table - the FCL mods
+        # ------------------------------------------------------------------------------
+        tt_name = client.odb_get("/Mu2e/ActiveRunConfiguration/Trigger/Table");
+        tt      = client.odb_get(f'/Mu2e/ActiveRunConfiguration/Trigger/{tt_name}');
+        # print(tt);
 
-        TRACE.INFO(f'event_builder: {fcl_template} nlines:{len(lines)} trigger_table:{trigger_table}',TRACE_NAME)
+        TRACE.INFO(f'event_builder: {fcl_template} nlines:{len(lines)} trigger_table:{tt_name}',TRACE_NAME)
         
         # in case of the event builder, do not append, override
+        #---------------------------------------------------------
         with open(fn,'w') as fout:
             for line in lines:
                 if (re.search(r'\s*process_name\s*:',line)):
@@ -86,56 +98,84 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
                     continue;
 
                 if (re.search(r'\s*physics\s*:\s*\{\s*\}',line)):
-                    fout.write(f'    physics      : {{ @table::{trigger_table}.physics }}\n');
+                    fout.write(f'    physics      : {{ @table::{tt_name}.physics }}\n');
                     continue;
 
                 if (re.search(r'\s*outputs\s*:\s*\{\s*\}',line)):
-                    fout.write(f'    outputs      : {{ @table::{trigger_table}.outputs }}\n');
+                    fout.write(f'    outputs      : {{ @table::{tt_name}.outputs }}\n');
                     continue
 
                 fout.write(line);
 
-            # then navigate the trigger table description in ODB and append the updates for things line
-            # prescale factor
-            # ------------------------------------------------------------------------------
-            tt = client.odb_get(f'/Mu2e/ActiveRunConfiguration/Trigger/{trigger_table}');
-        
-            # print(tt);
+            # now look at the trigger table for overrides in the filter settings
+            #------------------------------------------------------------------------------
             header_written = False
             for k0 in tt.keys():
                 TRACE.INFO(f'key: {k0} is_dict:{isinstance(tt[k0],dict)}',TRACE_NAME)
                 if (k0 == 'physics'):
-                    line = f'art.physics'
-                    # loop over 
+                    l0 = 'art.physics'
+                    # loop over
+                    TRACE.INFO(f'tt[k0].keys(): {tt[k0].keys()}',TRACE_NAME)
                     for k1 in tt[k0].keys():
                         if (k1 == 'filters'):
-                            line += '.filters'
-                            # loop over modules
-                            filters = tt[k0][k1]
-                            for k2 in filters.keys():
-                                print(f'k2:{k2}')
-                                line += f'.{k2}'
-                                module = filters[k2]
-                                # next go module parameters, to begin with, consider the simplest case
-                                for k3 in module.keys():
-                                    line += f'.{k3} : {module[k3]}\n'
-                                    TRACE.INFO(f'line:{line}',TRACE_NAME)
-                                    if (not header_written):
-                                        fout.write('#---------------------------------------------------\n')
-                                        fout.write('# trigger overrides\n');
-                                        fout.write('#---------------------------------------------------\n')
-                                        header_written = True
-                                        
-                                    fout.write(line)
-            
+                            l1 = l0 + '.filters'
+                        elif (k1 == 'producers'):
+                            l1 = l0 + '.producers'
+                            
+                        # loop over modules
+                        modules = tt[k0][k1] # this is a subdict
+                        TRACE.INFO(f'l1:{l1} modules:{modules}',TRACE_NAME)
+                        for k2 in modules.keys():
+                            print(f'k2:{k2}')
+                            l2 = l1+f'.{k2}'
+                            module = modules[k2]
+                            # next go module parameters, to begin with, consider the simplest case
+                            TRACE.INFO(f'module:{module} l2:{l2}',TRACE_NAME)
+                            for k3 in module.keys():
+                                l3 = l2+f'.{k3} : {module[k3]}\n'
+                                TRACE.INFO(f'l3:{l3}',TRACE_NAME)
+
+                                if (not header_written):
+                                    fout.write('#---------------------------------------------------\n')
+                                    fout.write('# trigger overrides from ODB\n');
+                                    fout.write('#---------------------------------------------------\n')
+                                    header_written = True
+                                    
+                                fout.write(l3)
+                                                
 
     elif ('data_logger' in fcl_template):
+        TRACE.INFO(f'generating DATA_LOGGER FCL',TRACE_NAME)
+        # get the trigger table - the FCL mods
+        # ------------------------------------------------------------------------------
+        tt_name = client.odb_get("/Mu2e/ActiveRunConfiguration/Trigger/Table");
+        tt      = client.odb_get(f'/Mu2e/ActiveRunConfiguration/Trigger/{tt_name}');
+        # print(tt);
+
         with open(fn,'w') as fout:
             for line in lines:
                 fout.write(line);
                 
         with open(fn,'a') as fout:
             fout.write(f'art.process_name : {artdaqLabel}\n');
+
+            # now look at the trigger table for overrides in the filter settings
+            #------------------------------------------------------------------------------
+            if ('data_logger' in tt.keys()):
+                dl_pars = tt['data_logger']
+                TRACE.INFO(f'tt.keys:{tt.keys()} dl_pars:{dl_pars}',TRACE_NAME)
+                for k0 in dl_pars.keys():
+                    TRACE.INFO(f'key: {k0} is_dict:{isinstance(tt[k0],dict)}',TRACE_NAME)
+                    if (k0 == 'physics'):
+                        l0 = 'art.physics'
+                        # loop over
+                        TRACE.INFO(f'physics.keys(): {dl_pars[k0].keys()}',TRACE_NAME)
+                        for k1 in dl_pars[k0].keys():
+                            if (k1 == 'path_e1'):
+                                l1 = l0 + f'.{k1}: [ "{dl_pars[k0][k1]}" ]'
+                                        
+                                fout.write(l1)
+
 
     elif (fcl_template == 'dispatcher'):
         with open(fn,'w') as fout:
@@ -149,6 +189,10 @@ def write_fcl(run_conf_name,client,args,artdaqLabel,proc,fcl_template):
 
 #------------------------------------------------------------------------------
 # generate FCL for processes defined by par, always for ACTIVE configuration !
+# do that for all enabled nodes and processes - that saves a restart:
+# traverse ODB, do not look at the cached in the software list of nodes
+# 1) before restarting TFM, enable what needs to be enabled and generate FCLs
+# 2) restart TFM
 #------------------------------------------------------------------------------
 def gen_fcl(client,args):
     TRACE.INFO('-- START',TRACE_NAME);

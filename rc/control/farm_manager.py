@@ -415,7 +415,8 @@ class FarmManager(Component):
        
 #------------------------------------------------------------------------------
 # PM: 1. subsystems are already created and cross-linked
-#     2. create processes 
+#     2. create processes
+# 2026-07-10: in addition to to be created FCL, a process need to know its template FCL
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
@@ -469,15 +470,21 @@ class FarmManager(Component):
                 subdir2 = self.client.odb_get(process_odb_path)
                 
                 TRACE.DEBUG(0,f'process:{key_name} process_odb_path:{process_odb_path}',TRACE_NAME)
-                for name,value in subdir2.items():
-                    # rank no longer exists .... TODO: get rid of it
-                    if (name == "Rank"):              rank               = int(value)
-                    if (name == "Subsystem" ):        subsystem_id       = str(value)
-                    if (name == "AllowedProcessors"): allowed_processors = str(value)
-                    if (name == "Target"):            target             = str(value)                        
-                    if (name == "Prepend"):           prepend            = str(value)
+# 2026-07-10 PM                for name,value in subdir2.items():
+# 2026-07-10 PM                    if (name == "Rank"):              rank               = int(value)
+# 2026-07-10 PM                    if (name == "Subsystem" ):        subsystem_id       = str(value)
+# 2026-07-10 PM                    if (name == "AllowedProcessors"): allowed_processors = str(value)
+# 2026-07-10 PM                    if (name == "Target"):            target             = str(value)                        
+# 2026-07-10 PM                    if (name == "Prepend"):           prepend            = str(value)
 
-                TRACE.DEBUG(0,f'process:{key_name} rank:{rank} subsystem_id:{subsystem_id} target:{target} prepend:{prepend} allowed_processors:{allowed_processors}',TRACE_NAME)
+                rank               = subdir2['Rank'];
+                subsystem_id       = subdir2['Subsystem'];
+                allowed_processors = subdir2['AllowedProcessors'];
+                target             = subdir2['Target']
+                prepend            = subdir2['Prepend']
+                fcl_template       = subdir2['fcl_template']
+
+                TRACE.DEBUG(0,f'process:{key_name} rank:{rank} subsystem_id:{subsystem_id} target:{target} prepend:{prepend} allowed_processors:{allowed_processors} fcl_template:{fcl_template}',TRACE_NAME)
                 # check the process subsystem - that could be disabled independently
                 s = self.find_subsystem(subsystem_id);
                 if (s == None):
@@ -490,7 +497,7 @@ class FarmManager(Component):
 
                 # to not hide 100000+1000*partition_id_rank in procinfo
                 xmlrpc_port = self.xmlrpc_port_number(rank);
-                fcl_fn      = f'{self.config_dir}/{key_name}.fcl';
+                fcl_fn      = f'{self.config_dir}/{key_name}.fcl'; # this is the name of the output FCL
 #------------------------------------------------------------------------------
 # PM: this naming is something to get rid of - a Procinfo thing has a type, so a
 # name is an overkill ... later...
@@ -600,6 +607,7 @@ class FarmManager(Component):
                 
                 p.odb_path      = process_odb_path;
                 p.log_directory = self.log_directory;
+                p.fcl_template  = fcl_template;
                 self.set_process_status(p,0);
                 
                 if (p.server == None):

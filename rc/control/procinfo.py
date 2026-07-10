@@ -72,7 +72,8 @@ class Procinfo(object):
         self.allowed_processors      = allowed_processors
         self.target                  = target
         self.prepend                 = prepend
-        self.fhicl                   = fhicl  # Name of the input FHiCL document
+        self.fcl_template            = None
+        self.fhicl                   = fhicl               # Name of the input FHiCL document
         self.ffp                     = fhicl_file_path
         self.priority                = 999
         self.list_of_sources         = [ ]
