@@ -33,6 +33,8 @@ DATA_LOGGER     = 3;
 DISPATCHER      = 4;
 ROUTING_MANAGER = 5;
 
+PROCESS_TYPES = [ BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ]
+
 #------------------------------------------------------------------------------
 # list_of_processes is either a p.list_of_destinations or a p.list_of_sources
 #------------------------------------------------------------------------------
@@ -62,9 +64,10 @@ class Procinfo(object):
                  prepend            = "",
                  fhicl_file_path    = [],
                  ):
+        self._process_type           = None;             # to make it detectable
         self.name                    = name
         self.rank                    = rank
-        self.port                    = port
+        self.port                    = port                   # isn't port obsolete and defined unambiguously by rank ?
         self.host                    = host
         self.label                   = label
         self.subsystem_id            = subsystem_id
@@ -79,12 +82,14 @@ class Procinfo(object):
         self.list_of_sources         = [ ]
         self.list_of_destinations    = [ ]
         self.list_of_fragment_ids    = [ ]
-        self.max_fragment_size_bytes = None;
-        self.max_event_size_bytes    = None;         ## for EBs ... DLs ?? etc
-        self.init_fragment_count     = None;         ## for DLs, DSs
+        self.max_fragment_size_bytes = 0;
+        self.max_event_size_bytes    = 0;         ## for EBs ... DLs ?? etc
+        self.init_fragment_count     = 0;            ## for DLs, DSs
         self.odb_path                = None;
         self.execname                = None;
         self.log_directory           = None;
+        self.input_plugin            = None;    ## BRs don't have it defined...
+        self.output_plugin           = None;
 
         self.server = None
         xmlrpc_url  = "http://" + self.rpc_server() + "/RPC2"
@@ -115,23 +120,23 @@ class Procinfo(object):
 #------------------------------------------------------------------------------
 # returns host:port
 #------------------------------------------------------------------------------
-    def type(self):
-        return self._type;
+    def process_type(self):
+        return self._process_type;
 
     def is_boardreader(self):
-        return self._type == BOARD_READER;
+        return self._process_type == BOARD_READER;
 
     def is_datalogger(self):
-        return self._type == DATA_LOGGER;
+        return self._process_type == DATA_LOGGER;
 
     def is_dispatcher(self):
-        return self._type == DISPATCHER;
+        return self._process_type == DISPATCHER;
 
     def is_eventbuilder(self):
-        return self._type == EVENT_BUILDER;
+        return self._process_type == EVENT_BUILDER;
 
     def is_routingmanager(self):
-        return self._type == ROUTING_MANAGER;
+        return self._process_type == ROUTING_MANAGER;
 
     def logfile(self,run_number):
         fn = f'{self.log_directory}/{self.label}_{self.node}_{self.port}/{self.label}_{self.node}_{self.port}_{run_number}.log'
@@ -146,10 +151,35 @@ class Procinfo(object):
     def rpc_server(self):
         return self.host+':'+self.port;
 
+#------------------------------------------------------------------------------
+# prints process parameters to STDOUT
+#------------------------------------------------------------------------------
+    def print_parameters(self):
+        # TRACE.WARN(f'label: {self.label} : TO BE OVERWRITTEN',TRACE_NAME)
+        print(f'label                  : {self.label}')
+        print(f'process_type           : {self._process_type}')
+        print(f'host                   : {self.host}' )
+        print(f'rank                   : {self.rank}' )
+        print(f'fcl_template           : {self.fcl_template}')
+        print(f'list_of_sources        :')
+        if (len(self.list_of_sources) > 0):
+            for p in self.list_of_sources:
+                print(f'                         p.label:{p.label}')
+
+        print(f'list_of_destinations   :')
+        if (len(self.list_of_destinations) > 0):
+            for p in self.list_of_destinations:
+                print(f'                         p.label:{p.label}')
+                
+        print(f'max_event_size_bytes   : {self.max_event_size_bytes}' )
+        print(f'max_fragment_size_bytes: {self.max_fragment_size_bytes}')
+        return
+    
+#------------------------------------------------------------------------------
     def print(self,text = None):
         if (text): print(f'{text}');
 
-        s = f'procinfo: ss_id:{self.subsystem_id:5} type:{self._type} label:{self.label:4} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}'
+        s = f'procinfo: ss_id:{self.subsystem_id:5} type:{self._process_type} label:{self.label:4} rpc_server:{self.rpc_server()} name:{self.name:12} fcl:{self.fhicl}'
         
         TRACE.DEBUG(1,s,TRACE_NAME);
 

@@ -30,24 +30,42 @@ class DataLogger(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
-        self._type                 = DATA_LOGGER;
+        self._process_type         = DATA_LOGGER;
         self.execname              = 'datalogger'
         self.output_data_directory = None
+        self.input_plugin          = None;
+        self.output_plugin         = None;
 
+
+#------------------------------------------------------------------------------
+    def connect_dispatcher(self,ds):
+        TRACE.INFO(f'-- START: adding DS label:{ds.label} to destinations',TRACE_NAME)
+        self.list_of_destinations.append(ds);
+
+        ds.list_of_sources.append(self)
+        ds.init_fragment_count += self.art_analyzer_count;      # it is the art process which sends the data
+                                                                            # and there could be several of them
+
+        if (self.max_event_size_bytes > ds.max_event_size_bytes):
+            ds.max_event_size_bytes = self.max_event_size_bytes
+
+        TRACE.DEBUG(1,f'-- END')
+        return
+    
 #-------^----------------------------------------------------------------------
 # define processes for p.type = DATA_LOGGER
 #------------------------------------------------------------------------------
     def init_connections(self):
 
-        TRACE.INFO(f'-- START: p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
+        TRACE.INFO(f'-- START: process p.label:{self.label} p.subsystem_id:{self.subsystem_id}',TRACE_NAME);
         # DL has to have inputs from either own EBs or from EBs other subsystems
         # start from checking inputs
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
         s.print();
         # EBs should already be covered
 
-        self.max_event_size_bytes = 0;
-        self.init_fragment_count  = 0;
+        # self.max_event_size_bytes = 0;
+        # self.init_fragment_count  = 0;
 
         if ((len(s.list_of_sS) > 0) and (s.min_type == DATA_LOGGER)):
             # subsystem has sources, and there is no local  EBs
@@ -57,15 +75,9 @@ class DataLogger(Procinfo):
                 if (ss.max_type == EVENT_BUILDER):
                     list_of_ebs = ss.list_of_event_builders()
                     for eb in list_of_ebs:
-                        self.init_fragment_count += eb.art_analyzer_count;
-                        
-                        if (eb.max_event_size_bytes > self.max_event_size_bytes):
-                            self.max_event_size_bytes =  eb.max_event_size_bytes
-    
-                        # avoid double counting
+                        # perform sanity check
                         if (not eb in self.list_of_sources):
-                            self.list_of_sources.append(eb);
-                            eb.list_of_destinations.append(self);
+                           raise RunTimeError(f'process {br.label} should have been accounted for as input')
                             
             TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
 #-------------------------------^----------------------------------------------
@@ -77,38 +89,32 @@ class DataLogger(Procinfo):
             list_of_ebs = s.list_of_event_builders()
             if (len(list_of_ebs) > 0):
                 for eb in list_of_ebs:
-                    self.init_fragment_count += eb.art_analyzer_count;
-                    if (eb.max_event_size_bytes > self.max_event_size_bytes):
-                        self.max_event_size_bytes =  eb.max_event_size_bytes
-                        
                     if (not eb in self.list_of_sources):
-                        self.list_of_sources.append(eb);
-                        eb.list_of_destinations.append(self);
-                    
+                        raise RunTimeError(f'process {br.label} should have been accounted for as input')
+                        
             else:
                 # subsystem has no own EB's : trouble
                 raise Exception('DL: no EBs in the subsystem');
 
             TRACE.INFO(f'self.init_fragment_count:{self.init_fragment_count}',TRACE_NAME);
 #------------------------------------------------------------------------------
-# now - destinations ... not done yet
+# now - destinations dispatchers
 #-------v----------------------------------------------------------------------
         list_of_dss = s.list_of_dispatchers()
         if (len(list_of_dss) > 0):
             for ds in list_of_dss:
-                self.init_fragment_count += 1;
-                        
                 if (not ds in self.list_of_destinations):
-                    self.list_of_destinations.append(ds);
-                    ds.list_of_sources.append(self);
+                    self.connect_dispatcher(ds)
 
-        TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
+                TRACE.ERROR(f'DL {self.label} no destinations defined - FIXME',TRACE_NAME)
+
+        TRACE.DEBUG(1,f'--END')
         return;
 
 #------------------------------------------------------------------------------
 #  DataLogger
 #------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
+    def update_fhicl(self): ## , transfer_plugin):
         TRACE.INFO(f'-- START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
         
         with open(self.fhicl,'r') as f:
@@ -117,13 +123,14 @@ class DataLogger(Procinfo):
         new_text = []
 
         for line in lines:
-            # print(line);
+            TRACE.INFO(f'fcl_line:{line}',TRACE_NAME)
             pattern = r'(?:[\w-]+\.)*sources'
             match = re.search(pattern,line)
             if (match):
                 key = match.group(0);
                 new_text.append(f'{key}: {{\n');
-                s = self.source_string(transfer_plugin)
+                #<2026-07-21 PM>s = self.source_string(transfer_plugin)
+                s = self.source_string(self.input_plugin)
                 new_text.append(s)
                 new_text.append('}\n');
                 continue
@@ -131,7 +138,8 @@ class DataLogger(Procinfo):
             pattern = r'(?:[\w-]+\.)*destinations'
             match = re.search(pattern,line)
             if (match):
-                s = self.destination_string(transfer_plugin);
+                #<2026-07-21 PM>s = self.destination_string(transfer_plugin);
+                s = self.destination_string(self.output_plugin);
                 if (s):
                     key = match.group(0);
                     new_text.append(f'{key}: {{\n');

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os, re, string, socket, shutil, sys, stat
+import tempfile
 
 import subprocess
 from   subprocess import Popen
@@ -420,17 +421,24 @@ def reformat_fhicl_documents(setup_fhiclcpp, procinfos):
                 % (cmd)
             )
         )
+#------------------------------------------------------------------------------
+# 2026-07-16 PM : someone didn't know about python way of making a temp directory
+#------------------------------------------------------------------------------
+# 2026-07-16 PM    reformat_indir = (
+# 2026-07-16 PM        Popen("mktemp -d", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8")
+# 2026-07-16 PM        .stdout.readlines()[0]
+# 2026-07-16 PM        .strip()
+# 2026-07-16 PM    )
+# 2026-07-16 PM    
+# 2026-07-16 PM    reformat_outdir = (
+# 2026-07-16 PM        Popen("mktemp -d", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8")
+# 2026-07-16 PM        .stdout.readlines()[0]
+# 2026-07-16 PM        .strip()
+# 2026-07-16 PM    )
 
-    reformat_indir = (
-        Popen("mktemp -d", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8")
-        .stdout.readlines()[0]
-        .strip()
-    )
-    reformat_outdir = (
-        Popen("mktemp -d", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8")
-        .stdout.readlines()[0]
-        .strip()
-    )
+    reformat_indir  = tempfile.mkdtemp();
+    reformat_outdir = tempfile.mkdtemp();
+
     TRACE.DEBUG(1,f'reformat_indir :{reformat_indir} reformat_outdir:{reformat_outdir}' ,TRACE_NAME);
 
     for p in procinfos:

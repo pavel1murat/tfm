@@ -117,7 +117,10 @@ def wait_for_completion_base(self,timeout_ms):
     return (n_not_finished, wait_time_ms)
 
 #------------------------------------------------------------------------------
+# every time it is called, it generates the job submission script (at begin run)
+# so checking that before the run started, doesn't name sense...
 # generate job submission script and send a command to each node
+#------------------------------------------------------------------------------
 def launch_procs_base(self):
     TRACE.INFO('--START:',TRACE_NAME)
 

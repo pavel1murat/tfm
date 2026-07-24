@@ -55,7 +55,7 @@ class ServerThread(threading.Thread):
         return
 
 #------------------------------------------------------------------------------
-# P.M. why we're inheriting from something with LBNE in the name ?
+# P.M. why are we inheriting from something with LBNE in the name ?
 #------------------------------------------------------------------------------
 class Component(ContextObject):
     """

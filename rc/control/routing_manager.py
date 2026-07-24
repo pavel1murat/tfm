@@ -30,8 +30,8 @@ class RoutingManager(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
-        self._type    = ROUTING_MANAGER;
-        self.execname = 'routing_manager'
+        self._process_type = ROUTING_MANAGER;
+        self.execname      = 'routing_manager'
 
 #------------------------------------------------------------------------------
 # define processes for p.type = ROUTINE_MANAGER
@@ -42,7 +42,7 @@ class RoutingManager(Procinfo):
 #------------------------------------------------------------------------------
 # RM - to be impemented
 #------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
+    def update_fhicl(self): ## , transfer_plugin):
         print('------ RM::update_fhicl')
         TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
         
@@ -60,7 +60,8 @@ class RoutingManager(Procinfo):
             if (match):
                 key = match.group(0);
                 new_text.append(f'{key}: {{\n');
-                s = self.source_string(transfer_plugin)   # from ProcInfo
+                #<2026-07-21 PM>s = self.source_string(transfer_plugin)   # from ProcInfo
+                s = self.source_string(self.input_plugin)                 # from ProcInfo
                 new_text.append(s)
                 new_text.append('}\n');
                 continue
@@ -68,7 +69,8 @@ class RoutingManager(Procinfo):
             pattern = r'(?:[\w-]+\.)*destinations'
             match = re.search(pattern,line)
             if (match):
-                s = self.destination_string(transfer_plugin);
+                #<2026-07-21 PM>s = self.destination_string(transfer_plugin);
+                s = self.destination_string(self.output_plugin);
                 if (s):
                     key = match.group(0);
                     new_text.append(f'{key}: {{\n');

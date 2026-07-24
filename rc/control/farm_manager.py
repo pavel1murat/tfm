@@ -32,7 +32,7 @@ if "TFM_OVERRIDES_FOR_EXPERIMENT_MODULE_DIR" in os.environ:
 # home brew
 #------------------------------------------------------------------------------
 import tfm.rc.control.run_control_state as     run_control_state
-from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER ;
+from   tfm.rc.control.procinfo          import Procinfo, BOARD_READER, EVENT_BUILDER, DATA_LOGGER, DISPATCHER, ROUTING_MANAGER, PROCESS_TYPES
 
 from   tfm.rc.io.timeoutclient          import TimeoutServerProxy
 from   tfm.rc.control.component         import Component
@@ -399,11 +399,9 @@ class FarmManager(Component):
         if ( (not os.path.exists(self.daq_quick_setup_script)) or
              (os.path.getmtime(self.daq_setup_script) > os.path.getmtime(self.daq_quick_setup_script)) ):
 
-            # start from variables.
-            result = os.popen("bash -c 'declare -p'").read()
-    
-            # convert 'declare -x VAR[=value]' → 'export VAR[=value]'
-            # converted = re.sub(r'declare -x\s+([A-Za-z_][A-Za-z0-9_]*)(=(.*))?',r'export \1\3',result)
+            # start from variables. ignore TRACE_PRINT_FD redefinition by the TFM frontend -
+            # having that redefined makes all node_frontend's to fail
+            result = os.popen("bash -c 'declare -p | grep -v TRACE_PRINT_FD'").read()
     
             # Write to file
             with open(self.daq_quick_setup_script, "w") as f:
@@ -420,6 +418,7 @@ class FarmManager(Component):
 #------------------------------------------------------------------------------
     def init_artdaq_processes(self):
 
+        self.procinfos = []
         # self.print_log('i',f'{sys._getframe(0).f_code.co_name} START',3)
         nodes_path = "/Mu2e/ActiveRunConfiguration/DAQ/Nodes"
         nodes_dir  = self.client.odb_get(nodes_path);
@@ -470,12 +469,6 @@ class FarmManager(Component):
                 subdir2 = self.client.odb_get(process_odb_path)
                 
                 TRACE.DEBUG(0,f'process:{key_name} process_odb_path:{process_odb_path}',TRACE_NAME)
-# 2026-07-10 PM                for name,value in subdir2.items():
-# 2026-07-10 PM                    if (name == "Rank"):              rank               = int(value)
-# 2026-07-10 PM                    if (name == "Subsystem" ):        subsystem_id       = str(value)
-# 2026-07-10 PM                    if (name == "AllowedProcessors"): allowed_processors = str(value)
-# 2026-07-10 PM                    if (name == "Target"):            target             = str(value)                        
-# 2026-07-10 PM                    if (name == "Prepend"):           prepend            = str(value)
 
                 rank               = subdir2['Rank'];
                 subsystem_id       = subdir2['Subsystem'];
@@ -534,6 +527,7 @@ class FarmManager(Component):
                     p.max_fragment_size_bytes = subdir2['max_fragment_size_bytes']
                     p.max_event_size_bytes    = p.max_fragment_size_bytes;
                     p.list_of_fragment_ids    = subdir2['fragment_ids'].split(',')
+                    p.output_plugin           = self.br_output_plugin;
                         
                     TRACE.DEBUG(1,f'new BR: label:{key_name} fragment_ids:{p.list_of_fragment_ids} p.n_fragment_ids():{p.n_fragment_ids()}',TRACE_NAME)
                     
@@ -550,7 +544,12 @@ class FarmManager(Component):
                                    fhicl              = fcl_fn,
                                    prepend            = "")
                     # data logger needs to know the output data directory
+                    # by default, 1 art process per DL
+                    #------------------------------------------------------------------------------
                     p.output_data_directory = self.data_directory_override;
+                    p.art_analyzer_count    = int(subdir2['ArtAnalyzerCount'])
+                    p.input_plugin          = self.eb_output_plugin;
+                    p.output_plugin         = self.dl_output_plugin;
 
                     TRACE.DEBUG(1,f'created new datalogger label:{key_name}',TRACE_NAME)
                     
@@ -567,6 +566,9 @@ class FarmManager(Component):
                                    fhicl              = fcl_fn,
                                    prepend            = "")
 
+                    p.input_plugin          = self.dl_output_plugin;
+                    p.output_plugin         = self.ds_output_plugin;
+                    
                     TRACE.DEBUG(1,f'created new dispatcher label:{key_name}',TRACE_NAME)
                     
                 elif (key_name[0:2] == 'eb') :
@@ -581,8 +583,11 @@ class FarmManager(Component):
                                      target             = "none",
                                      fhicl              = fcl_fn,
                                      prepend            = "")
-                    if ('ArtAnalyzerCount' in subdir2.keys()):
-                        p.art_analyzer_count = int(subdir2['ArtAnalyzerCount'])
+                    # by default, 1 art process per EB
+                    #------------------------------------------------------------------------------
+                    p.art_analyzer_count = int(subdir2['ArtAnalyzerCount'])
+                    p.input_plugin          = self.br_output_plugin;
+                    p.output_plugin         = self.eb_output_plugin;
 
                     TRACE.DEBUG(1,f'created new eventbuilder label:{key_name} p.art_analyzer_count:{p.art_analyzer_count}',TRACE_NAME)
 
@@ -730,18 +735,20 @@ class FarmManager(Component):
 
         TRACE.INFO('-------------------------- append processes to subsystems .. .II',TRACE_NAME)
         for p in self.procinfos:
-            TRACE.DEBUG(1,f'p.rank:{p.rank} p.name:{p.name} p.type():{p.type()} p.subsystem_id:{p.subsystem_id}',TRACE_NAME)
+            TRACE.DEBUG(1,f'p.rank:{p.rank} p.name:{p.name} p.process_type():{p.process_type()} p.subsystem_id:{p.subsystem_id}',TRACE_NAME)
             s           = self.subsystems[p.subsystem_id]
             p.subsystem = s;                        # finally, defined
-            # s.print()
 #------------------------------------------------------------------------------
 # a subsystem has 5 lists of processes, separate for each type - is that still needed ?
 #------------------------------------------------------------------------------
-            s.list_of_procinfos[p.type()].append(p);
+            s.list_of_procinfos[p.process_type()].append(p);
             
-            if (s.max_type < p.type()): s.max_type = p.type();
-            if (s.min_type > p.type()): s.min_type = p.type();
+            if (s.max_type < p.process_type()): s.max_type = p.process_type();
+            if (s.min_type > p.process_type()): s.min_type = p.process_type();
 
+        for s in self.list_of_subsystems:
+            s.print()
+            
         TRACE.INFO('-------------------------- subsystems supposedly initialized',TRACE_NAME)
 
 #------------------------------------------------------------------------------
@@ -755,10 +762,16 @@ class FarmManager(Component):
 # EB --> DL
 #
 # DL --> DS
+# at this point some additional arithmetic is being done, so the order is important
+# first, need to process boardreaders, then - event builders, etc
 #------------------------------------------------------------------------------
         TRACE.INFO('-------------------------- init_process_connections',TRACE_NAME)
-        for p in self.procinfos:
-            p.init_connections();
+        for ptype in PROCESS_TYPES:
+            TRACE.DEBUG(1,f' init_processes of type:{ptype}',TRACE_NAME)
+            for p in self.procinfos:
+                if (p.process_type() == ptype):
+                    TRACE.DEBUG(1,f'init connections of {p.label}',TRACE_NAME)
+                    p.init_connections();
 
 #-------^----------------------------------------------------------------------
 # at this point, each process knows about its sources and destinations
@@ -804,15 +817,18 @@ class FarmManager(Component):
         TRACE.INFO(f'-- START',TRACE_NAME)
 
         tmp_dir = f'/tmp/partition_{self.partition()}/{self.config_name}'
+
+        # make sure the directory exists before writing into it
+        pathlib.Path(tmp_dir).mkdir(parents=True, exist_ok=True)
+        
         for p in self.procinfos:
 #------------------------------------------------------------------------------
 # to decouple the update step, need to pass the transfer plugin and the output directory
 #------------------------------------------------------------------------------
-            updated_fcl = p.update_fhicl(self.transfer);
+            updated_fcl = p.update_fhicl() ## self.transfer);
 #-----------^-----------------------------------------------------------------
 #  write updated FCL but not yet flattened to /tmp, to create input for fhicl-dump
 #  for checking
-#  TODO: make sure that the directory exists
 #-----------v------------------------------------------------------------------
             new_fn = f'{tmp_dir}/{p.label}.fcl'
             TRACE.DEBUG(0,f'p.name:{p.name} new_fn:{new_fn}',TRACE_NAME)
@@ -1081,6 +1097,10 @@ class FarmManager(Component):
         self.launch_procs_wait_time              = odb_client.odb_get(self.tfm_conf_path+"/launch_procs_wait_time")
         self.debug_level                         = odb_client.odb_get(self.tfm_conf_path+"/debug_level")
         self.transfer                            = odb_client.odb_get(self.tfm_conf_path+"/transfer_plugin_to_use")
+        self.br_output_plugin                    = odb_client.odb_get(self.tfm_conf_path+"/br_output_plugin")
+        self.eb_output_plugin                    = odb_client.odb_get(self.tfm_conf_path+"/eb_output_plugin")
+        self.dl_output_plugin                    = odb_client.odb_get(self.tfm_conf_path+"/dl_output_plugin")
+        self.ds_output_plugin                    = odb_client.odb_get(self.tfm_conf_path+"/ds_output_plugin")
 #------------------------------------------------------------------------------
 # initialize artfaq subsystems and processes
 #-------v----------------------------------------------------------------------

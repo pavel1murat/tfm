@@ -113,7 +113,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
             # print(p.fhicl_used);
                 
             # breakpoint()
-            if p.type() == BOARD_READER:
+            if p.process_type() == BOARD_READER:
                 # handling regexps seems to be a very slow procedure, try to optimize
                 res = re.findall(r"\n[^#]*.*max_fragment_size_bytes.*\s*:\s*([0-9\.exabcdefABCDEF]+)",p.fhicl_used)
 
@@ -166,7 +166,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
         subsystem_fragment_ids  [ss] = []
 
     for procinfo in self.procinfos:
-        if procinfo.type() == BOARD_READER:
+        if procinfo.process_type() == BOARD_READER:
 
             generated_fragments_per_event = 1
             reader_ids = []
@@ -870,7 +870,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
                     "EventBuilder",
                 )
 
-        elif (self.procinfos[i_proc].type() == DATA_LOGGER):
+        elif (self.procinfos[i_proc].process_type() == DATA_LOGGER):
             dl_subsystem = self.procinfos[i_proc].subsystem
             if (dl_subsystem, "DataLogger") in router_process_hostnames:
                 bookkeep_table_for_router_process(
@@ -914,7 +914,7 @@ def bookkeeping_for_fhicl_documents_artdaq_v3_base(self):
 # P.Murat: one could have process types, not names - no need to do 
 #          the string comparison every time... that also is much more error-prone
 #------------------------------------------------------------------------------
-            TRACE.DEBUG(1,f'p.name:{p.name} p.label:{p.label} p.type():{p.type()} p.fhicl:{p.fhicl}',TRACE_NAME);
+            TRACE.DEBUG(1,f'p.name:{p.name} p.label:{p.label} p.type():{p.process_type()} p.fhicl:{p.fhicl}',TRACE_NAME);
             if (p.is_eventbuilder() or p.is_datalogger()):
                 if fhicl_writes_root_file(p.fhicl_used):
 #------------------------------------------------------------------------------

@@ -30,8 +30,8 @@ class Dispatcher(Procinfo):
         
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
-        self._type    = DISPATCHER;
-        self.execname = 'dispatcher'
+        self._process_type = DISPATCHER;
+        self.execname      = 'dispatcher'
         
 
 #------------------------------------------------------------------------------
@@ -39,9 +39,13 @@ class Dispatcher(Procinfo):
         # DS only has inputs ..DLs ? start from checking inputs
         s = self.subsystem; ## self.subsystems[p.subsystem_id]; # subsystem which a given process belongs to
 
+        # self.max_event_size_bytes = 0;
+        # self.init_fragment_count  = 0;
+        
         if (len(s.list_of_sS) > 0):
             # THERE ARE INPUT SUBSYSTEMS, thus there should be no local inputs
             # for now, assume correct inputs, handle errors later
+            TRACE.INFO(f's.list_of_sS:{s.list_of_sS}',TRACE_NAME);
             for ss in s.list_of_sS:               ## source in s.sources:
                 # there should be DLs in the source subsystem
                 if (ss.max_type >= DATA_LOGGER):
@@ -49,38 +53,38 @@ class Dispatcher(Procinfo):
                     # although need to check the logic
                     plist = ss.list_of_data_loggers()
                     for x in plist:
-                        # avoid double counting - just in case
+                        # sanity check - shouldn't do anything
                         if (not x in self.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
+                            raise Exception(f'process {x.label} should have been accounted for as input')
+ 
                 else:
-                    # ss has no DLs, check EBs 
+                    # ss has no DLs, check EBs - they also should've been handled
                     plist = ss.list_of_event_builders();
                     for x in plist:
-                        # avoid double counting - just in case
                         if (not x in self.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
-#---------------------------^--------------------------------------------------
+                            raise Exception(f'DS {self.label} : process {x.label} should have been already accounted for as input')
+                            
+#-----------^--------------------------------------------------
 # no input sources , check local inputs
 #-------v----------------------------------------------------------------------
         else:
             plist = s.list_of_data_loggers()
+            TRACE.INFO(f'list of DLs:{plist}',TRACE_NAME)
             if (len(plist) > 0):
-                # DLs available, local EBs should be talking to them
+                # DLs available, local DSs should be talking to them
                 for x in plist:
-                    self.list_of_sources.append(x);
-                    x.list_of_destinations.append(self);
-                    
+                    if (not x in self.list_of_sources):
+                        raise Exception(f'DS {self.label} : process {x.label} should have been already accounted for as input')
             else:
-                # subsystem has no own data loggers, look for event builders
+                # subsystem has no own data loggers, look for event builders - in principle, those
+                # may also send data to dispatchers
                 plist = s.list_of_event_builders()
+                TRACE.INFO(f'list of EBs:{plist}',TRACE_NAME)
                 if (len(plist) > 0):
-                    # DLs available, local EBs should be talking to them
+                    # no DLs, but EBs available, DS gets input from them
                     for x in plist:
-                        if (not x in dl.list_of_sources):
-                            self.list_of_sources.append(x);
-                            x.list_of_destinations.append(self);
+                        if (not x in self.list_of_sources):
+                            raise Exception(f'DS {self.label} : process {x.label} should have been already accounted for as input')
                 else:
                     # a problem , throw
                     raise Exception('Dispatcher::init_connections: DS: no local DLs or EBs');
@@ -89,11 +93,11 @@ class Dispatcher(Procinfo):
 #------------------------------------------------------------------------------
 # DS - to be impemented
 #------------------------------------------------------------------------------
-    def update_fhicl(self, transfer_plugin):
+    def update_fhicl(self): ## , transfer_plugin):
         print('------ DS::update_fhicl')
         TRACE.INFO(f'self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
         
-        raise Exception('DISPATCHER: IMPLEMENT ME!')
+        # raise Exception('DISPATCHER: IMPLEMENT ME!')
 
         with open(self.fhicl,'r') as f:
             lines = f.readlines()
@@ -107,7 +111,8 @@ class Dispatcher(Procinfo):
             if (match):
                 key = match.group(0);
                 new_text.append(f'{key}: {{\n');
-                s = self.source_string(transfer_plugin)
+                #<2026-07-21 PM>s = self.source_string(transfer_plugin)
+                s = self.source_string(self.input_plugin)
                 new_text.append(s)
                 new_text.append('}\n');
                 continue
@@ -117,7 +122,8 @@ class Dispatcher(Procinfo):
             if (match):
                 key = match.group(0);
                 new_text.append(f'{key}: {{\n');
-                s = self.destination_string(transfer_plugin);
+                #<2026-07-21 PM>s = self.destination_string(transfer_plugin);
+                s = self.destination_string(self.output_plugin);
                 new_text.append(s);
                 new_text.append('}\n');
                 continue;

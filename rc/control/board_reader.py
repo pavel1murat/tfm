@@ -33,9 +33,20 @@ class BoardReader(Procinfo):
         super().__init__(name,rank,host,port,timeout,label,subsystem,
                          allowed_processors,target,fhicl,prepend)
 
-        self._type    = BOARD_READER;
-        self.execname = 'boardreader'
+        self._process_type = BOARD_READER;
+        self.execname      = 'boardreader'
 
+#------------------------------------------------------------------------------
+    def connect_event_builder(self,eb):
+        self.list_of_destinations.append(eb);
+        eb.list_of_sources.append(self);
+        eb.exp_fragments_per_event += self.n_fragment_ids()
+        max_sum_fragment_sizes      = self.n_fragment_ids()*self.max_fragment_size_bytes;
+        eb.max_event_size_bytes    += max_sum_fragment_sizes;
+        # max size of data from one destination
+        if (max_sum_fragment_sizes > eb.max_fragment_size_bytes):
+            eb.max_fragment_size_bytes = max_sum_fragment_sizes;
+        
 #------------------------------------------------------------------------------
 # boardreades only have destinations
 #------------------------------------------------------------------------------
@@ -48,13 +59,13 @@ class BoardReader(Procinfo):
 
             list_of_ebs = s.list_of_procinfos[EVENT_BUILDER]
             for eb in list_of_ebs:
-                self.list_of_destinations.append(eb);
-                eb.list_of_sources.append(self);
+                if (not eb in self.list_of_destinations):
+                    self.connect_event_builder(eb)
         else:
             # subsystem has only BRs, check subsystem destination
             TRACE.INFO(f'-- [BoardReader::init_connections] self.label:{self.label} s.destination:{s.destination}',TRACE_NAME)
             if (s.destination != None):
-                # subsystem has a destination, that has to have event builders
+                # subsystem has a destination, that has to have EBs
                 TRACE.INFO(f'subsystem:{s.id} destination is not NONE, but :"{s.destination}"',TRACE_NAME)
                 sd = s.dS;                  # destination subsystem, ## self.subsystems[s.destination];
                 list_of_ebs = sd.list_of_procinfos[EVENT_BUILDER]
@@ -62,8 +73,8 @@ class BoardReader(Procinfo):
                 
                 for eb in list_of_ebs:
                     TRACE.INFO(f'-- [init_br_connections] append {eb.label} to the destinations of {self.label}',TRACE_NAME)
-                    self.list_of_destinations.append(eb);
-                    eb.list_of_sources.append(self);
+                    if (not eb in self.list_of_destinations):
+                        self.connect_event_builder(eb);
             else:
                 # the subsystem has only BRs', that is a problem
                 raise Exception(f'ERROR: subsystem:{s.id} has only BRs and no destination. FIX IT.')
@@ -72,7 +83,7 @@ class BoardReader(Procinfo):
 #------------------------------------------------------------------------------
 # BoardReader: return updated , not not yet expanded FCL
 #------------------------------------------------------------------------------
-    def update_fhicl(self,transfer_plugin):
+    def update_fhicl(self): ## ,transfer_plugin):
         # step 1 : read and replace - start from BRs
         TRACE.DEBUG(1,f'--START: self.label:{self.label} self.fhicl:{self.fhicl}',TRACE_NAME)
 
@@ -92,7 +103,8 @@ class BoardReader(Procinfo):
             if (match):
                 key = match.group(0);
                 new_text.append(f'{key}: {{\n');
-                s = self.destination_string(transfer_plugin)
+                #<2026-07-21 PM>s = self.destination_string(transfer_plugin)
+                s = self.destination_string(self.output_plugin)
                 new_text.append(s)
                 new_text.append('}\n');
                 continue
